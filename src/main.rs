@@ -11,8 +11,20 @@ fn dist_euclidian(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32
     return sum_val.sqrt();
 }
 
-fn cos_cimilarity() {
-    
+fn dist_cosine_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
+    let dot_prod = p.dot(q);
+    let magnitude_p = p.dot(p).sqrt();
+    let magnitude_q = p.dot(p).sqrt();
+    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
+    return cos_sim;
+}
+
+fn dist_angular_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
+    let dot_prod = p.dot(q);
+    let magnitude_p = p.dot(p).sqrt();
+    let magnitude_q = p.dot(p).sqrt();
+    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
+    return cos_sim.acos() / std::f32::consts::PI;
 }
 
 fn get_dataset_f32(file: &hdf5::File, dataset:&str) -> ndarray::Array2::<f32> {
@@ -35,7 +47,9 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarr
             let mut j:i32 = 0;
             let first = &ds_test.slice(s![i,..]);
             for row in ds_train.outer_iter() {
-                let dist = dist_euclidian(&first.to_owned(), &row.to_owned());
+                // let dist = dist_euclidian(&first.to_owned(), &row.to_owned());
+                // let dist = dist_cosine_similarity(&first.to_owned(), &row.to_owned());
+                let dist = dist_angular_similarity(&first.to_owned(), &row.to_owned());
         
                 if dist < best_dist {
                     best_dist = dist;
