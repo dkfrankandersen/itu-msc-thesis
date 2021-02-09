@@ -1,3 +1,17 @@
+// pub struct Dataset {
+//     filename: String,
+//     file: std::result::Result,
+// }
+
+// impl Dataset {
+//     pub fn new(&self) {
+//         self.file = hdf5::File::open(self.filename);
+//     }
+//     pub fn get_train(&self) -> hdf5::Result<ndarray::Array2::<f32>> {
+//         let hdf5_data = self.file.dataset(self.filename);
+//         let data_2d_float:ndarray::Array2::<f32> = hdf5_data.read_2d::<f32>()?;
+//     }
+// }
 
 pub fn get_data_array(filename: &str, dataset: &str) -> hdf5::Result<ndarray::Array2::<f32>> {
     // so that libhdf5 doesn't print errors to stdout
