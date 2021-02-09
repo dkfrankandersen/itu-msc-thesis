@@ -38,26 +38,38 @@ fn get_dataset_i32(file:&hdf5::File, dataset:&str) -> ndarray::Array2::<f32> {
 fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 2]>>,
                         ds_train: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 2]>>) {
 
-        // let first = &ds_test.slice(s![0,..]);
-        
-        
         for i in 0..ds_test.len() {
-            let mut best_dist:f32 = f32::INFINITY;
-            let mut best_index:i32 = -1;
+            let mut best_dist_euc:f32 = f32::INFINITY;
+            let mut best_dist_cos:f32 = f32::INFINITY;
+            let mut best_dist_ang:f32 = f32::INFINITY;
+            let mut best_index_euc:i32 = -1;
+            let mut best_index_cos:i32 = -1;
+            let mut best_index_ang:i32 = -1;
             let mut j:i32 = 0;
-            let first = &ds_test.slice(s![i,..]);
+            let test_vector = &ds_test.slice(s![i,..]);
             for row in ds_train.outer_iter() {
-                // let dist = dist_euclidian(&first.to_owned(), &row.to_owned());
-                // let dist = dist_cosine_similarity(&first.to_owned(), &row.to_owned());
-                let dist = dist_angular_similarity(&first.to_owned(), &row.to_owned());
+                let dist_euc = dist_euclidian(&test_vector.to_owned(), &row.to_owned());
+                let dist_cos = dist_cosine_similarity(&test_vector.to_owned(), &row.to_owned());
+                let dist_ang = dist_angular_similarity(&test_vector.to_owned(), &row.to_owned());
         
-                if dist < best_dist {
-                    best_dist = dist;
-                    best_index = j;
+                if dist_euc < best_dist_euc {
+                    best_dist_euc = dist_euc;
+                    best_index_euc = j;
+                }
+                if dist_cos < best_dist_cos {
+                    best_dist_cos = dist_cos;
+                    best_index_cos = j;
+                }
+                if dist_ang < best_dist_ang {
+                    best_dist_ang = dist_ang;
+                    best_index_ang = j;
                 }
                 j += 1;
             }
-            println!("Best index {} with dist: {}", best_index, best_dist);
+            println!("Test index: {}", i);
+            println!("EUC best index: {} with dist: {}", best_index_euc, best_dist_euc);
+            println!("COS best index: {} with dist: {}", best_index_cos, best_dist_cos);
+            println!("ANG best index: {} with dist: {}", best_index_ang, best_dist_ang);
         }
 }
 
