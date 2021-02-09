@@ -1,21 +1,4 @@
 
-pub fn get_dataset(filename: &str) -> hdf5::Result<()> {
-    // so that libhdf5 doesn't print errors to stdout
-    let _e = hdf5::silence_errors();
-    {
-        let file = hdf5::File::open(filename)?;
-        let train_dataset = file.dataset("train")?;
-    }
-    Ok(())
-}
-
-enum HDF5_Dataset {
-    DISTANCE,
-    NEIGHBORS,
-    TRAIN,
-    TEST
-}
-
 pub fn get_data_array(filename: &str, dataset: &str) -> hdf5::Result<ndarray::Array2::<f32>> {
     // so that libhdf5 doesn't print errors to stdout
     let _e = hdf5::silence_errors();
@@ -36,7 +19,6 @@ pub fn get_data_array(filename: &str, dataset: &str) -> hdf5::Result<ndarray::Ar
     } else {
         println!("ERROR: WRONG DATASET CHOOSEN");
     }
-    // let empty = ndarray::Array2::<f32>::zeros((0,0));
     Ok(res)
 }
 
