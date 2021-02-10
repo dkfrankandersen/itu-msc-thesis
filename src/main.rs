@@ -14,7 +14,7 @@ fn dist_euclidian(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32
 fn dist_cosine_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
-    let magnitude_q = p.dot(p).sqrt();
+    let magnitude_q = q.dot(q).sqrt();
     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
     return cos_sim;
 }
@@ -22,7 +22,7 @@ fn dist_cosine_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>
 fn dist_angular_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
-    let magnitude_q = p.dot(p).sqrt();
+    let magnitude_q = q.dot(q).sqrt();
     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
     return cos_sim.acos() / std::f32::consts::PI;
 }
