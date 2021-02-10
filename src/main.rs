@@ -35,19 +35,18 @@ fn get_dataset_i32(file:&hdf5::File, dataset:&str) -> ndarray::Array2::<f32> {
     return (file).dataset(dataset).unwrap().read_2d::<f32>().unwrap();
 }
 
-fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 2]>>,
-                        ds_train: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 2]>>) {
+fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
+                        ds_train: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>) {
 
         for i in 0..ds_test.len() {
             let mut best_dist_euc:f32 = f32::INFINITY;
             let mut best_dist_cos:f32 = f32::NEG_INFINITY;
             let mut best_dist_ang:f32 = f32::INFINITY;
-            let mut best_index_euc:i32 = -1;
-            let mut best_index_cos:i32 = -1;
-            let mut best_index_ang:i32 = -1;
-            let mut j:i32 = 0;
+            let mut best_index_euc:usize = 0;
+            let mut best_index_cos:usize = 0;
+            let mut best_index_ang:usize = 0;
             let test_vector = &ds_test.slice(s![i,..]);
-            for row in ds_train.outer_iter() {
+            for (j, row) in ds_train.outer_iter().enumerate() {
                 let dist_euc = dist_euclidian(&test_vector, &row);
                 let dist_cos = dist_cosine_similarity(&test_vector, &row);
                 let dist_ang = dist_angular_similarity(&test_vector, &row);
@@ -64,7 +63,6 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarr
                     best_dist_ang = dist_ang;
                     best_index_ang = j;
                 }
-                j += 1;
             }
             println!("Test index: {}", i);
             println!("EUC best index: {} with dist: {}", best_index_euc, best_dist_euc);
@@ -87,9 +85,9 @@ fn main() {
 
     // linear scan
     println!("bruteforce_search started at {:?}", time_start);
-    bruteforce_search(&ds_test, &ds_train);
+    bruteforce_search(&ds_test.view(), &ds_train.view());
+    bruteforce_search(&ds_test.view(), &ds_train.view());
 
-    
     let time_finish = Instant::now();
     println!("Duration: {:?}", time_finish.duration_since(time_start));
     
