@@ -3,7 +3,7 @@ extern crate ndarray;
 use std::time::{Instant};
 
 
-fn dist_euclidian(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
+fn dist_euclidian(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
     let mut sum_val = 0.0;
     for i in 0..p.len() {
         sum_val += (p[i]-q[i]).powi(2);
@@ -11,7 +11,7 @@ fn dist_euclidian(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32
     return sum_val.sqrt();
 }
 
-fn dist_cosine_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
+fn dist_cosine_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
@@ -19,7 +19,7 @@ fn dist_cosine_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>
     return cos_sim;
 }
 
-fn dist_angular_similarity(p: &ndarray::Array1::<f32>, q: &ndarray::Array1::<f32>) -> f32 {
+fn dist_angular_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
@@ -40,7 +40,7 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarr
 
         for i in 0..ds_test.len() {
             let mut best_dist_euc:f32 = f32::INFINITY;
-            let mut best_dist_cos:f32 = f32::INFINITY;
+            let mut best_dist_cos:f32 = f32::NEG_INFINITY;
             let mut best_dist_ang:f32 = f32::INFINITY;
             let mut best_index_euc:i32 = -1;
             let mut best_index_cos:i32 = -1;
@@ -48,15 +48,15 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarr
             let mut j:i32 = 0;
             let test_vector = &ds_test.slice(s![i,..]);
             for row in ds_train.outer_iter() {
-                let dist_euc = dist_euclidian(&test_vector.to_owned(), &row.to_owned());
-                let dist_cos = dist_cosine_similarity(&test_vector.to_owned(), &row.to_owned());
-                let dist_ang = dist_angular_similarity(&test_vector.to_owned(), &row.to_owned());
+                let dist_euc = dist_euclidian(&test_vector, &row);
+                let dist_cos = dist_cosine_similarity(&test_vector, &row);
+                let dist_ang = dist_angular_similarity(&test_vector, &row);
         
                 if dist_euc < best_dist_euc {
                     best_dist_euc = dist_euc;
                     best_index_euc = j;
                 }
-                if dist_cos < best_dist_cos {
+                if dist_cos > best_dist_cos {
                     best_dist_cos = dist_cos;
                     best_index_cos = j;
                 }
