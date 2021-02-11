@@ -2,8 +2,9 @@
 extern crate ndarray;
 // extern crate ndarray_linalg;
 use std::time::{Instant};
+use ndarray::{Array1, Array2, ArrayView1, ArrayBase};
 
-fn dist_euclidian(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
+fn dist_euclidian(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 {
     let mut sum_val = 0.0;
     for i in 0..p.len() {
         sum_val += (p[i]-q[i]).powi(2);
@@ -11,7 +12,7 @@ fn dist_euclidian(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>
     return sum_val.sqrt();
 }
 
-fn dist_cosine_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
+fn dist_cosine_similarity(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
@@ -19,7 +20,7 @@ fn dist_cosine_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView
     return cos_sim;
 }
 
-fn dist_angular_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
+fn dist_angular_similarity(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
@@ -27,16 +28,21 @@ fn dist_angular_similarity(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayVie
     return cos_sim.acos() / std::f32::consts::PI;
 }
 
-fn get_dataset_f32(file: &hdf5::File, dataset:&str) -> ndarray::Array2::<f32> {
+fn _normalize(p: ArrayView1::<f32>) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 1]>> {
+    let magnitude_p = &p.dot(&p).sqrt();
+    return p.map(|e| e/magnitude_p);
+}
+
+fn get_dataset_f32(file: &hdf5::File, dataset:&str) -> Array2::<f32> {
     return (file).dataset(dataset).unwrap().read_2d::<f32>().unwrap();
 }
 
-fn get_dataset_i32(file:&hdf5::File, dataset:&str) -> ndarray::Array2::<f32> {
+fn get_dataset_i32(file:&hdf5::File, dataset:&str) -> Array2::<f32> {
     return (file).dataset(dataset).unwrap().read_2d::<f32>().unwrap();
 }
 
-fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
-                        ds_train: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>) {
+fn bruteforce_search(ds_test: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
+                        ds_train: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>) {
 
         for i in 0..ds_test.len() {
             let mut best_dist_euc:f32 = f32::INFINITY;
@@ -47,18 +53,32 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarr
             let mut best_index_ang:usize = 0;
             let test_vector = &ds_test.slice(s![i,..]);
             for (index, row) in ds_train.outer_iter().enumerate() {
-                let dist_euc = dist_euclidian(&test_vector, &row);
-                let dist_cos = dist_cosine_similarity(&test_vector, &row);
-                let dist_ang = dist_angular_similarity(&test_vector, &row);
+                let magnitude_p = &test_vector.dot(test_vector).sqrt();
+                let test_vector_norm = test_vector.map(|e| e/magnitude_p);
+
+                let magnitude_q = row.dot(&row).sqrt();
+                let row_vector_norm = row.map(|e| e/magnitude_q);
+
+                // let dist_euc = dist_euclidian(&test_vector, &row);
+                // let dist_cos = dist_cosine_similarity(&test_vector, &row);
+                // let dist_ang = dist_angular_similarity(&test_vector, &row);
+
+                let dist_euc = dist_euclidian(&test_vector_norm.view(), &row_vector_norm.view());
+                let dist_cos = dist_cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
+                let dist_ang = dist_angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
         
                 if dist_euc < best_dist_euc {
                     best_dist_euc = dist_euc;
                     best_index_euc = index;
                 }
+
+
                 if dist_cos > best_dist_cos {
                     best_dist_cos = dist_cos;
                     best_index_cos = index;
                 }
+
+                
                 if dist_ang < best_dist_ang {
                     best_dist_ang = dist_ang;
                     best_index_ang = index;
@@ -88,7 +108,6 @@ fn main() {
 
     // linear scan
     println!("bruteforce_search started at {:?}", time_start);
-    bruteforce_search(&ds_test.view(), &ds_train.view());
     bruteforce_search(&ds_test.view(), &ds_train.view());
 
     let time_finish = Instant::now();
