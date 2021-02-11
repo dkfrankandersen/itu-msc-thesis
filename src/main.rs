@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate ndarray;
+// extern crate ndarray_linalg;
 use std::time::{Instant};
-
 
 fn dist_euclidian(p: &ndarray::ArrayView1::<f32>, q: &ndarray::ArrayView1::<f32>) -> f32 {
     let mut sum_val = 0.0;
@@ -46,22 +46,22 @@ fn bruteforce_search(ds_test: &ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarr
             let mut best_index_cos:usize = 0;
             let mut best_index_ang:usize = 0;
             let test_vector = &ds_test.slice(s![i,..]);
-            for (j, row) in ds_train.outer_iter().enumerate() {
+            for (index, row) in ds_train.outer_iter().enumerate() {
                 let dist_euc = dist_euclidian(&test_vector, &row);
                 let dist_cos = dist_cosine_similarity(&test_vector, &row);
                 let dist_ang = dist_angular_similarity(&test_vector, &row);
         
                 if dist_euc < best_dist_euc {
                     best_dist_euc = dist_euc;
-                    best_index_euc = j;
+                    best_index_euc = index;
                 }
                 if dist_cos > best_dist_cos {
                     best_dist_cos = dist_cos;
-                    best_index_cos = j;
+                    best_index_cos = index;
                 }
                 if dist_ang < best_dist_ang {
                     best_dist_ang = dist_ang;
-                    best_index_ang = j;
+                    best_index_ang = index;
                 }
             }
             println!("Test index: {}", i);
@@ -80,6 +80,9 @@ fn main() {
     let _ds_distance = get_dataset_f32(file, "distances");
     let _ds_neighbors = get_dataset_i32(file, "neighbors");
     
+    // ndarray_linalg::norm::NormalizeAxis
+    // ndarray_linalg::norm
+    // let ds_train_norm = ds_train
 
     let time_start = Instant::now();
 
