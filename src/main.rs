@@ -2,6 +2,7 @@ extern crate ndarray;
 // extern crate ndarray_linalg;
 use std::time::{Instant};
 use ndarray::{Array2, ArrayView1, ArrayBase, ViewRepr, Dim, OwnedRepr};
+use priority_queue::PriorityQueue;
 
 fn dist_euclidian(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 {
     let mut sum_val = 0.0;
@@ -43,7 +44,7 @@ fn normalize(p: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>)
 
 fn bruteforce_search(ds_test: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>,
                         ds_train: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>) {
-                            
+                           
         for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
             let mut best_dist_euc:f32 = f32::INFINITY;
             let mut best_dist_cos:f32 = f32::NEG_INFINITY;
@@ -64,18 +65,18 @@ fn bruteforce_search(ds_test: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>,
                 let dist_ang = dist_angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
         
                 if dist_euc < best_dist_euc {
-                    best_dist_euc = dist_euc;
                     best_index_euc = idx_train;
+                    best_dist_euc = dist_euc;
                 }
 
                 if dist_cos > best_dist_cos {
-                    best_dist_cos = dist_cos;
                     best_index_cos = idx_train;
+                    best_dist_cos = dist_cos;
                 }
 
                 if dist_ang < best_dist_ang {
-                    best_dist_ang = dist_ang;
                     best_index_ang = idx_train;
+                    best_dist_ang = dist_ang;
                 }
             }
             println!("Test index: {}", idx_test);
