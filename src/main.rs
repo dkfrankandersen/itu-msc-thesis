@@ -2,7 +2,7 @@
 extern crate ndarray;
 // extern crate ndarray_linalg;
 use std::time::{Instant};
-use ndarray::{Array1, Array2, ArrayView1, ArrayBase};
+use ndarray::{Array2, ArrayView1, ArrayBase, ViewRepr, Dim, OwnedRepr};
 
 fn dist_euclidian(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 {
     let mut sum_val = 0.0;
@@ -28,40 +28,37 @@ fn dist_angular_similarity(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> f32 
     return cos_sim.acos() / std::f32::consts::PI;
 }
 
-fn _normalize(p: ArrayView1::<f32>) -> ndarray::ArrayBase<ndarray::OwnedRepr<f32>, ndarray::Dim<[usize; 1]>> {
-    let magnitude_p = &p.dot(&p).sqrt();
-    return p.map(|e| e/magnitude_p);
-}
-
 fn get_dataset_f32(file: &hdf5::File, dataset:&str) -> Array2::<f32> {
     return (file).dataset(dataset).unwrap().read_2d::<f32>().unwrap();
 }
 
-fn get_dataset_i32(file:&hdf5::File, dataset:&str) -> Array2::<f32> {
+fn get_dataset_i32(file: &hdf5::File, dataset:&str) -> Array2::<f32> {
     return (file).dataset(dataset).unwrap().read_2d::<f32>().unwrap();
 }
 
-fn bruteforce_search(ds_test: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
-                        ds_train: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>) {
+fn normalize(p: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>) 
+                        -> ArrayBase<OwnedRepr<f32>, Dim<[usize; 1]>> {
+    let magnitude = p.dot(p).sqrt();
+    return p.map(|e| e/magnitude);
+}
 
-        for i in 0..ds_test.len() {
+fn bruteforce_search(ds_test: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>,
+                        ds_train: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>) {
+                            
+        for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
             let mut best_dist_euc:f32 = f32::INFINITY;
             let mut best_dist_cos:f32 = f32::NEG_INFINITY;
             let mut best_dist_ang:f32 = f32::INFINITY;
             let mut best_index_euc:usize = 0;
             let mut best_index_cos:usize = 0;
             let mut best_index_ang:usize = 0;
-            let test_vector = &ds_test.slice(s![i,..]);
-            for (index, row) in ds_train.outer_iter().enumerate() {
-                let magnitude_p = &test_vector.dot(test_vector).sqrt();
-                let test_vector_norm = test_vector.map(|e| e/magnitude_p);
-
-                let magnitude_q = row.dot(&row).sqrt();
-                let row_vector_norm = row.map(|e| e/magnitude_q);
-
+            for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
                 // let dist_euc = dist_euclidian(&test_vector, &row);
                 // let dist_cos = dist_cosine_similarity(&test_vector, &row);
                 // let dist_ang = dist_angular_similarity(&test_vector, &row);
+
+                let test_vector_norm = normalize(&test_vector);
+                let row_vector_norm = normalize(&train_vector);
 
                 let dist_euc = dist_euclidian(&test_vector_norm.view(), &row_vector_norm.view());
                 let dist_cos = dist_cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
@@ -69,22 +66,20 @@ fn bruteforce_search(ds_test: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[
         
                 if dist_euc < best_dist_euc {
                     best_dist_euc = dist_euc;
-                    best_index_euc = index;
+                    best_index_euc = idx_train;
                 }
-
 
                 if dist_cos > best_dist_cos {
                     best_dist_cos = dist_cos;
-                    best_index_cos = index;
+                    best_index_cos = idx_train;
                 }
 
-                
                 if dist_ang < best_dist_ang {
                     best_dist_ang = dist_ang;
-                    best_index_ang = index;
+                    best_index_ang = idx_train;
                 }
             }
-            println!("Test index: {}", i);
+            println!("Test index: {}", idx_test);
             println!("EUC best index: {} with dist: {}", best_index_euc, best_dist_euc);
             println!("COS best index: {} with dist: {}", best_index_cos, best_dist_cos);
             println!("ANG best index: {} with dist: {}", best_index_ang, best_dist_ang);
@@ -92,7 +87,6 @@ fn bruteforce_search(ds_test: &ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[
 }
 
 fn main() {
-
     let filename = "../../datasets/glove-100-angular.hdf5";
     let file = &hdf5::File::open(filename).unwrap();
     let ds_train = get_dataset_f32(file, "train");
@@ -100,10 +94,6 @@ fn main() {
     let _ds_distance = get_dataset_f32(file, "distances");
     let _ds_neighbors = get_dataset_i32(file, "neighbors");
     
-    // ndarray_linalg::norm::NormalizeAxis
-    // ndarray_linalg::norm
-    // let ds_train_norm = ds_train
-
     let time_start = Instant::now();
 
     // linear scan
@@ -112,5 +102,18 @@ fn main() {
 
     let time_finish = Instant::now();
     println!("Duration: {:?}", time_finish.duration_since(time_start));
-    
+}
+
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn another() {
+        panic!("Make this test fail");
+    }
 }
