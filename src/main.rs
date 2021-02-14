@@ -53,27 +53,23 @@ fn bruteforce_search(ds_test: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>,
             let mut best_index_cos:usize = 0;
             let mut best_index_ang:usize = 0;
             for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-                // let dist_euc = dist_euclidian(&test_vector, &row);
-                // let dist_cos = dist_cosine_similarity(&test_vector, &row);
-                // let dist_ang = dist_angular_similarity(&test_vector, &row);
 
                 let test_vector_norm = normalize(&test_vector);
                 let row_vector_norm = normalize(&train_vector);
 
                 let dist_euc = dist_euclidian(&test_vector_norm.view(), &row_vector_norm.view());
-                let dist_cos = dist_cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
-                let dist_ang = dist_angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
-        
                 if dist_euc < best_dist_euc {
                     best_index_euc = idx_train;
                     best_dist_euc = dist_euc;
                 }
 
+                let dist_cos = dist_cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
                 if dist_cos > best_dist_cos {
                     best_index_cos = idx_train;
                     best_dist_cos = dist_cos;
                 }
 
+                let dist_ang = dist_angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
                 if dist_ang < best_dist_ang {
                     best_index_ang = idx_train;
                     best_dist_ang = dist_ang;
