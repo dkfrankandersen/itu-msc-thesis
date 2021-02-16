@@ -4,6 +4,7 @@ use std::time::{Instant};
 use ndarray::{ArrayBase, Array2, ViewRepr, Dim};
 use priority_queue::PriorityQueue;
 mod dataset;
+mod distance;
 mod bruteforce;
 
 fn main() {
@@ -15,7 +16,7 @@ fn main() {
     let _ds_train = dataset::normalize_all(ds_train);
     
     let ds_test = dataset::get_dataset_f32(file, "test");
-    let _ds_test = dataset::normalize_all(ds_test);
+    let _ds_test = &dataset::normalize_all(ds_test);
 
     let ds_distance = dataset::get_dataset_f32(file, "distances");
     let _ds_distance = dataset::normalize_all(ds_distance);
@@ -26,7 +27,10 @@ fn main() {
 
     // linear scan
     println!("bruteforce_search started at {:?}", time_start);
-    bruteforce::bruteforce_search(_ds_test, _ds_train);
+    for (i,p) in _ds_test.outer_iter().enumerate() {
+        bruteforce::bruteforce_search(p, _ds_train.view(), crate::distance::DistType::Cosine);
+    }
+    
 
     let time_finish = Instant::now();
     println!("Duration: {:?}", time_finish.duration_since(time_start));

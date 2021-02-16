@@ -24,7 +24,7 @@ pub fn dist_angular_similarity(p: &ArrayView1::<f32>, q: &ArrayView1::<f32>) -> 
     return cos_sim.acos() / std::f32::consts::PI;
 }
 
-enum DistType {
+pub enum DistType {
     Angular,
     Cosine,
     Euclidian
