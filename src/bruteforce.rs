@@ -4,36 +4,42 @@ mod distance;
 
 pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>,
                             ds_train: ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
-                            dist: crate::distance::DistType) {
+                            distType: crate::distance::DistType) {
 
     let mut best_dist: f32;
     let mut best_index: usize = 0;
 
-    match dist {
+    match distType {
         crate::distance::DistType::Angular     => best_dist = f32::INFINITY,
         crate::distance::DistType::Cosine      => best_dist = f32::NEG_INFINITY,
         crate::distance::DistType::Euclidian   => best_dist = f32::INFINITY,
-        _                               => panic!("Wrong distance")
     }
     
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
 
-        let dist_euc = distance::dist_euclidian(&test_vector.view(), &train_vector.view());
-        if dist_euc < best_dist {
-            best_index = idx_train;
-            best_dist = dist_euc;
-        }
-
-        let dist_cos = distance::dist_cosine_similarity(&test_vector.view(), &train_vector.view());
-        if dist_cos > best_dist {
-            best_index = idx_train;
-            best_dist = dist_cos;
-        }
-
-        let dist_ang = distance::dist_angular_similarity(&test_vector.view(), &train_vector.view());
-        if dist_ang < best_dist {
-            best_index = idx_train;
-            best_dist = dist_ang;
+        let dist: f32;
+        match distType {
+            crate::distance::DistType::Angular     => {
+                dist = distance::dist_euclidian(&test_vector.view(), &train_vector.view());
+                if dist < best_dist {
+                    best_index = idx_train;
+                    best_dist = dist;
+                };
+            },
+            crate::distance::DistType::Cosine      => {
+                dist = distance::dist_cosine_similarity(&test_vector.view(), &train_vector.view());
+                if dist > best_dist {
+                    best_index = idx_train;
+                    best_dist = dist;
+                }
+            },
+            crate::distance::DistType::Euclidian   => {
+                dist = distance::dist_angular_similarity(&test_vector.view(), &train_vector.view());
+                if dist < best_dist {
+                    best_index = idx_train;
+                    best_dist = dist;
+                }
+            },
         }
     }
         println!("Best index: {} with dist: {}", best_index, best_dist);
