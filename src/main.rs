@@ -42,6 +42,13 @@ fn normalize(p: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>)
     return p.map(|e| e/magnitude);
 }
 
+enum DistType {
+    Angular,
+    Cosine,
+    Euclidian
+}
+
+
 fn bruteforce_search(ds_test: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>,
                         ds_train: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 2]>>) {
                            
