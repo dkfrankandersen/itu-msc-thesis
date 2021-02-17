@@ -1,22 +1,24 @@
 use ndarray::{Array2, ArrayView1, ArrayView2};
 #[path="distance.rs"]
 mod distance;
+use priority_queue::PriorityQueue;
 
-pub fn bruteforce_search(test_vector: &ArrayView1::<f32>,
-                            ds_train: &ArrayView2::<f32>,
-                            dist_type: crate::distance::DistType) -> (usize, f32) {
+pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
+                            ds_train: &ArrayView2::<f64>,
+                            dist_type: crate::distance::DistType) -> (usize, f64) {
 
-    let mut best_dist: f32;
+    let mut best_dist: f64;
     let mut best_index: usize = 0;
+   
 
     match dist_type {
-        crate::distance::DistType::Angular     => best_dist = f32::INFINITY,
-        crate::distance::DistType::Cosine      => best_dist = f32::NEG_INFINITY,
-        crate::distance::DistType::Euclidian   => best_dist = f32::INFINITY,
+        crate::distance::DistType::Angular     => best_dist = f64::INFINITY,
+        crate::distance::DistType::Cosine      => best_dist = f64::NEG_INFINITY,
+        crate::distance::DistType::Euclidian   => best_dist = f64::INFINITY,
     }
     
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-        let dist: f32;
+        let dist: f64;
         match dist_type {
             crate::distance::DistType::Angular     => {
                 dist = distance::dist_euclidian(&test_vector.view(), &train_vector.view());
@@ -45,12 +47,12 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f32>,
         (best_index, best_dist)
 }
 
-pub fn bruteforce_search_all(ds_test: Array2<f32>, ds_train: Array2<f32>) {
+pub fn bruteforce_search_dataset(ds_test: Array2<f64>, ds_train: Array2<f64>) {
 
     for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
-    let mut best_dist_euc:f32 = f32::INFINITY;
-    let mut best_dist_cos:f32 = f32::NEG_INFINITY;
-    let mut best_dist_ang:f32 = f32::INFINITY;
+    let mut best_dist_euc:f64 = f64::INFINITY;
+    let mut best_dist_cos:f64 = f64::NEG_INFINITY;
+    let mut best_dist_ang:f64 = f64::INFINITY;
     let mut best_index_euc:usize = 0;
     let mut best_index_cos:usize = 0;
     let mut best_index_ang:usize = 0;
