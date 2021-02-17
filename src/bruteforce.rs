@@ -4,12 +4,12 @@ mod distance;
 
 pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>,
                             ds_train: ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
-                            distType: crate::distance::DistType) {
+                            dist_type: crate::distance::DistType) {
 
     let mut best_dist: f32;
     let mut best_index: usize = 0;
 
-    match distType {
+    match dist_type {
         crate::distance::DistType::Angular     => best_dist = f32::INFINITY,
         crate::distance::DistType::Cosine      => best_dist = f32::NEG_INFINITY,
         crate::distance::DistType::Euclidian   => best_dist = f32::INFINITY,
@@ -18,7 +18,7 @@ pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
 
         let dist: f32;
-        match distType {
+        match dist_type {
             crate::distance::DistType::Angular     => {
                 dist = distance::dist_euclidian(&test_vector.view(), &train_vector.view());
                 if dist < best_dist {
