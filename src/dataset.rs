@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayBase, ViewRepr, Dim, OwnedRepr};
+use ndarray::{Array2, ArrayView1, Array1};
 
 pub fn get_dataset(filename: &str) -> hdf5::File {
     return hdf5::File::open(filename).unwrap();
@@ -13,8 +13,7 @@ pub fn get_dataset_i32(file: &hdf5::File, dataset: &str) -> Array2::<i32> {
     return (file).dataset(dataset).unwrap().read_2d::<i32>().unwrap();
 }
 
-pub fn normalize_vector(p: &ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>) 
-                        -> ArrayBase<OwnedRepr<f32>, Dim<[usize; 1]>> {
+pub fn normalize_vector(p: &ArrayView1::<f32>)-> Array1::<f32>  {
     let magnitude = p.dot(p).sqrt();
     return p.map(|e| e/magnitude);
 }

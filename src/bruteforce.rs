@@ -1,10 +1,10 @@
-use ndarray::{Array2, ArrayBase, Dim, ViewRepr};
+use ndarray::{Array2, ArrayView1, ArrayView2};
 #[path="distance.rs"]
 mod distance;
 
-pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>,
-                            ds_train: ndarray::ArrayBase<ndarray::ViewRepr<&f32>, ndarray::Dim<[usize; 2]>>,
-                            dist_type: crate::distance::DistType) {
+pub fn bruteforce_search(test_vector: &ArrayView1::<f32>,
+                            ds_train: &ArrayView2::<f32>,
+                            dist_type: crate::distance::DistType) -> (usize, f32) {
 
     let mut best_dist: f32;
     let mut best_index: usize = 0;
@@ -16,7 +16,6 @@ pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>
     }
     
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-
         let dist: f32;
         match dist_type {
             crate::distance::DistType::Angular     => {
@@ -43,10 +42,10 @@ pub fn bruteforce_search(test_vector: ArrayBase<ViewRepr<&f32>, Dim<[usize; 1]>>
         }
     }
         println!("Best index: {} with dist: {}", best_index, best_dist);
+        (best_index, best_dist)
 }
 
-pub fn bruteforce_search_all(ds_test: Array2<f32>,
-    ds_train: Array2<f32>) {
+pub fn bruteforce_search_all(ds_test: Array2<f32>, ds_train: Array2<f32>) {
 
     for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
     let mut best_dist_euc:f32 = f32::INFINITY;
