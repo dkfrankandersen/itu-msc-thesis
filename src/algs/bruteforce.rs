@@ -1,5 +1,5 @@
 use ndarray::{Array2, ArrayView1, ArrayView2};
-use crate::{distance};
+use crate::algs::distance;
 
 pub fn single_search(test_vector: &ArrayView1::<f64>,
                         ds_train: &ArrayView2::<f64>,
@@ -9,14 +9,13 @@ pub fn single_search(test_vector: &ArrayView1::<f64>,
     let mut best_index: usize = 0;
 
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-        let dist = distance::dist_cosine_similarity(&test_vector.view(), &train_vector.view());
+        let dist = distance::dist_cosine_similarity(&test_vector, &train_vector);
         if dist > best_dist {
             best_index = idx_train;
             best_dist = dist;
         }
     }
     best_index
-    
 }
 
 pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,

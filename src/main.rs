@@ -1,9 +1,8 @@
 extern crate ndarray;
 extern crate hdf5;
 use std::time::{Instant};
-mod dataset;
-mod distance;
-mod bruteforce;
+mod algs;
+use algs::{dataset,linearsearch};
 
 
 fn main() {
@@ -27,8 +26,12 @@ fn main() {
     // linear scan
     println!("bruteforce_search started at {:?}", time_start);
     for (i,p) in ds_test_norm.outer_iter().enumerate() {
-        let (best_idx, best_dist) = bruteforce::bruteforce_search(&p, &ds_train_norm.view(), crate::distance::DistType::Cosine);
+        let res = linearsearch::single_search(&p, &ds_train_norm.view(), 1000);
+        println!("{:?}", res);
+        println!("{:?}", ds_neighbors[[i,0]]);
+        break;
     }
+
 
     let time_finish = Instant::now();
     println!("Duration: {:?}", time_finish.duration_since(time_start));
