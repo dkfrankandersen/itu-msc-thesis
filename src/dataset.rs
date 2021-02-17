@@ -13,6 +13,10 @@ pub fn get_dataset_i32(file: &hdf5::File, dataset: &str) -> Array2::<i32> {
     return (file).dataset(dataset).unwrap().read_2d::<i32>().unwrap();
 }
 
+pub fn get_dataset_usize(file: &hdf5::File, dataset: &str) -> Array2::<usize> {
+    return (file).dataset(dataset).unwrap().read_2d::<usize>().unwrap();
+}
+
 pub fn normalize_vector(p: &ArrayView1::<f32>)-> Array1::<f32>  {
     let magnitude = p.dot(p).sqrt();
     return p.map(|e| e/magnitude);
