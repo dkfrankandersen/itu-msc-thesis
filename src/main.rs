@@ -1,9 +1,29 @@
 extern crate ndarray;
 extern crate hdf5;
-use std::time::{Instant};
+use std::time::{Instant, Duration};
+use ndarray::{ArrayView1, ArrayView2, s};
 mod algs;
 use algs::dataset::Dataset;
 use algs::bruteforce;
+
+fn print_true_neighbors(ds: ArrayView2<usize>, from : usize, to: usize) {
+    println!("Distance for 5 closests neighbors from {} to {}:", from, to);
+    for i in from..to {
+        println!("|  idx: {} neighbors {:?}", i, (ds[[i,0]], ds[[i,1]], ds[[i,2]], ds[[i,3]], ds[[i,4]]));
+    }
+    println!("");
+}
+
+fn single_query(p: &ArrayView1<f64>, dataset: ArrayView2<f64>) -> (Duration, Vec<usize>) {
+    // bruteforce_search
+    let time_start = Instant::now();
+    println!("bruteforce_search started at {:?}", time_start);
+    let candidates = bruteforce::query(&p, &dataset, 10);
+    let time_finish = Instant::now();
+    let total_time = time_finish.duration_since(time_start);
+
+    (total_time, candidates)
+}
 
 fn main() {
     let filename = "datasets/glove-100-angular.hdf5";
@@ -13,28 +33,10 @@ fn main() {
     let ds_distances_norm = ds.distances_normalize();
     let ds_neighbors = ds.neighbors();
 
-    let time_start = Instant::now();
+    print_true_neighbors(ds_neighbors.view(), 0, 5);
 
-    println!("start ds_neighbor for 0 and dist to 5 closests: ");
-    for (i, v) in ds_neighbors.outer_iter().enumerate() {
-        println!("{} {:?} {}", i, v[0], ds_distances_norm[[i,0]]);
-        println!("{} {:?} {}", i, v[1], ds_distances_norm[[i,1]]);
-        println!("{} {:?} {}", i, v[2], ds_distances_norm[[i,2]]);
-        println!("{} {:?} {}", i, v[3], ds_distances_norm[[i,3]]);
-        println!("{} {:?} {}", i, v[4], ds_distances_norm[[i,4]]);
-        break
-    }
-    println!("end ds_neighbors: ");
-    
-    // bruteforce_search
-    println!("bruteforce_search started at {:?}", time_start);
-    for (i,p) in ds_test_norm.outer_iter().enumerate() {
-        println!("\n-- Test index: {:?} --", i);
-        let res1 = bruteforce::single_search(&p, &ds_train_norm.view(), 10);
-        println!("{:?}", res1);
-        break;
-    }
+    let v = &ds_test_norm.slice(s![0,..]);
+    single_query(v, ds_train_norm.view());
 
-    let time_finish = Instant::now();
-    println!("Duration: {:?}", time_finish.duration_since(time_start));
 }
+
