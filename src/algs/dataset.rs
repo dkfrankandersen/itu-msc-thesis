@@ -66,4 +66,17 @@ impl Dataset {
         let magnitude = p.dot(p).sqrt();
         return p.map(|e| e/magnitude);
     }
+
+    pub fn print_true_neighbors(&self, from : usize, to: usize, m: usize) {
+        let dataset = self.neighbors();
+        println!("| Distance for 5 closests neighbors from {} to {}:", from, to);
+        for i in from..to {
+            let mut neighbors = Vec::new();
+            for j in 0..m {
+                neighbors.push(dataset[[i,j]]);
+            }
+            println!("|  idx: {} neighbors {:?}", i, neighbors);
+        }
+        println!("");
+    }
 }

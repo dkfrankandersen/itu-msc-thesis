@@ -3,13 +3,13 @@ use crate::algs::distance;
 use crate::algs::pq;
 use std::collections::BinaryHeap;
 
-pub fn query(v: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, n: i32) -> Vec<usize> {
+pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, n: i32) -> Vec<usize> {
     
     let mut best_candidates = BinaryHeap::new();
     for (idx, candidate) in dataset.outer_iter().enumerate() {
         best_candidates.push(pq::DataEntry {
                                                 index: idx,  
-                                                distance: distance::cosine_similarity(&v, &candidate)
+                                                distance: distance::cosine_similarity(&p, &candidate)
                                             });
     }
 
