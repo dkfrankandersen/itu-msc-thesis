@@ -15,16 +15,33 @@ impl Dataset {
         }
     }
 
-    pub fn get(&self, dataset: &str) -> Array2::<f64> {
+    pub fn get_f64(&self, dataset: &str) -> Array2::<f64> {
         return (self.hdf5_file).dataset(dataset).unwrap().read_2d::<f64>().unwrap();
     }
 
-    pub fn get_as_usize(&self, dataset: &str) -> Array2::<usize> {
+    pub fn get_usize(&self, dataset: &str) -> Array2::<usize> {
         return (self.hdf5_file).dataset(dataset).unwrap().read_2d::<usize>().unwrap();
     }
 
+    pub fn neighbors(&self) -> Array2::<usize> {
+        return self.get_usize("neighbors");
+    }
+
+    pub fn train_normalize(&self) -> Array2::<f64> {
+        return self.get_as_normalize("train");
+    }
+
+    pub fn test_normalize(&self) -> Array2::<f64> {
+        return self.get_as_normalize("test");
+    }
+
+    pub fn distances_normalize(&self) -> Array2::<f64> {
+        return self.get_as_normalize("distances");
+    }
+
+
     pub fn get_as_normalize(&self, dataset: &str) -> Array2::<f64> {
-        let dataset = (self.hdf5_file).dataset(dataset).unwrap().read_2d::<f64>().unwrap();
+        let dataset = self.get_f64(dataset);
         let mut ds_new: Array2<f64> = dataset.clone();
         for (idx_row, p) in dataset.outer_iter().enumerate() {
             let magnitude = p.dot(&p).sqrt();        
