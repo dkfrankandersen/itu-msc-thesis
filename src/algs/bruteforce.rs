@@ -9,7 +9,7 @@ pub fn single_search(test_vector: &ArrayView1::<f64>,
     
     let mut heap = BinaryHeap::new();
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-        let dist = distance::dist_cosine_similarity(&test_vector, &train_vector);
+        let dist = distance::cosine_similarity(&test_vector, &train_vector);
         heap.push(pq::DataEntry {index: idx_train,  distance: dist});
     }
 
@@ -39,21 +39,21 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
         let dist: f64;
         match dist_type {
             distance::DistType::Angular     => {
-                dist = distance::dist_euclidian(&test_vector.view(), &train_vector.view());
+                dist = distance::euclidian(&test_vector.view(), &train_vector.view());
                 if dist < best_dist {
                     best_index = idx_train;
                     best_dist = dist;
                 };
             },
             distance::DistType::Cosine      => {
-                dist = distance::dist_cosine_similarity(&test_vector.view(), &train_vector.view());
+                dist = distance::cosine_similarity(&test_vector.view(), &train_vector.view());
                 if dist > best_dist {
                     best_index = idx_train;
                     best_dist = dist;
                 }
             },
             distance::DistType::Euclidian   => {
-                dist = distance::dist_angular_similarity(&test_vector.view(), &train_vector.view());
+                dist = distance::angular_similarity(&test_vector.view(), &train_vector.view());
                 if dist < best_dist {
                     best_index = idx_train;
                     best_dist = dist;
@@ -65,7 +65,7 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
         (best_index, best_dist)
 }
 
-pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>, no_of_results: usize) {
+pub fn search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>, no_of_results: usize) {
 
     for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
         let mut best_dist_euc:f64 = f64::INFINITY;
@@ -78,19 +78,19 @@ pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>, 
             let test_vector_norm = &test_vector;
             let row_vector_norm = &train_vector;
 
-            let dist_euc = distance::dist_euclidian(&test_vector_norm.view(), &row_vector_norm.view());
+            let dist_euc = distance::euclidian(&test_vector_norm.view(), &row_vector_norm.view());
             if dist_euc < best_dist_euc {
                 best_index_euc = idx_train;
                 best_dist_euc = dist_euc;
             }
 
-            let dist_cos = distance::dist_cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
+            let dist_cos = distance::cosine_similarity(&test_vector_norm.view(), &row_vector_norm.view());
             if dist_cos > best_dist_cos {
                 best_index_cos = idx_train;
                 best_dist_cos = dist_cos;
             }
 
-            let dist_ang = distance::dist_angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
+            let dist_ang = distance::angular_similarity(&test_vector_norm.view(), &row_vector_norm.view());
             if dist_ang < best_dist_ang {
                 best_index_ang = idx_train;
                 best_dist_ang = dist_ang;

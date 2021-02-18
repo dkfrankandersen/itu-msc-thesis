@@ -1,6 +1,6 @@
 use ndarray::{ArrayView1};
 
-pub fn dist_euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+pub fn euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let mut sum_val = 0.0;
     for i in 0..p.len() {
         sum_val += (p[i]-q[i]).powi(2);
@@ -8,7 +8,7 @@ pub fn dist_euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     return sum_val.sqrt();
 }
 
-pub fn dist_cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
@@ -16,7 +16,7 @@ pub fn dist_cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f
     return cos_sim;
 }
 
-pub fn dist_angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();

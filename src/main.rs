@@ -3,22 +3,30 @@ extern crate hdf5;
 use std::time::{Instant};
 mod algs;
 use algs::{dataset,pq,bruteforce};
+use algs::dataset::Dataset;
 
 fn main() {
     let _e = hdf5::silence_errors();
     let _filename = "datasets/glove-100-angular.hdf5";
-    let file = &dataset::get_dataset(_filename);
-    
-    let ds_train = dataset::get_dataset_f64(file, "train");
-    let ds_train_norm = dataset::normalize_all(ds_train);
-    
-    let ds_test = dataset::get_dataset_f64(file, "test");
-    let ds_test_norm = &dataset::normalize_all(ds_test);
+    // let file = &dataset::get_dataset(_filename);
 
-    let ds_distance = dataset::get_dataset_f64(file, "distances");
-    let ds_distance_norm = dataset::normalize_all(ds_distance);
+    let ds = Dataset::new(_filename);
 
-    let ds_neighbors = dataset::get_dataset_usize(file, "neighbors");
+    let ds_train_norm = ds.get_dataset_normalize("train");
+    let ds_test_norm = ds.get_dataset_normalize("test");
+    let ds_distance_norm = ds.get_dataset_normalize("distances");
+    let ds_neighbors = ds.get_dataset_usize("neighbors");
+    
+    // let ds_train = dataset::get_dataset_f64(file, "train");
+    // let ds_train_norm = dataset::normalize_all(ds_train);
+    
+    // let ds_test = dataset::get_dataset_f64(file, "test");
+    // let ds_test_norm = &dataset::normalize_all(ds_test);
+
+    // let ds_distance = dataset::get_dataset_f64(file, "distances");
+    // let ds_distance_norm = dataset::normalize_all(ds_distance);
+
+    // let ds_neighbors = dataset::get_dataset_usize(file, "neighbors");
 
     let time_start = Instant::now();
 
