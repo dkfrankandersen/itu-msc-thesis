@@ -2,10 +2,14 @@ extern crate ndarray;
 extern crate hdf5;
 use std::time::{Instant};
 mod algs;
-use algs::{dataset,linearsearch};
+use algs::{dataset,linearsearch,pq,bruteforce};
 
 
 fn main() {
+
+    // pq::test_pq();
+    // return;
+
     let _e = hdf5::silence_errors();
     let _filename = "datasets/glove-100-angular.hdf5";
     let file = &dataset::get_dataset(_filename);
@@ -23,18 +27,36 @@ fn main() {
 
     let time_start = Instant::now();
 
+    println!("start ds_neighbor for 0 and dist to 5 closests: ");
+    for (i, v) in ds_neighbors.outer_iter().enumerate() {
+        println!("{} {:?} {}", i, v[0], ds_distance_norm[[i,0]]);
+        println!("{} {:?} {}", i, v[1], ds_distance_norm[[i,1]]);
+        println!("{} {:?} {}", i, v[2], ds_distance_norm[[i,2]]);
+        println!("{} {:?} {}", i, v[3], ds_distance_norm[[i,3]]);
+        println!("{} {:?} {}", i, v[4], ds_distance_norm[[i,4]]);
+        break
+    }
+    println!("end ds_neighbors: ");
+        
+
+    // bruteforce::bruteforce_search_dataset(&ds_test_norm, &ds_train_norm);
+
     // linear scan
-    println!("bruteforce_search started at {:?}", time_start);
+    // println!("bruteforce_search started at {:?}", time_start);
     for (i,p) in ds_test_norm.outer_iter().enumerate() {
-        let res = linearsearch::single_search(&p, &ds_train_norm.view(), 1000);
-        println!("{:?}", res);
-        println!("{:?}", ds_neighbors[[i,0]]);
+        println!("-- Lets look at {:?} --", i);
+        println!("- For cosine");
+        let res1 = linearsearch::single_search(&p, &ds_train_norm.view(), 10, "cosine");
+        println!("{:?}", res1);
+        println!("- For angular");
+        let res2 = linearsearch::single_search(&p, &ds_train_norm.view(), 10, "angular");
+        println!("{:?}", res2);
         break;
     }
 
 
-    let time_finish = Instant::now();
-    println!("Duration: {:?}", time_finish.duration_since(time_start));
+    // let time_finish = Instant::now();
+    // println!("Duration: {:?}", time_finish.duration_since(time_start));
 }
 
 

@@ -62,7 +62,7 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
         (best_index, best_dist)
 }
 
-pub fn bruteforce_search_dataset(ds_test: Array2<f64>, ds_train: Array2<f64>) {
+pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>) {
 
     for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
     let mut best_dist_euc:f64 = f64::INFINITY;
