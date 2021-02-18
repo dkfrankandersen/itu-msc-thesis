@@ -1,21 +1,25 @@
 use ndarray::{Array2, ArrayView1, ArrayView2};
 use crate::algs::distance;
+use crate::algs::pq;
+use std::collections::BinaryHeap;
 
 pub fn single_search(test_vector: &ArrayView1::<f64>,
                         ds_train: &ArrayView2::<f64>,
-                        no_of_matches: &i32) -> usize {
+                        no_of_matches: i32) -> Vec<(usize, f64)> {
     
-    let mut best_dist: f64 = f64::NEG_INFINITY;
-    let mut best_index: usize = 0;
-
+    let mut heap = BinaryHeap::new();
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
         let dist = distance::dist_cosine_similarity(&test_vector, &train_vector);
-        if dist > best_dist {
-            best_index = idx_train;
-            best_dist = dist;
-        }
+        heap.push(pq::DataEntry {index: idx_train,  distance: dist});
     }
-    best_index
+
+    let mut result: Vec<(usize, f64)> = Vec::new();
+
+    for _ in 0..no_of_matches {
+        let idx = (Some(heap.pop()).unwrap()).unwrap();
+        result.push((idx.index, idx.distance));
+    }
+    result
 }
 
 pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
@@ -24,7 +28,6 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
 
     let mut best_dist: f64;
     let mut best_index: usize = 0;
-   
 
     match dist_type {
         distance::DistType::Angular     => best_dist = f64::INFINITY,
@@ -62,7 +65,7 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
         (best_index, best_dist)
 }
 
-pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>) {
+pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>, no_of_results: usize) {
 
     for (idx_test, test_vector) in ds_test.outer_iter().enumerate() {
         let mut best_dist_euc:f64 = f64::INFINITY;
@@ -97,7 +100,8 @@ pub fn bruteforce_search_dataset(ds_test: &Array2<f64>, ds_train: &Array2<f64>) 
         println!("EUC best index: {} with dist: {}", best_index_euc, best_dist_euc);
         println!("COS best index: {} with dist: {}", best_index_cos, best_dist_cos);
         println!("ANG best index: {} with dist: {}", best_index_ang, best_dist_ang);
-        if idx_test >= 5 {
+        
+        if idx_test >= no_of_results {
             break;
         }
     }

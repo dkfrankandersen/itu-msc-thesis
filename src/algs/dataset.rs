@@ -9,10 +9,6 @@ pub fn get_dataset_f64(file: &hdf5::File, dataset: &str) -> Array2::<f64> {
     return (file).dataset(dataset).unwrap().read_2d::<f64>().unwrap();
 }
 
-pub fn get_dataset_i64(file: &hdf5::File, dataset: &str) -> Array2::<usize> {
-    return (file).dataset(dataset).unwrap().read_2d::<usize>().unwrap();
-}
-
 pub fn get_dataset_usize(file: &hdf5::File, dataset: &str) -> Array2::<usize> {
     return (file).dataset(dataset).unwrap().read_2d::<usize>().unwrap();
 }

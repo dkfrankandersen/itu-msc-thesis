@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct DataEntry {
@@ -21,20 +20,32 @@ impl Ord for DataEntry {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn given_2_3_1_return_3() {
+        use std::collections::BinaryHeap;
+        use crate::algs::pq::{DataEntry};
 
-pub fn test_pq() {
-    let mut heap = BinaryHeap::new();
-    heap.push(DataEntry {index: 2,  distance: 0.00000002});
-    heap.push(DataEntry {index: 7,  distance: 0.00000007});
-    heap.push(DataEntry {index: 4,  distance: 0.00000004});
-    heap.push(DataEntry {index: 5,  distance: 0.00000005});
-    heap.push(DataEntry {index: 6,  distance: 0.00000006});
-    heap.push(DataEntry {index: 1,  distance: 0.00000001});
-    heap.push(DataEntry {index: 9,  distance: 0.00000009});
-    for _ in 0..heap.len() {
-        match heap.pop() {
-            Some(x) => println!("Some {:?}", x),
-            None => println!("None")
-        }
+        let mut heap = BinaryHeap::new();
+        heap.push(DataEntry {index: 2,  distance: 0.2});
+        heap.push(DataEntry {index: 3,  distance: 0.3});
+        heap.push(DataEntry {index: 1,  distance: 0.1});
+        let idx = (Some(heap.pop()).unwrap()).unwrap();
+
+        assert_eq!((idx.index, idx.distance), (3, 0.3));
+    }
+    #[test]
+    fn given_neg_2_3_1_return_1() {
+        use std::collections::BinaryHeap;
+        use crate::algs::pq::{DataEntry};
+
+        let mut heap = BinaryHeap::new();
+        heap.push(DataEntry {index: 2,  distance: -0.2});
+        heap.push(DataEntry {index: 3,  distance: -0.3});
+        heap.push(DataEntry {index: 1,  distance: -0.1});
+        let idx = (Some(heap.pop()).unwrap()).unwrap();
+
+        assert_eq!((idx.index, idx.distance), (1, -0.1));
     }
 }
