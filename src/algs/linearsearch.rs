@@ -11,8 +11,12 @@ pub fn single_search(test_vector: &ArrayView1::<f64>,
     for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
         let dist: f64;
         if dist_type == "angular" {
-            dist = distance::dist_angular_similarity(&test_vector, &train_vector);
-        } else {
+            dist = -distance::dist_angular_similarity(&test_vector, &train_vector);
+        } 
+        else if dist_type == "euclidian" {
+            dist = -distance::dist_euclidian(&test_vector, &train_vector);
+        }
+        else {
             dist = distance::dist_cosine_similarity(&test_vector, &train_vector);
         }
     

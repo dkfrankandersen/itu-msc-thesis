@@ -39,18 +39,24 @@ fn main() {
     println!("end ds_neighbors: ");
         
 
-    // bruteforce::bruteforce_search_dataset(&ds_test_norm, &ds_train_norm);
+    
 
     // linear scan
     // println!("bruteforce_search started at {:?}", time_start);
     for (i,p) in ds_test_norm.outer_iter().enumerate() {
-        println!("-- Lets look at {:?} --", i);
+        println!("\n-- Test index: {:?} --", i);
         println!("- For cosine");
         let res1 = linearsearch::single_search(&p, &ds_train_norm.view(), 10, "cosine");
         println!("{:?}", res1);
-        println!("- For angular");
+        println!("\n- For angular");
         let res2 = linearsearch::single_search(&p, &ds_train_norm.view(), 10, "angular");
         println!("{:?}", res2);
+        println!("\n- For euclidian");
+        let res3 = linearsearch::single_search(&p, &ds_train_norm.view(), 10, "euclidian");
+        println!("{:?}", res3);
+
+        println!("\n- For bruteforce all");
+        bruteforce::bruteforce_search_dataset(&ds_test_norm, &ds_train_norm);
         break;
     }
 

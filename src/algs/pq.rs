@@ -10,8 +10,8 @@ pub struct DataEntry {
 impl Eq for DataEntry {}
 
 impl PartialOrd for DataEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.distance.partial_cmp(&self.distance)
+    fn partial_cmp(&self, other: &DataEntry) -> Option<Ordering> {
+        self.distance.partial_cmp(&other.distance)
     }
 }
 
