@@ -39,7 +39,6 @@ impl Dataset {
         return self.get_as_normalize("distances");
     }
 
-
     pub fn get_as_normalize(&self, dataset: &str) -> Array2::<f64> {
         let dataset = self.get_f64(dataset);
         let mut ds_new: Array2<f64> = dataset.clone();

@@ -3,27 +3,26 @@ use crate::algs::distance;
 use crate::algs::pq;
 use std::collections::BinaryHeap;
 
-pub fn single_search(test_vector: &ArrayView1::<f64>,
-                        ds_train: &ArrayView2::<f64>,
-                        no_of_matches: i32) -> Vec<(usize, f64)> {
+pub fn single_search(v: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, n: i32) -> Vec<usize> {
     
-    let mut heap = BinaryHeap::new();
-    for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
-        let dist = distance::cosine_similarity(&test_vector, &train_vector);
-        heap.push(pq::DataEntry {index: idx_train,  distance: dist});
+    let mut best_candidates = BinaryHeap::new();
+    for (idx, candidate) in dataset.outer_iter().enumerate() {
+        best_candidates.push(pq::DataEntry {
+                                                index: idx,  
+                                                distance: distance::cosine_similarity(&v, &candidate)
+                                            });
     }
 
-    let mut result: Vec<(usize, f64)> = Vec::new();
-
-    for _ in 0..no_of_matches {
-        let idx = (Some(heap.pop()).unwrap()).unwrap();
-        result.push((idx.index, idx.distance));
+    let mut best_n_candidates: Vec<usize> = Vec::new();
+    for _ in 0..n {
+        let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
+        best_n_candidates.push(idx.index);
     }
-    result
+    best_n_candidates
 }
 
-pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
-                            ds_train: &ArrayView2::<f64>,
+pub fn bruteforce_search(v: &ArrayView1::<f64>,
+                            dataset: &ArrayView2::<f64>,
                             dist_type: distance::DistType) -> (usize, f64) {
 
     let mut best_dist: f64;
@@ -35,27 +34,27 @@ pub fn bruteforce_search(test_vector: &ArrayView1::<f64>,
         distance::DistType::Euclidian   => best_dist = f64::INFINITY,
     }
     
-    for (idx_train, train_vector) in ds_train.outer_iter().enumerate() {
+    for (idx, candidate) in dataset.outer_iter().enumerate() {
         let dist: f64;
         match dist_type {
             distance::DistType::Angular     => {
-                dist = distance::euclidian(&test_vector.view(), &train_vector.view());
+                dist = distance::euclidian(&v.view(), &candidate.view());
                 if dist < best_dist {
-                    best_index = idx_train;
+                    best_index = idx;
                     best_dist = dist;
                 };
             },
             distance::DistType::Cosine      => {
-                dist = distance::cosine_similarity(&test_vector.view(), &train_vector.view());
+                dist = distance::cosine_similarity(&v.view(), &candidate.view());
                 if dist > best_dist {
-                    best_index = idx_train;
+                    best_index = idx;
                     best_dist = dist;
                 }
             },
             distance::DistType::Euclidian   => {
-                dist = distance::angular_similarity(&test_vector.view(), &train_vector.view());
+                dist = distance::angular_similarity(&v.view(), &candidate.view());
                 if dist < best_dist {
-                    best_index = idx_train;
+                    best_index = idx;
                     best_dist = dist;
                 }
             },
