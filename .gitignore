@@ -13,4 +13,8 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# Added by Frank Andersen
 /datasets
+/results
+

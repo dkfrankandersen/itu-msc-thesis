@@ -4,6 +4,7 @@ use std::time::{Instant, Duration};
 use ndarray::{ArrayView1, ArrayView2, s};
 mod algs;
 use algs::dataset::Dataset;
+mod util;
 
 fn main() {
     let filename = "datasets/glove-100-angular.hdf5";
@@ -18,5 +19,7 @@ fn main() {
     let v = &ds_test_norm.slice(s![0,..]);
     let result = algs::single_query(v, &ds_train_norm.view());
     println!("{:?}", result);
+
+    util::store_results();
 }
 
