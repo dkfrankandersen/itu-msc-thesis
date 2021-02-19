@@ -1,9 +1,7 @@
 extern crate ndarray;
 extern crate hdf5;
-use std::str::FromStr;
-use hdf5::types::VarLenUnicode;
 use std::time::{Instant, Duration};
-use ndarray::{ArrayView1, ArrayView2, s};
+use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
@@ -22,24 +20,25 @@ fn main() {
     let result = algs::single_query(v, &ds_train_norm.view());
     println!("{:?}", result);
 
-
-    let attrs = util::Attrs {
-        algo: VarLenUnicode::from_str("bruteforce").unwrap(),
+   
+    let attrs = util::Attributes {
+        algo: "bruteforce".to_string(),
         batch_mode: false,
         best_search_time: 0.01,
         build_time: 0.02,
         candidates: 10.0,
         count: 10,
-        dataset: VarLenUnicode::from_str("glove-100-angular").unwrap(),
-        distance: VarLenUnicode::from_str("cosine").unwrap(),
+        dataset: "glove-100-angular".to_string(),
+        distance: "cosine".to_string(),
         expect_extra: false,
         index_size: 0.03,
-        name: VarLenUnicode::from_str("bruteforce(n_trees=100,search_k=100)").unwrap(),
+        name: "bruteforce(n_trees=100,search_k=100)".to_string(),
         run_count: 3
     };
 
-    // println!("{:?}", attrs);
+    println!("{:?}", attrs);
 
-    util::store_results(result, attrs);
+    let saved = util::store_results(result, attrs);
+    println!("{:?}", saved);
 }
 

@@ -1,6 +1,8 @@
 use std::time::{Instant, Duration};
 extern crate hdf5;
 use hdf5::types::{VarLenUnicode};
+use std::str::FromStr;
+
 // pub struct Attrs {
 //     'algo': 'annoy',
 //     'batch_mode': False,
@@ -18,7 +20,7 @@ use hdf5::types::{VarLenUnicode};
 
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
-pub struct Attrs {
+pub struct AttributesForH5 {
     pub algo: VarLenUnicode,
     pub batch_mode: bool,
     pub best_search_time: f64,
@@ -30,12 +32,48 @@ pub struct Attrs {
     pub expect_extra: bool,
     pub index_size: f64,
     pub name: VarLenUnicode,
-    pub run_count: u64
+    pub run_count: u32
 }
 
-pub fn store_results(results: (Duration, Vec<usize>), attrs: Attrs) -> hdf5::Result<()> {
+#[derive(Debug)]
+pub struct Attributes {
+    pub algo: String,
+    pub batch_mode: bool,
+    pub best_search_time: f64,
+    pub build_time: f64,
+    pub candidates: f64,
+    pub count: u64,
+    pub dataset: String,
+    pub distance: String,
+    pub expect_extra: bool,
+    pub index_size: f64,
+    pub name: String,
+    pub run_count: u32
+}
+
+impl Attributes {
+
+    pub fn get_as_h5(&self) -> AttributesForH5 {
+        AttributesForH5 {
+            algo: VarLenUnicode::from_str(&self.algo).unwrap(),
+            batch_mode: self.batch_mode,
+            best_search_time: self.best_search_time,
+            build_time: self.build_time,
+            candidates: self.candidates,
+            count: self.count,
+            dataset: VarLenUnicode::from_str(&self.dataset).unwrap(),
+            distance: VarLenUnicode::from_str(&self.distance).unwrap(),
+            expect_extra: self.expect_extra,
+            index_size: self.index_size,
+            name: VarLenUnicode::from_str(&self.name).unwrap(),
+            run_count: self.run_count
+        }
+    }
+}
+
+pub fn store_results(results: (Duration, Vec<usize>), attrs: Attributes) -> hdf5::Result<()> {
     let path: &str = "results/";
-    let filename: &str = "test4.hdf5";
+    let filename: &str = "test5.hdf5";
 
     let full_path = format!("{}{}", path, filename);
     println!("{}", full_path);
@@ -44,11 +82,8 @@ pub fn store_results(results: (Duration, Vec<usize>), attrs: Attrs) -> hdf5::Res
         let file = hdf5::File::create(full_path);
         match file {
             Ok(f) => {
-                        let attributes = f.new_dataset::<Attrs>().create("attributes", 1)?;
-                        attributes.write(&[attrs]);
-                        // match attributes {
-                        //     Ok(a) => a
-                        // }
+                        let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
+                        attributes.write(&[attrs.get_as_h5()]);
                         let times = f.new_dataset::<f64>().create("times", 2);
                         let neighbors = f.new_dataset::<i32>().create("neighbors", 2);
                         let distances = f.new_dataset::<f64>().create("distances", 2);
