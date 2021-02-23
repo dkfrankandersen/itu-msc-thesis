@@ -26,7 +26,7 @@ pub struct AttributesForH5 {
     pub best_search_time: f64,
     pub build_time: f64,
     pub candidates: f64,
-    pub count: u64,
+    pub count: u32,
     pub dataset: VarLenUnicode,
     pub distance: VarLenUnicode,
     pub expect_extra: bool,
@@ -42,7 +42,7 @@ pub struct Attributes {
     pub best_search_time: f64,
     pub build_time: f64,
     pub candidates: f64,
-    pub count: u64,
+    pub count: u32,
     pub dataset: String,
     pub distance: String,
     pub expect_extra: bool,
@@ -71,7 +71,7 @@ impl Attributes {
     }
 }
 
-pub fn store_results(results: (Duration, Vec<usize>), attrs: Attributes) -> hdf5::Result<()> {
+pub fn store_results(results: (Duration, Vec<(usize, f64)>), attrs: Attributes) -> hdf5::Result<()> {
     let path: &str = "results/";
     let filename: &str = "test5.hdf5";
 

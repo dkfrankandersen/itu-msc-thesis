@@ -19,8 +19,7 @@ fn main() {
     let v = &ds_test_norm.slice(s![0,..]);
     let result = algs::single_query(v, &ds_train_norm.view());
     println!("{:?}", result);
-
-   
+    
     let attrs = util::Attributes {
         algo: "bruteforce".to_string(),
         batch_mode: false,
@@ -36,7 +35,8 @@ fn main() {
         run_count: 3
     };
 
-    println!("{:?}", attrs);
+    // println!("{:?}", result);
+    // println!("{:?}", attrs);
 
     let saved = util::store_results(result, attrs);
     println!("{:?}", saved);
