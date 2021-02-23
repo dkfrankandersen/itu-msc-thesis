@@ -19,16 +19,18 @@ fn main() {
 
 
     let dataset = ds_test_norm;
+    let count: u32 = 10;
+
     let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
     for p in dataset.outer_iter() {
     // let v = &ds_test_norm.slice(s![0,..]);
-        let result = algs::single_query(&p, &ds_train_norm.view());
+        let result = algs::single_query(&p, &ds_train_norm.view(), count);
         println!("{:?}", result);
         results.push(result);
     }
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
-    for (time,candidates) in results.iter() {
+    for (time, candidates) in results.iter() {
         total_time += time;
         total_candidates += candidates.len();
     }
@@ -43,7 +45,7 @@ fn main() {
         best_search_time: best_search_time,
         build_time: 0.02,
         candidates: avg_candidates,
-        count: 10,
+        count: count,
         dataset: dataset_name.to_string(),
         distance: "cosine".to_string(),
         expect_extra: false,
