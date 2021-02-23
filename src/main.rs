@@ -5,16 +5,17 @@ use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
+use std::collections::HashMap;
 
 fn main() {
     let dataset_name = "glove-100-angular";
     let run_count = 1;
     let count: u32 = 10;
     let distance_type = "cosine";
-    let algo_definition = "bruteforce";
-    let alg_name = "bruteforce(...)";
     let build_time = 0.; // Not used
     let index_size = 0.; // Not used
+    let algo_definition = "bruteforce";
+    let alg_name = "bruteforce(...)";
 
     let best_search_time = f64::INFINITY;
 
@@ -30,11 +31,12 @@ fn main() {
 
     let dataset = &ds_test_norm;
     let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
-    for p in dataset.outer_iter() {
+    for (i, p) in dataset.outer_iter().enumerate() {
     // let v = &ds_test_norm.slice(s![0,..]);
         let result = algs::single_query(&p, &ds_train_norm.view(), count);
         println!("{:?}", result);
         results.push(result);
+        if i > 1 {break}
     }
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
@@ -53,7 +55,7 @@ fn main() {
         index_size: index_size,
         algo: algo_definition.to_string(),
         dataset: dataset_name.to_string(),
-        
+
         batch_mode: false,
         best_search_time: best_search_time,
         candidates: avg_candidates,

@@ -2,6 +2,7 @@ use std::time::{Instant, Duration};
 extern crate hdf5;
 use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
+use ndarray::{s, Array1};
 
 // pub struct Attrs {
 //     'algo': 'annoy',
@@ -73,7 +74,7 @@ impl Attributes {
 
 pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
     let path: &str = "results/";
-    let filename: &str = "test5.hdf5";
+    let filename: &str = "test20.hdf5"; 
 
     let full_path = format!("{}{}", path, filename);
     println!("{}", full_path);
@@ -83,14 +84,30 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
         match file {
             Ok(f) => {
                         let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
-                        attributes.write(&[attrs.get_as_h5()]);
-                        let times = f.new_dataset::<f64>().create("times", 2);
-                        let neighbors = f.new_dataset::<i32>().create("neighbors", 2);
-                        let distances = f.new_dataset::<f64>().create("distances", 2);
+                        attributes.write(&[attrs.get_as_h5()]).ok();
+                        
+                        let times = f.new_dataset::<f64>().create("times", results.len())?;
+                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), 10))?;
+                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), 10))?;                    
+                         
+                        let mut res_times: Vec<f64> = Vec::new();                       
+                        for (i, (time, result)) in results.iter().enumerate() { 
+                            
+                            res_times.push(*time);
+                            
+                            let (res_neigh, res_dist): (Vec<usize>, Vec<f64>) = result.iter().cloned().unzip();
+
+                            println!("{:?}",res_neigh);
+                            println!("{:?}",res_dist);
+                            
+                            neighbors.write_slice(&res_neigh, s![i,..]).ok();
+                            distances.write_slice(&res_dist, s![i,..]).ok();
+                        }
+                        times.write(&res_times).ok();
+
             },
             Err(e) => println!("Error {}", e)
         }
-        
     }
     Ok(())
 }
