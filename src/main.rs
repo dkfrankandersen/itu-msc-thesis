@@ -8,6 +8,16 @@ mod util;
 
 fn main() {
     let dataset_name = "glove-100-angular";
+    let run_count = 1;
+    let count: u32 = 10;
+    let distance_type = "cosine";
+    let algo_definition = "bruteforce";
+    let alg_name = "bruteforce(...)";
+    let build_time = 0.; // Not used
+    let index_size = 0.; // Not used
+
+    let best_search_time = f64::INFINITY;
+
     let filename = format!("datasets/{}.hdf5",dataset_name);
     let ds = Dataset::new(&filename);
     let ds_train_norm = ds.train_normalize();
@@ -18,9 +28,7 @@ fn main() {
     ds.print_true_neighbors(0, 5, 10);
 
 
-    let dataset = ds_test_norm;
-    let count: u32 = 10;
-
+    let dataset = &ds_test_norm;
     let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
     for p in dataset.outer_iter() {
     // let v = &ds_test_norm.slice(s![0,..]);
@@ -37,21 +45,23 @@ fn main() {
 
     let search_time = total_time / dataset.len() as f64;
     let avg_candidates = total_candidates as f64 / dataset.len() as f64;
-    let best_search_time = search_time;
+    let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }} ;
     
 
     let attrs = util::Attributes {
+        build_time: build_time,
+        index_size: index_size,
+        algo: algo_definition.to_string(),
+        dataset: dataset_name.to_string(),
+        
         batch_mode: false,
         best_search_time: best_search_time,
-        build_time: 0.02,
         candidates: avg_candidates,
         count: count,
-        dataset: dataset_name.to_string(),
-        distance: "cosine".to_string(),
+        distance: distance_type.to_string(),
         expect_extra: false,
-        index_size: 0.03,
-        name: "bruteforce()".to_string(),
-        run_count: 3
+        name: alg_name.to_string(),
+        run_count: run_count
     };
 
     let saved = util::store_results(results, attrs);

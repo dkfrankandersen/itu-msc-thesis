@@ -21,6 +21,7 @@ use std::str::FromStr;
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
 pub struct AttributesForH5 {
+    pub algo: VarLenUnicode,
     pub batch_mode: bool,
     pub best_search_time: f64,
     pub build_time: f64,
@@ -36,6 +37,7 @@ pub struct AttributesForH5 {
 
 #[derive(Debug)]
 pub struct Attributes {
+    pub algo: String,
     pub batch_mode: bool,
     pub best_search_time: f64,
     pub build_time: f64,
@@ -50,8 +52,10 @@ pub struct Attributes {
 }
 
 impl Attributes {
+
     pub fn get_as_h5(&self) -> AttributesForH5 {
         AttributesForH5 {
+            algo: VarLenUnicode::from_str(&self.algo).unwrap(),
             batch_mode: self.batch_mode,
             best_search_time: self.best_search_time,
             build_time: self.build_time,
@@ -82,9 +86,7 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
                         attributes.write(&[attrs.get_as_h5()]);
                         let times = f.new_dataset::<f64>().create("times", 2);
                         let neighbors = f.new_dataset::<i32>().create("neighbors", 2);
-
                         let distances = f.new_dataset::<f64>().create("distances", 2);
-                        
             },
             Err(e) => println!("Error {}", e)
         }
@@ -92,3 +94,4 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
     }
     Ok(())
 }
+
