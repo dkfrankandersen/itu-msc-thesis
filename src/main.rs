@@ -28,7 +28,6 @@ fn main() {
 
     ds.print_true_neighbors(0, 5, 10);
 
-
     let dataset = &ds_test_norm;
     let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
@@ -66,7 +65,7 @@ fn main() {
         run_count: run_count
     };
 
-    let saved = util::store_results(results, result_count, attrs);
+    let saved = util::store_results(results, attrs);
     println!("{:?}", saved);
 }
 

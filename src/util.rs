@@ -21,7 +21,7 @@ pub struct AttributesForH5 {
     pub run_count: u32
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Attributes {
     pub algo: String,
     pub batch_mode: bool,
@@ -56,12 +56,18 @@ impl Attributes {
     }
 }
 
-pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, result_count: u32, attrs: Attributes) -> hdf5::Result<()> {
+fn get_result_filename(path: &str, attrs: Attributes) -> String {
+    format!("{:?}/{:?}_{:?}_{:?}", "", path, attrs.dataset, attrs.count)
+}
+
+pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
     let path: &str = "results/";
     let filename: &str = "test20.hdf5"; 
 
     let full_path = format!("{}{}", path, filename);
     println!("{}", full_path);
+    // let full_path2 = get_result_filename("results", attrs);
+    // println!("{}", full_path2);
     let _e = hdf5::silence_errors();
     {
         let file = hdf5::File::create(full_path);
@@ -71,8 +77,10 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, result_co
                         attributes.write(&[attrs.get_as_h5()]).ok();
                         
                         let times = f.new_dataset::<f64>().create("times", results.len())?;
-                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count as usize))?;
-                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count as usize))?;                    
+                        // let result_count = attrs.count as usize;
+                        let result_count = 10;
+                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count))?;
+                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count))?;                    
                          
                         let mut res_times: Vec<f64> = Vec::new();                       
                         for (i, (time, result)) in results.iter().enumerate() { 
