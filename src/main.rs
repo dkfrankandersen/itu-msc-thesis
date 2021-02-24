@@ -29,13 +29,13 @@ fn main() {
     ds.print_true_neighbors(0, 5, 10);
 
     let dataset = &ds_test_norm;
-    let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
+    let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
     // let v = &ds_test_norm.slice(s![0,..]);
         let result = algs::single_query(&p, &ds_train_norm.view(), result_count);
         println!("{:?}", result);
         results.push(result);
-        if i > 1 {break}
+        if i > 5 {break}
     }
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;

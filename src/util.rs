@@ -9,17 +9,17 @@ use std::fs;
 #[repr(C)]
 pub struct AttributesForH5 {
     pub algo: VarLenUnicode,
-    pub batch_mode: bool,
-    pub best_search_time: f64,
-    pub build_time: f64,
-    pub candidates: f64,
-    pub count: u32,
+    pub batch_mode: VarLenUnicode,
+    pub best_search_time: VarLenUnicode,
+    pub build_time: VarLenUnicode,
+    pub candidates: VarLenUnicode,
+    pub count: VarLenUnicode,
     pub dataset: VarLenUnicode,
     pub distance: VarLenUnicode,
-    pub expect_extra: bool,
-    pub index_size: f64,
+    pub expect_extra: VarLenUnicode,
+    pub index_size: VarLenUnicode,
     pub name: VarLenUnicode,
-    pub run_count: u32
+    pub run_count: VarLenUnicode
 }
 
 #[derive(Debug, Clone)]
@@ -38,21 +38,26 @@ pub struct Attributes {
     pub run_count: u32
 }
 
+// Quick fix because HDF5-Rust does not work well with attributes yet, so need a Python script to fix it.
+pub fn key_type_data(key: String, datatype: String, data: String) -> VarLenUnicode {
+    VarLenUnicode::from_str(&format!("{}:{}:{}", key, datatype, data)).unwrap()
+}
+
 impl Attributes {
     pub fn get_as_h5(&self) -> AttributesForH5 {
         AttributesForH5 {
-            algo: VarLenUnicode::from_str(&self.algo).unwrap(),
-            batch_mode: self.batch_mode,
-            best_search_time: self.best_search_time,
-            build_time: self.build_time,
-            candidates: self.candidates,
-            count: self.count,
-            dataset: VarLenUnicode::from_str(&self.dataset).unwrap(),
-            distance: VarLenUnicode::from_str(&self.distance).unwrap(),
-            expect_extra: self.expect_extra,
-            index_size: self.index_size,
-            name: VarLenUnicode::from_str(&self.name).unwrap(),
-            run_count: self.run_count
+            algo:               key_type_data("algo".to_string(),"str".to_string(), self.algo.to_string()),
+            batch_mode:         key_type_data("batch_mode".to_string(),"bool".to_string(), self.batch_mode.to_string()),
+            best_search_time:   key_type_data("best_search_time".to_string(),"float".to_string(), self.best_search_time.to_string()),
+            build_time:         key_type_data("build_time".to_string(),"float".to_string(), self.build_time.to_string()),
+            candidates:         key_type_data("candidates".to_string(),"float".to_string(), self.candidates.to_string()),
+            count:              key_type_data("count".to_string(),"int".to_string(), self.count.to_string()),
+            dataset:            key_type_data("distance".to_string(),"str".to_string(), self.dataset.to_string()),
+            distance:           key_type_data("distance".to_string(),"str".to_string(), self.distance.to_string()),
+            expect_extra:       key_type_data("expect_extra".to_string(),"bool".to_string(), self.expect_extra.to_string()),
+            index_size:         key_type_data("index_size".to_string(),"float".to_string(), self.index_size.to_string()),
+            name:               key_type_data("name".to_string(),"str".to_string(), self.name.to_string()),
+            run_count:          key_type_data("run_count".to_string(),"int".to_string(), self.run_count.to_string()),
         }
     }
 }
