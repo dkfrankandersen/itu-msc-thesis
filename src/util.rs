@@ -4,21 +4,6 @@ use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
 use ndarray::{s, Array1};
 
-// pub struct Attrs {
-//     'algo': 'annoy',
-//     'batch_mode': False,
-//     'best_search_time': 0.00016217617988586425,
-//     'build_time': 388.5926456451416,
-//     'candidates': 10.0,
-//     'count': 10,
-//     'dataset': 'glove-100-angular',
-//     'distance': 'angular',
-//     'expect_extra': False,
-//     'index_size': 2705648.0,
-//     'name': 'Annoy(n_trees=100,search_k=100)',
-//     'run_count': 3
-// }
-
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
 pub struct AttributesForH5 {
@@ -53,7 +38,6 @@ pub struct Attributes {
 }
 
 impl Attributes {
-
     pub fn get_as_h5(&self) -> AttributesForH5 {
         AttributesForH5 {
             algo: VarLenUnicode::from_str(&self.algo).unwrap(),
@@ -72,7 +56,7 @@ impl Attributes {
     }
 }
 
-pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
+pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, result_count: u32, attrs: Attributes) -> hdf5::Result<()> {
     let path: &str = "results/";
     let filename: &str = "test20.hdf5"; 
 
@@ -87,24 +71,17 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
                         attributes.write(&[attrs.get_as_h5()]).ok();
                         
                         let times = f.new_dataset::<f64>().create("times", results.len())?;
-                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), 10))?;
-                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), 10))?;                    
+                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count as usize))?;
+                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count as usize))?;                    
                          
                         let mut res_times: Vec<f64> = Vec::new();                       
                         for (i, (time, result)) in results.iter().enumerate() { 
-                            
-                            res_times.push(*time);
-                            
+                            res_times.push(*time); 
                             let (res_neigh, res_dist): (Vec<usize>, Vec<f64>) = result.iter().cloned().unzip();
-
-                            println!("{:?}",res_neigh);
-                            println!("{:?}",res_dist);
-                            
                             neighbors.write_slice(&res_neigh, s![i,..]).ok();
                             distances.write_slice(&res_dist, s![i,..]).ok();
                         }
                         times.write(&res_times).ok();
-
             },
             Err(e) => println!("Error {}", e)
         }

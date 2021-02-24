@@ -10,7 +10,7 @@ use std::collections::HashMap;
 fn main() {
     let dataset_name = "glove-100-angular";
     let run_count = 1;
-    let count: u32 = 10;
+    let result_count: u32 = 10;
     let distance_type = "cosine";
     let build_time = 0.; // Not used
     let index_size = 0.; // Not used
@@ -33,7 +33,7 @@ fn main() {
     let mut results = Vec::<(f64, std::vec::Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
     // let v = &ds_test_norm.slice(s![0,..]);
-        let result = algs::single_query(&p, &ds_train_norm.view(), count);
+        let result = algs::single_query(&p, &ds_train_norm.view(), result_count);
         println!("{:?}", result);
         results.push(result);
         if i > 1 {break}
@@ -59,14 +59,14 @@ fn main() {
         batch_mode: false,
         best_search_time: best_search_time,
         candidates: avg_candidates,
-        count: count,
+        count: result_count,
         distance: distance_type.to_string(),
         expect_extra: false,
         name: alg_name.to_string(),
         run_count: run_count
     };
 
-    let saved = util::store_results(results, attrs);
+    let saved = util::store_results(results, result_count, attrs);
     println!("{:?}", saved);
 }
 

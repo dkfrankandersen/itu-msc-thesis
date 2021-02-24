@@ -3,7 +3,7 @@ use crate::algs::distance;
 use crate::algs::pq;
 use std::collections::BinaryHeap;
 
-pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, n: u32) -> Vec<usize> {
+pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let mut best_candidates = BinaryHeap::new();
     for (idx, candidate) in dataset.outer_iter().enumerate() {
@@ -14,7 +14,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, n: u32) -> Vec<
     }
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
-    for _ in 0..n {
+    for _ in 0..result_count {
         let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
         best_n_candidates.push(idx.index);
     }
