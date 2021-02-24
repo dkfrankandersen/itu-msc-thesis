@@ -3,6 +3,7 @@ extern crate hdf5;
 use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
 use ndarray::{s, Array1};
+use std::fs;
 
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
@@ -56,29 +57,49 @@ impl Attributes {
     }
 }
 
-fn get_result_filename(path: &str, attrs: Attributes) -> String {
-    format!("{:?}/{:?}_{:?}_{:?}", "", path, attrs.dataset, attrs.count)
+#[derive(Debug, Clone)]
+struct ResultFilename {
+    path: String,
+    name: String,
+    filetype: String
 }
 
-pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
-    let path: &str = "results/";
-    let filename: &str = "test20.hdf5"; 
+impl ResultFilename {
+    fn filename(&self) -> String {
+        format!("{}{}", self.name, self.filetype)
+    }
 
-    let full_path = format!("{}{}", path, filename);
-    println!("{}", full_path);
-    // let full_path2 = get_result_filename("results", attrs);
-    // println!("{}", full_path2);
+    fn path_and_filename(&self) -> String {
+        format!("{}{}{}", self.path, self.name, self.filetype)
+    }
+}
+
+fn get_result_filename(path: &str, attrs: &Attributes) -> ResultFilename {
+    let path = format!("{}/{}/{}/{}/", path, attrs.dataset, attrs.count, attrs.algo);
+    ResultFilename {path: path, name: attrs.name.to_string(), filetype: ".hdf5".to_string()}
+}
+
+
+
+pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
+    let file = &get_result_filename("results", &attrs);
+
+    println!("Storing result data into: {}", format!("{}{}{}", file.path, file.name, file.filetype));
+
+    {
+        fs::create_dir_all(&file.path).ok();
+    }
+
     let _e = hdf5::silence_errors();
     {
-        let file = hdf5::File::create(full_path);
+        let file = hdf5::File::create(file.path_and_filename());
         match file {
             Ok(f) => {
                         let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
                         attributes.write(&[attrs.get_as_h5()]).ok();
                         
                         let times = f.new_dataset::<f64>().create("times", results.len())?;
-                        // let result_count = attrs.count as usize;
-                        let result_count = 10;
+                        let result_count = attrs.count as usize;
                         let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count))?;
                         let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count))?;                    
                          

@@ -15,7 +15,7 @@ fn main() {
     let build_time = 0.; // Not used
     let index_size = 0.; // Not used
     let algo_definition = "bruteforce";
-    let alg_name = "bruteforce(...)";
+    let alg_name = "bruteforce_basic";
 
     let best_search_time = f64::INFINITY;
 
@@ -47,7 +47,6 @@ fn main() {
     let search_time = total_time / dataset.len() as f64;
     let avg_candidates = total_candidates as f64 / dataset.len() as f64;
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }} ;
-    
 
     let attrs = util::Attributes {
         build_time: build_time,
