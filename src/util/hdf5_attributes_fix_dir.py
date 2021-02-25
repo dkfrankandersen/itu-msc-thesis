@@ -5,7 +5,7 @@ import traceback
 
 def write_attributes():
     use_input_path = "no"
-    path_file = "/mnt/e/repository/itu/thesis/itu-msc-thesis/src/util"
+    path_file = "/mnt/e/repository/itu/thesis/itu-msc-thesis/results"
     if len(sys.argv) < 2:
         print("Full filepath missing as args input")
         use_input_path = input(f"Use standard dir: {path_file} ? [yes/no]: ")

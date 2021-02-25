@@ -97,8 +97,8 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
 
     let _e = hdf5::silence_errors();
     {
-        let file = hdf5::File::create(file.path_and_filename());
-        match file {
+        let hdf5_file = hdf5::File::create(file.path_and_filename());
+        match hdf5_file {
             Ok(f) => {
                         let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
                         attributes.write(&[attrs.get_as_h5()]).ok();
@@ -116,6 +116,8 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
                             distances.write_slice(&res_dist, s![i,..]).ok();
                         }
                         times.write(&res_times).ok();
+                        println!("Call python attributes convert on file");
+                        println!("{:?}", file.path_and_filename());
             },
             Err(e) => println!("Error {}", e)
         }
