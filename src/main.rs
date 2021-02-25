@@ -67,13 +67,10 @@ fn main() {
 
     let store_result = util::store_results(results, attrs);
     match store_result {
-        Ok(file) => {
-                    println!("Trying to fix HDF5 attributes using python, on file\n{}", file);
-                    let res = util::hdf5_python_attributes_fix::run(file);
-                },
+        Ok(file) => {util::hdf5_attributes_fix::run(file).ok(); },
         Err(e) => println!("{}", e) 
     }
-
-    
+    println!("Hello there");
+   
 }
 

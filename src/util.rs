@@ -4,7 +4,7 @@ use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
 use ndarray::{s, Array1};
 use std::fs;
-pub mod hdf5_python_attributes_fix;
+pub mod hdf5_attributes_fix;
 
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
