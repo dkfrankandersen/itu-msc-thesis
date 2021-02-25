@@ -5,7 +5,7 @@ use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
-use util::{hdf5_store_file, hdf5_attributes_fix};
+use util::{store_results_and_fix_attributes, hdf5_store_file};
 
 
 fn main() {
@@ -65,11 +65,8 @@ fn main() {
         run_count: run_count
     };
 
-    let store_result = hdf5_store_file::store_results(results, attrs);
-    match store_result {
-        Ok(file) => {hdf5_attributes_fix::run(file).ok(); },
-        Err(e) => println!("{}", e) 
-    }
+    store_results_and_fix_attributes(results, attrs);
+
     println!("Hello there");
    
 }
