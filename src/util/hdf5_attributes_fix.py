@@ -35,7 +35,7 @@ def color_text(text):
 
 def convert():
     print(style.MAGENTA + "###########################################################")
-    print("### "+style.GREEN+f"ENTERING PYTHON3 ({os.path.basename(__file__)})"+style.MAGENTA+"            ###")
+    print("### "+style.GREEN+f"ENTERING PYTHON3 ({os.path.basename(__file__)})"+style.MAGENTA+"           ###")
     if len(sys.argv) < 2:
         print("###    Missing as args, expected a hdf5 file!")
     else:
@@ -62,6 +62,6 @@ def convert():
             except:
                 print(f"###    "+style.GREEN+"Was unable to read {path_file}"+style.MAGENTA+"            ###")
                 traceback.print_exc()  
-    print("### "+style.GREEN+"LEAVING PYTHON3"+style.MAGENTA+"                                      ###")
+    print("### "+style.GREEN+"LEAVING PYTHON3"+style.MAGENTA+"                                     ###")
     print("###########################################################" + style.RESET)
 convert()

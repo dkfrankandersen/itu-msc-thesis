@@ -1,11 +1,11 @@
 extern crate ndarray;
 extern crate hdf5;
 use std::time::{Instant, Duration};
-use std::collections::HashMap;
 use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
+use util::{hdf5_store_file, hdf5_attributes_fix};
 
 
 fn main() {
@@ -49,7 +49,7 @@ fn main() {
     let avg_candidates = total_candidates as f64 / dataset.len() as f64;
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }} ;
 
-    let attrs = util::Attributes {
+    let attrs = hdf5_store_file::Attributes {
         build_time: build_time,
         index_size: index_size,
         algo: algo_definition.to_string(),
@@ -65,9 +65,9 @@ fn main() {
         run_count: run_count
     };
 
-    let store_result = util::store_results(results, attrs);
+    let store_result = hdf5_store_file::store_results(results, attrs);
     match store_result {
-        Ok(file) => {util::hdf5_attributes_fix::run(file).ok(); },
+        Ok(file) => {hdf5_attributes_fix::run(file).ok(); },
         Err(e) => println!("{}", e) 
     }
     println!("Hello there");
