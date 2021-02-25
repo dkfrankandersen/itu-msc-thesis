@@ -4,6 +4,7 @@ use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
 use ndarray::{s, Array1};
 use std::fs;
+pub mod hdf5_python_attributes_fix;
 
 #[derive(hdf5::H5Type, Clone, PartialEq, Debug)]
 #[repr(C)]
@@ -86,7 +87,7 @@ fn get_result_filename(path: &str, attrs: &Attributes) -> ResultFilename {
 
 
 
-pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<()> {
+pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<String> {
     let file = &get_result_filename("results", &attrs);
 
     println!("Storing result data into: {}", format!("{}{}{}", file.path, file.name, file.filetype));
@@ -96,32 +97,34 @@ pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: At
     }
 
     let _e = hdf5::silence_errors();
-    {
-        let hdf5_file = hdf5::File::create(file.path_and_filename());
-        match hdf5_file {
-            Ok(f) => {
-                        let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
-                        attributes.write(&[attrs.get_as_h5()]).ok();
+    let hdf5_file = hdf5::File::create(file.path_and_filename());
+    match hdf5_file {
+        Ok(f) => {
+                    let attributes = f.new_dataset::<AttributesForH5>().create("attributes", 1)?;
+                    attributes.write(&[attrs.get_as_h5()]).ok();
+                    
+                    let times = f.new_dataset::<f64>().create("times", results.len())?;
+                    let result_count = attrs.count as usize;
+                    let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count))?;
+                    let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count))?;                    
                         
-                        let times = f.new_dataset::<f64>().create("times", results.len())?;
-                        let result_count = attrs.count as usize;
-                        let neighbors = f.new_dataset::<i32>().create("neighbors", (results.len(), result_count))?;
-                        let distances = f.new_dataset::<f64>().create("distances", (results.len(), result_count))?;                    
-                         
-                        let mut res_times: Vec<f64> = Vec::new();                       
-                        for (i, (time, result)) in results.iter().enumerate() { 
-                            res_times.push(*time); 
-                            let (res_neigh, res_dist): (Vec<usize>, Vec<f64>) = result.iter().cloned().unzip();
-                            neighbors.write_slice(&res_neigh, s![i,..]).ok();
-                            distances.write_slice(&res_dist, s![i,..]).ok();
-                        }
-                        times.write(&res_times).ok();
-                        println!("Call python attributes convert on file");
-                        println!("{:?}", file.path_and_filename());
-            },
-            Err(e) => println!("Error {}", e)
-        }
+                    let mut res_times: Vec<f64> = Vec::new();                       
+                    for (i, (time, result)) in results.iter().enumerate() { 
+                        res_times.push(*time); 
+                        let (res_neigh, res_dist): (Vec<usize>, Vec<f64>) = result.iter().cloned().unzip();
+                        neighbors.write_slice(&res_neigh, s![i,..]).ok();
+                        distances.write_slice(&res_dist, s![i,..]).ok();
+                    }
+                    times.write(&res_times).ok();
+                    println!("Call python attributes convert on file");
+                    println!("{:?}", file.path_and_filename());
+                    return Ok(file.path_and_filename());
+        },
+        Err(e) =>   { 
+                        println!("Error {}", e);
+                        return Err(e);
+                    }
     }
-    Ok(())
+    
 }
 

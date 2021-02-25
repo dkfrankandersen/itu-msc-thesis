@@ -5,6 +5,8 @@ import traceback
 
 def write_attributes(f, attributes):
     for attribute in attributes:
+        if isinstance(attribute, bytes):
+            attribute = attribute.decode('ascii', 'replace')
         (key, datatype, value) = attribute.split(":")
         if datatype == "int":
             val = int(value)
@@ -20,7 +22,7 @@ def write_attributes(f, attributes):
 
 def convert():
     use_input_path = "no"
-    root_path = "/mnt/e/repository/itu/thesis/itu-msc-thesis/"
+    root_path = ""
     if len(sys.argv) < 2:
         print("Full filepath missing as args input")
     else:

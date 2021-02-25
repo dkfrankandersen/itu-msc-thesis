@@ -1,11 +1,12 @@
 extern crate ndarray;
 extern crate hdf5;
 use std::time::{Instant, Duration};
+use std::collections::HashMap;
 use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
-use std::collections::HashMap;
+
 
 fn main() {
     let dataset_name = "glove-100-angular";
@@ -64,7 +65,15 @@ fn main() {
         run_count: run_count
     };
 
-    let saved = util::store_results(results, attrs);
-    println!("{:?}", saved);
+    let store_result = util::store_results(results, attrs);
+    match store_result {
+        Ok(file) => {
+                    println!("Trying to fix HDF5 attributes using python, on file\n{}", file);
+                    let res = util::hdf5_python_attributes_fix::run(file);
+                },
+        Err(e) => println!("{}", e) 
+    }
+
+    
 }
 
