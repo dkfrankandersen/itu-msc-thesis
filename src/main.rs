@@ -7,6 +7,14 @@ use algs::dataset::Dataset;
 mod util;
 use util::{store_results_and_fix_attributes, hdf5_store_file};
 
+// struct AlgoRun {
+//     dataset: String,    // "glove-100-angular"
+//     run_count: u32,
+//     result_count: u32,
+//     distance_type: String,  // "cosine"
+//     algo_definition: String, // Bruteforce, k
+//     alg_name: String
+// }
 
 fn main() {
     let dataset_name = "glove-100-angular";
@@ -32,11 +40,11 @@ fn main() {
     let dataset = &ds_test_norm;
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
-    // let v = &ds_test_norm.slice(s![0,..]);
+    // let p = &ds_test_norm.slice(s![0,..]);
         let result = algs::single_query(&p, &ds_train_norm.view(), result_count);
-        println!("{:?}", result);
+        // println!("{:?}", result);
         results.push(result);
-        if i > 5 {break}
+        // if i > 5 {break}
     }
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
