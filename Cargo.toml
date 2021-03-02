@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 hdf5 = "0.7.1"
 ndarray = "0.14.0"
+rand = "0.8.3"
 
 [lib]
 name = "hdf5_attribute_fix"
