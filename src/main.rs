@@ -47,6 +47,7 @@ fn main() {
         results.push(result);
         // if i > 5 {break}
     }
+    return;
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
     for (time, candidates) in results.iter() {
