@@ -7,8 +7,18 @@ use std::collections::HashMap;
 
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
 
+    /*
+        Init
+        Assign
+        Update
+        Repeat until convergence or some iteration count
+
+        Repeat X times, select best based on cluster density
+    */
+
     // 1. Init
     let k = 10;
+    let max_iterations = 100;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
     let mut rng = thread_rng();
     let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
@@ -52,6 +62,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     }
 
     // 3. Update
+    
     for (&key,vec) in codebook_cluster.iter() {
         let local_minima = &dataset.slice(s![idx,..]);
         let local_minima = &dataset.slice(s![idx,..]);
