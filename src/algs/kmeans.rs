@@ -52,7 +52,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
     
     let k = 2;
-    let max_iterations = 100;
+    let max_iterations = 2;
     let max_samples = 10;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
 
@@ -74,54 +74,71 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     println!("Dataset lenght: {}", n);
     println!("Init k-means with centroids: {:?}\n", init_k_sampled);
     print_codebook("Codebook after init", &codebook);
-    
-    // 2. Assign
-    println!("Let's look for my favorit centroid!");
-    for (idx, candidate) in dataset.outer_iter().enumerate() {
-        let mut best_centroid = 0;
-        let mut best_distance = f64::INFINITY;
-        for (&key, centroid) in codebook.iter() {
-            
-            let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-            if best_distance > distance {
-                best_centroid = key;
-                best_distance = distance;
 
-            }
-        }
-        codebook.get_mut(&best_centroid).unwrap().childern.push(idx);
-        // println!("Assign datapoint {} to centroid C{} ", idx, best_centroid);
-
-        if idx > 5 {
+    // Repeat until convergence or some iteration count
+    let mut iterations = 1;
+    loop {
+        
+        if iterations > max_iterations {
             break;
         }
-    }
+        println!("Iteration {}", iterations);
+        iterations += 1;
 
-    print_codebook("Codebook after assign", &codebook);
+        // Delete points associated to each centroid
+        for (_, centroid) in codebook.iter_mut() {
+            centroid.childern.clear();
+        }
 
-    // 3. Update
-    for (key, centroid) in codebook.iter_mut() {
-        
-            for i in 0..centroid.point.len() {
-                centroid.point[i] = 0.;
-            }
+        // 2. Assign
+        println!("Let's look for my favorit centroid!");
+        for (idx, candidate) in dataset.outer_iter().enumerate() {
+            let mut best_centroid = 0;
+            let mut best_distance = f64::INFINITY;
+            for (&key, centroid) in codebook.iter_mut() {
+                let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
+                if best_distance > distance {
+                    best_centroid = key;
+                    best_distance = distance;
 
-            for child_key in centroid.childern.iter() {
-                let child_point = dataset.slice(s![*child_key,..]);
-                for (i, x) in child_point.iter().enumerate() {
-                    centroid.point[i] += x;
                 }
             }
+            codebook.get_mut(&best_centroid).unwrap().childern.push(idx);
+            // println!("Assign datapoint {} to centroid C{} ", idx, best_centroid);
 
-            let dimensions = centroid.point.len() as f64;
-            for i in 0..centroid.point.len() {
-                centroid.point[i] = centroid.point[i]/dimensions;
-            }
+            // if idx > 200 {
+            //     break;
+            // }
+        }
+
+        print_codebook("Codebook after assign", &codebook);
+
+        // 3. Update
+        for (key, centroid) in codebook.iter_mut() {
+
+                for i in 0..centroid.point.len() {
+                    centroid.point[i] = 0.;
+                }
+
+                // println!("{}", centroid.point);
+
+                for child_key in centroid.childern.iter() {
+                    let child_point = dataset.slice(s![*child_key,..]);
+                    for (i, x) in child_point.iter().enumerate() {
+                        centroid.point[i] += x;
+                    }
+                }
+
+                let dimensions = centroid.point.len() as f64;
+                for i in 0..centroid.point.len() {
+                    centroid.point[i] = centroid.point[i]/dimensions;
+                }
+        }
+
+        print_codebook("Codebook after update", &codebook);
+
     }
-
-    print_codebook("Codebook after update", &codebook);
-
-    // 4. Repeat   
+    print_sum_codebook_childern("Does codebook contain all points?", &codebook, *n);
     
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
@@ -132,6 +149,14 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     best_n_candidates
 }
 
+fn print_sum_codebook_childern(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
+    println!("{}", info);
+    let mut sum = 0;
+    for (_, centroid) in codebook.iter() {
+        sum += centroid.childern.len();
+    }
+    println!("Childern: {} == {} dataset points, equal {}", sum, dataset_len, sum == dataset_len);
+}
 
 fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
     println!("{}", info);
