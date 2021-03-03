@@ -23,8 +23,12 @@ fn main() {
     let distance_type = "cosine";
     let build_time = 0.; // Not used
     let index_size = 0.; // Not used
-    let algo_definition = "bruteforce";
-    let alg_name = "bruteforce_basic";
+
+    // let algo_definition = "bruteforce";
+    // let alg_name = "bruteforce_basic";
+
+    let algo_definition = "kmeans";
+    let alg_name = "kmeans_basic";
 
     let best_search_time = f64::INFINITY;
 

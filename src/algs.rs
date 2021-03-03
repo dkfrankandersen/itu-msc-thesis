@@ -4,7 +4,7 @@ pub mod dataset;
 pub mod distance;
 pub mod pq;
 use std::time::{Instant, Duration};
-use ndarray::{ArrayView1, ArrayView2};
+use ndarray::{ArrayBase, ArrayView1, ArrayView2};
 use ndarray::{s};
 
 pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
@@ -22,4 +22,14 @@ pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count
     }
 
     (total_time.as_secs_f64(), candidates_dist)
+}
+
+
+trait Algorithm {
+    fn new(name: &'static str) -> Self;
+    fn name(&self) -> &'static str;
+    fn definition(&self) -> &'static str;
+
+    fn query(&self, p: &ArrayBase<ndarray::ViewRepr<&f64>, ndarray::Dim<[usize; 1]>>, 
+                    dataset: ArrayBase<ndarray::ViewRepr<&f64>, ndarray::Dim<[usize; 2]>>, result_count: u32) -> Vec<usize>;
 }
