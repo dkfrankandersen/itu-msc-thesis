@@ -5,6 +5,7 @@ use std::collections::BinaryHeap;
 use rand::prelude::*;
 use std::collections::HashMap;
 use std::cmp::Ordering;
+use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -36,7 +37,6 @@ impl Centroid {
 // }
 
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
-
     /*
         Repeat X times, select best based on cluster density {
             Repeat until convergence or some iteration count {
@@ -50,7 +50,6 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         Pick best result        
     */
 
-    
     let k = 2;
     let max_iterations = 2;
     let max_samples = 10;
@@ -76,9 +75,8 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     print_codebook("Codebook after init", &codebook);
 
     // Repeat until convergence or some iteration count
-    let mut iterations = 1;
+    let mut iterations = 2;
     loop {
-        
         if iterations > max_iterations {
             break;
         }
@@ -105,17 +103,12 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
             }
             codebook.get_mut(&best_centroid).unwrap().childern.push(idx);
             // println!("Assign datapoint {} to centroid C{} ", idx, best_centroid);
-
-            // if idx > 200 {
-            //     break;
-            // }
         }
 
         print_codebook("Codebook after assign", &codebook);
 
         // 3. Update
         for (key, centroid) in codebook.iter_mut() {
-
                 for i in 0..centroid.point.len() {
                     centroid.point[i] = 0.;
                 }
@@ -134,9 +127,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
                     centroid.point[i] = centroid.point[i]/dimensions;
                 }
         }
-
         print_codebook("Codebook after update", &codebook);
-
     }
     print_sum_codebook_childern("Does codebook contain all points?", &codebook, *n);
     
@@ -150,16 +141,16 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 }
 
 fn print_sum_codebook_childern(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
-    println!("{}", info);
+    println!("{}", info.to_string().on_white().black());
     let mut sum = 0;
     for (_, centroid) in codebook.iter() {
         sum += centroid.childern.len();
     }
-    println!("Childern: {} == {} dataset points, equal {}", sum, dataset_len, sum == dataset_len);
+    println!("Childern: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
 }
 
 fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
-    println!("{}", info);
+    println!("{}", info.to_string().on_white().black());
     for (key, centroid) in codebook.iter() {
         println!("-> centroid C{:?} |  Childern: {:?} | point sum: {:?}", key, centroid.childern.len(), centroid.point.sum());
     }
