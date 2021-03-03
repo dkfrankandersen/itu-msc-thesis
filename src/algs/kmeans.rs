@@ -50,8 +50,8 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         Pick best result        
     */
 
-    let k = 2;
-    let max_iterations = 2;
+    let k = 5;
+    let max_iterations = 100;
     let max_samples = 10;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
 
@@ -75,8 +75,16 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     print_codebook("Codebook after init", &codebook);
 
     // Repeat until convergence or some iteration count
-    let mut iterations = 2;
+    let mut iterations = 1;
+    let mut last_codebook;
     loop {
+        if codebook == last_codebook {
+            println!("Breaking because of max iterations reached {}", iterations);
+            break;
+        }
+        
+        last_codebook = codebook;
+
         if iterations > max_iterations {
             break;
         }
@@ -147,6 +155,12 @@ fn print_sum_codebook_childern(info: &str, codebook: &HashMap<i32, Centroid>, da
         sum += centroid.childern.len();
     }
     println!("Childern: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
+}
+
+fn codebook_simple_hash(info: &str, codebook: &HashMap<i32, Centroid>) {
+    for (key, centroid) in codebook.iter() {
+        println!("-> centroid C{:?} |  Childern: {:?} | point sum: {:?}", key, centroid.childern.len(), centroid.point.sum());
+    }
 }
 
 fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
