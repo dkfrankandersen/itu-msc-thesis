@@ -9,8 +9,8 @@ use ndarray::{s};
 
 pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    // let candidates = bruteforce::query(&p, &dataset, result_count);
-    let candidates = kmeans::query(&p, &dataset, result_count);
+    let candidates = bruteforce::query(&p, &dataset, result_count);
+    // let candidates = kmeans::query(&p, &dataset, result_count);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
 

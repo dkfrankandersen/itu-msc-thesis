@@ -76,14 +76,14 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
     // Repeat until convergence or some iteration count
     let mut iterations = 1;
-    let mut last_codebook;
+    // let mut last_codebook;
     loop {
-        if codebook == last_codebook {
-            println!("Breaking because of max iterations reached {}", iterations);
-            break;
-        }
+        // if codebook == last_codebook {
+        //     println!("Breaking because of max iterations reached {}", iterations);
+        //     break;
+        // }
         
-        last_codebook = codebook;
+        // last_codebook = codebook;
 
         if iterations > max_iterations {
             break;
