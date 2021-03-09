@@ -61,32 +61,30 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     let mut iterations = 1;
     let mut last_codebook = HashMap::new();
     loop {
-        println!("Iteration {}", iterations);
-
-        if iterations > max_iterations {
-            println!("Breaking because of max iterations reached, iterations: {}", iterations-1);
-            break;
+        if iterations == 1 || iterations % 10 == 0 {
+            println!("Iteration {}", iterations);
         }
         
 
-        if codebook == last_codebook {
-            println!("Equal: Breaking because, computation has converged, iterations: {}", iterations-1);
+        if iterations > max_iterations {
+            println!("Max iterations reached, iterations: {}", iterations);
+            break;
+        } else if codebook == last_codebook {
+            println!("Computation has converged, iterations: {}", iterations);
             break;
         }
 
         last_codebook = codebook.clone();
-        // print_codebook("Codebook", &codebook);
-        // print_codebook("Cloned Codebook", &last_codebook);
 
         // Delete points associated to each centroid
         for (_, centroid) in codebook.iter_mut() {
             centroid.children.clear();
         }
-        // print_codebook("Erased Codebook", &codebook);
+
         // 2. Assign
-        println!("Let's look for my favorit centroid!");
+        // println!("Let's look for my favorit centroid!");
         for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let mut best_centroid = 0;
+            let mut best_centroid = -1;
             let mut best_distance = f64::NEG_INFINITY;
             for (&key, centroid) in codebook.iter_mut() {
                 let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
@@ -95,20 +93,19 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
                     best_distance = distance;
                 }
             }
-            codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-            // println!("Assign datapoint {} to centroid C{} ", idx, best_centroid);
+            if best_centroid >= 0 {
+                codebook.get_mut(&best_centroid).unwrap().children.push(idx);
+            }            
         }
 
-        print_codebook("Codebook after assign", &codebook);
+        // print_codebook("Codebook after assign", &codebook);
 
         // 3. Update
-        for (key, centroid) in codebook.iter_mut() {
+        for (_, centroid) in codebook.iter_mut() {
                 for i in 0..centroid.point.len() {
                     centroid.point[i] = 0.;
                 }
-
-                // println!("{}", centroid.point);
-
+                
                 for child_key in centroid.children.iter() {
                     let child_point = dataset.slice(s![*child_key,..]);
                     for (i, x) in child_point.iter().enumerate() {
@@ -121,7 +118,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
                     centroid.point[i] = centroid.point[i]/dimensions;
                 }
         }
-        print_codebook("Codebook after update", &codebook);
+        // print_codebook("Codebook after update", &codebook);
         iterations += 1;
     }
     print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
@@ -131,6 +128,18 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
+    let mut best_candidates = BinaryHeap::new();
+    for (key, centroid) in codebook.iter() {
+        let dist_to_centroid = distance::cosine_similarity(&p, &centroid.point.view());
+
+    }
+
+    for (idx, candidate) in dataset.outer_iter().enumerate() {
+        best_candidates.push(pq::DataEntry {
+                                                index: idx,  
+                                                distance: distance::cosine_similarity(&p, &candidate)
+                                            });
+    }
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
     // for _ in 0..result_count {
