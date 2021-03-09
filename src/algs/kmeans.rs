@@ -67,10 +67,10 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         
 
         if iterations > max_iterations {
-            println!("Max iterations reached, iterations: {}", iterations);
+            println!("Max iterations reached, iterations: {}", iterations-1);
             break;
         } else if codebook == last_codebook {
-            println!("Computation has converged, iterations: {}", iterations);
+            println!("Computation has converged, iterations: {}", iterations-1);
             break;
         }
 
@@ -128,24 +128,36 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
+    let centroids_to_search = 1;
+    let mut best_centroids = BinaryHeap::new();
     let mut best_candidates = BinaryHeap::new();
     for (key, centroid) in codebook.iter() {
-        let dist_to_centroid = distance::cosine_similarity(&p, &centroid.point.view());
-
+        best_centroids.push(pq::DataEntry {
+            index: *key as usize,  
+            distance: distance::cosine_similarity(&p, &centroid.point.view())
+        });
     }
 
-    for (idx, candidate) in dataset.outer_iter().enumerate() {
-        best_candidates.push(pq::DataEntry {
-                                                index: idx,  
-                                                distance: distance::cosine_similarity(&p, &candidate)
-                                            });
+
+    for i in 0..centroids_to_search {
+        let centroid_key = best_centroids.pop().unwrap().index;
+        for candidate_key in codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
+            let candidate = dataset.slice(s![centroid_key as i32,..]);
+            best_candidates.push(pq::DataEntry {
+                                                    index: *candidate_key,  
+                                                    distance: distance::cosine_similarity(&p, &candidate)
+                                                });
+        }
     }
+
+    
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
-    // for _ in 0..result_count {
-    //     let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-    //     best_n_candidates.push(idx.index);
-    // }
+    for _ in 0..result_count {
+        let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
+        best_n_candidates.push(idx.index);
+    }
+    println!("best_n_candidates \n{:?}", best_n_candidates);
     best_n_candidates
 }
 
