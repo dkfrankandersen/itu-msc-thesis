@@ -10,14 +10,14 @@ use colored::*;
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
     pub point: Array1::<f64>,
-    pub childern: Vec::<usize>
+    pub children: Vec::<usize>
 }
 
 impl Centroid {
     fn new(point: Array1::<f64>) -> Centroid {
         Centroid {
             point: point,
-            childern: Vec::<usize>::new()
+            children: Vec::<usize>::new()
         }
     }
 }
@@ -36,6 +36,28 @@ impl Centroid {
 //     }
 // }
 
+fn is_codebook_stable(this: &HashMap::<i32, Centroid>, other: &HashMap::<i32, Centroid>) -> bool {
+
+    if this.len() != other.len() {
+        println!("is_codebook_stable: diff len.");
+        return false;
+    } else {
+        for (k, c) in this.iter() {
+            if !other.contains_key(k) {
+                println!("is_codebook_stable: key not found.");
+                return false;
+            } else {
+                    let o = other.get(k).unwrap();
+                    if o.children.len() != c.children.len() {
+                        println!("is_codebook_stable: children len not equal. k:{} {} {}", k, o.children.len(), c.children.len());
+                        return false;
+                    }
+                }
+            }
+        }
+    return true;
+}
+
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     /*
         Repeat X times, select best based on cluster density {
@@ -50,8 +72,8 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         Pick best result        
     */
 
-    let k = 5;
-    let max_iterations = 100;
+    let k = 2;
+    let max_iterations = 1000;
     let max_samples = 10;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
 
@@ -61,7 +83,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     let mut init_k_sampled: Vec<usize> = vec![];
     
     // 1. Init
-    let mut codebook = HashMap::new();
+    let mut codebook = HashMap::<i32, Centroid>::new();
     for i in 0..k {
         let rand_key = rng.sample(dist_uniform);
         init_k_sampled.push(rand_key);
@@ -76,16 +98,17 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
     // Repeat until convergence or some iteration count
     let mut iterations = 1;
-    // let mut last_codebook;
+    let mut last_codebook = HashMap::new();
     loop {
-        // if codebook == last_codebook {
-        //     println!("Breaking because of max iterations reached {}", iterations);
-        //     break;
-        // }
+        if codebook == last_codebook || is_codebook_stable(&codebook, &last_codebook) {
+            println!("Breaking because, computation has converged, iterations: {}", iterations-1);
+            break;
+        }
         
-        // last_codebook = codebook;
+        last_codebook = codebook.clone();
 
         if iterations > max_iterations {
+            println!("Breaking because of max iterations reached, iterations: {}", iterations-1);
             break;
         }
         println!("Iteration {}", iterations);
@@ -93,7 +116,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
         // Delete points associated to each centroid
         for (_, centroid) in codebook.iter_mut() {
-            centroid.childern.clear();
+            centroid.children.clear();
         }
 
         // 2. Assign
@@ -109,7 +132,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
                 }
             }
-            codebook.get_mut(&best_centroid).unwrap().childern.push(idx);
+            codebook.get_mut(&best_centroid).unwrap().children.push(idx);
             // println!("Assign datapoint {} to centroid C{} ", idx, best_centroid);
         }
 
@@ -123,7 +146,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
                 // println!("{}", centroid.point);
 
-                for child_key in centroid.childern.iter() {
+                for child_key in centroid.children.iter() {
                     let child_point = dataset.slice(s![*child_key,..]);
                     for (i, x) in child_point.iter().enumerate() {
                         centroid.point[i] += x;
@@ -137,7 +160,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         }
         print_codebook("Codebook after update", &codebook);
     }
-    print_sum_codebook_childern("Does codebook contain all points?", &codebook, *n);
+    print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
     
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
@@ -148,24 +171,24 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     best_n_candidates
 }
 
-fn print_sum_codebook_childern(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
+fn print_sum_codebook_children(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
     println!("{}", info.to_string().on_white().black());
     let mut sum = 0;
     for (_, centroid) in codebook.iter() {
-        sum += centroid.childern.len();
+        sum += centroid.children.len();
     }
-    println!("Childern: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
+    println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
 }
 
 fn codebook_simple_hash(info: &str, codebook: &HashMap<i32, Centroid>) {
     for (key, centroid) in codebook.iter() {
-        println!("-> centroid C{:?} |  Childern: {:?} | point sum: {:?}", key, centroid.childern.len(), centroid.point.sum());
+        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
     }
 }
 
 fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
     println!("{}", info.to_string().on_white().black());
     for (key, centroid) in codebook.iter() {
-        println!("-> centroid C{:?} |  Childern: {:?} | point sum: {:?}", key, centroid.childern.len(), centroid.point.sum());
+        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
     }
 }
