@@ -24,27 +24,6 @@ impl Centroid {
     }
 }
 
-fn is_codebooks_equal(this: &HashMap::<i32, Centroid>, other: &HashMap::<i32, Centroid>) -> bool {
-    if &this.len() != &other.len() {
-        println!("is_codebook_stable: diff len.");
-        return false;
-    }
-    for (k, tc) in this.iter() {
-        if !&other.contains_key(k) {
-            println!("is_codebook_stable: key not found.");
-            return false;
-        } else {
-                let oc = other.get(k).unwrap();
-                if tc.point != oc.point {
-                    println!("is_codebook_stable: centroid still moving k:{} this sum: {} other sum: {}", k, tc.point.sum(), oc.point.sum());
-                    return false;
-                }
-            }
-        }
-    return true;
-}
-
-
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     /*
         Repeat X times, select best based on cluster density {
@@ -97,11 +76,6 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
 
         if codebook == last_codebook {
             println!("Equal: Breaking because, computation has converged, iterations: {}", iterations-1);
-            break;
-        }
-
-        if is_codebooks_equal(&codebook, &last_codebook) {
-            println!("is_codebooks_equal: Breaking because, computation has converged, iterations: {}", iterations-1);
             break;
         }
 
