@@ -9,54 +9,41 @@ use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
+    id: i32,
     pub point: Array1::<f64>,
     pub children: Vec::<usize>
 }
 
 impl Centroid {
-    fn new(point: Array1::<f64>) -> Centroid {
+    fn new(id: i32, point: Array1::<f64>) -> Centroid {
         Centroid {
+            id: id,
             point: point,
             children: Vec::<usize>::new()
         }
     }
 }
 
-// impl Eq for Centroid {}
-
-// impl PartialOrd for Centroid {
-//     fn partial_cmp(&self, other: &Centroid) -> Option<Ordering> {
-//         self.point.partial_cmp(&other.point)
-//     }
-// }
-
-// impl Ord for Centroid {
-//     fn cmp(&self, other: &Centroid) -> Ordering {
-//         self.partial_cmp(other).unwrap()
-//     }
-// }
-
-fn is_codebook_stable(this: &HashMap::<i32, Centroid>, other: &HashMap::<i32, Centroid>) -> bool {
-
-    if this.len() != other.len() {
+fn is_codebooks_equal(this: &HashMap::<i32, Centroid>, other: &HashMap::<i32, Centroid>) -> bool {
+    if &this.len() != &other.len() {
         println!("is_codebook_stable: diff len.");
         return false;
-    } else {
-        for (k, c) in this.iter() {
-            if !other.contains_key(k) {
-                println!("is_codebook_stable: key not found.");
-                return false;
-            } else {
-                    let o = other.get(k).unwrap();
-                    if o.children.len() != c.children.len() {
-                        println!("is_codebook_stable: children len not equal. k:{} {} {}", k, o.children.len(), c.children.len());
-                        return false;
-                    }
+    }
+    for (k, tc) in this.iter() {
+        if !&other.contains_key(k) {
+            println!("is_codebook_stable: key not found.");
+            return false;
+        } else {
+                let oc = other.get(k).unwrap();
+                if tc.point != oc.point {
+                    println!("is_codebook_stable: centroid still moving k:{} this sum: {} other sum: {}", k, tc.point.sum(), oc.point.sum());
+                    return false;
                 }
             }
         }
     return true;
 }
+
 
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     /*
@@ -68,12 +55,12 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
             }
             Save result
         }
-        
-        Pick best result        
+
+        Pick best result
     */
 
     let k = 2;
-    let max_iterations = 1000;
+    let max_iterations = 200;
     let max_samples = 10;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
 
@@ -81,14 +68,14 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     let mut rng = thread_rng();
     let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
     let mut init_k_sampled: Vec<usize> = vec![];
-    
+
     // 1. Init
     let mut codebook = HashMap::<i32, Centroid>::new();
     for i in 0..k {
         let rand_key = rng.sample(dist_uniform);
         init_k_sampled.push(rand_key);
         let candidate = dataset.slice(s![rand_key,..]);
-        let new_centroid = Centroid::new(candidate.to_owned());
+        let new_centroid = Centroid::new(i, candidate.to_owned());
         codebook.insert(i, new_centroid);
     }
 
@@ -100,12 +87,6 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     let mut iterations = 1;
     let mut last_codebook = HashMap::new();
     loop {
-        if codebook == last_codebook || is_codebook_stable(&codebook, &last_codebook) {
-            println!("Breaking because, computation has converged, iterations: {}", iterations-1);
-            break;
-        }
-        
-        last_codebook = codebook.clone();
 
         if iterations > max_iterations {
             println!("Breaking because of max iterations reached, iterations: {}", iterations-1);
@@ -114,22 +95,35 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         println!("Iteration {}", iterations);
         iterations += 1;
 
+        if codebook == last_codebook {
+            println!("Equal: Breaking because, computation has converged, iterations: {}", iterations-1);
+            break;
+        }
+
+        if is_codebooks_equal(&codebook, &last_codebook) {
+            println!("is_codebooks_equal: Breaking because, computation has converged, iterations: {}", iterations-1);
+            break;
+        }
+
+        last_codebook = codebook.clone();
+        // print_codebook("Codebook", &codebook);
+        // print_codebook("Cloned Codebook", &last_codebook);
+
         // Delete points associated to each centroid
         for (_, centroid) in codebook.iter_mut() {
             centroid.children.clear();
         }
-
+        // print_codebook("Erased Codebook", &codebook);
         // 2. Assign
         println!("Let's look for my favorit centroid!");
         for (idx, candidate) in dataset.outer_iter().enumerate() {
             let mut best_centroid = 0;
-            let mut best_distance = f64::INFINITY;
+            let mut best_distance = f64::NEG_INFINITY;
             for (&key, centroid) in codebook.iter_mut() {
                 let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                if best_distance > distance {
+                if best_distance < distance {
                     best_centroid = key;
                     best_distance = distance;
-
                 }
             }
             codebook.get_mut(&best_centroid).unwrap().children.push(idx);
@@ -161,7 +155,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         print_codebook("Codebook after update", &codebook);
     }
     print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
-    
+
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
     // for _ in 0..result_count {
