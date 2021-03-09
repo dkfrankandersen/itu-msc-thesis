@@ -24,11 +24,11 @@ fn main() {
     let build_time = 0.; // Not used
     let index_size = 0.; // Not used
 
-    let algo_definition = "bruteforce";
-    let alg_name = "bruteforce_basic";
+    // let algo_definition = "bruteforce";
+    // let alg_name = "bruteforce_basic";
 
-    // let algo_definition = "kmeans";
-    // let alg_name = "kmeans_basic";
+    let algo_definition = "kmeans";
+    let alg_name = "kmeans_basic";
 
     let best_search_time = f64::INFINITY;
 
@@ -46,11 +46,12 @@ fn main() {
     for (i, p) in dataset.outer_iter().enumerate() {
     // let p = &ds_test_norm.slice(s![0,..]);
         let result = algs::single_query(&p, &ds_train_norm.view(), result_count);
-        // break;
+        break;
         println!("{:?}", result);
         results.push(result);
         if i > 5 {break}
     }
+    return;
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
     for (time, candidates) in results.iter() {
