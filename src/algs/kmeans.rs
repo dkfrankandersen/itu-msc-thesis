@@ -121,16 +121,18 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         // print_codebook("Codebook after update", &codebook);
         iterations += 1;
     }
+
     print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
+    print_codebook("Codebook status", &codebook);
     codebook
 }
 
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
-    let centroids_to_search = 1;
+    let centroids_to_search = 10;
     let mut best_centroids = BinaryHeap::new();
-    let mut best_candidates = BinaryHeap::new();
+    
     for (key, centroid) in codebook.iter() {
         best_centroids.push(pq::DataEntry {
             index: *key as usize,  
@@ -138,9 +140,12 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         });
     }
 
+    println!("best_centroids: {:?}", best_centroids);
 
-    for i in 0..centroids_to_search {
+    let mut best_candidates = BinaryHeap::new();
+    for _ in 0..centroids_to_search {
         let centroid_key = best_centroids.pop().unwrap().index;
+        println!("{}", centroid_key);
         for candidate_key in codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
             let candidate = dataset.slice(s![centroid_key as i32,..]);
             best_candidates.push(pq::DataEntry {
