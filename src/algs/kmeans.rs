@@ -24,7 +24,7 @@ impl Centroid {
     }
 }
 
-pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
+pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
     /*
         Repeat X times, select best based on cluster density {
             Repeat until convergence or some iteration count {
@@ -38,12 +38,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         Pick best result
     */
 
-    let k = 2;
-    let max_iterations = 200;
-    let max_samples = 10;
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
-
-
     let mut rng = thread_rng();
     let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
     let mut init_k_sampled: Vec<usize> = vec![];
@@ -66,13 +61,13 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     let mut iterations = 1;
     let mut last_codebook = HashMap::new();
     loop {
+        println!("Iteration {}", iterations);
 
         if iterations > max_iterations {
             println!("Breaking because of max iterations reached, iterations: {}", iterations-1);
             break;
         }
-        println!("Iteration {}", iterations);
-        iterations += 1;
+        
 
         if codebook == last_codebook {
             println!("Equal: Breaking because, computation has converged, iterations: {}", iterations-1);
@@ -127,9 +122,15 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
                 }
         }
         print_codebook("Codebook after update", &codebook);
+        iterations += 1;
     }
     print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
+    codebook
+}
 
+pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
+    
+    let codebook = kmeans(10, 200, 10, dataset);
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
     // for _ in 0..result_count {
