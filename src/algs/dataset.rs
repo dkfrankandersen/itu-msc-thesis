@@ -8,7 +8,7 @@ pub struct Dataset {
 
 impl Dataset {
 
-    pub fn new(filename: &str) -> Dataset {
+    pub fn new(filename: &str) -> Self {
         Dataset {
             filename: filename.to_string(),
             hdf5_file: hdf5::File::open(filename.to_string()).unwrap()
