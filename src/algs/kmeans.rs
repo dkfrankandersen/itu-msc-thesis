@@ -24,13 +24,27 @@ impl Centroid {
     }
 }
 
+fn print_sum_codebook_children(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
+    println!("{}", info.to_string().on_white().black());
+    let mut sum = 0;
+    for (_, centroid) in codebook.iter() {
+        sum += centroid.children.len();
+    }
+    println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
+}
+
+fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
+    println!("{}", info.to_string().on_white().black());
+    for (key, centroid) in codebook.iter() {
+        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
+    }
+}
+
 pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
     /*
         Repeat X times, select best based on cluster density {
             Repeat until convergence or some iteration count {
-                Init
-                Assign
-                Update
+                Init -> Assign -> Update
             }
             Save result
         }
@@ -43,7 +57,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
     let mut init_k_sampled: Vec<usize> = vec![];
 
-    // 1. Init
+    // Init
     let mut codebook = HashMap::<i32, Centroid>::new();
     for i in 0..k {
         let rand_key = rng.sample(dist_uniform);
@@ -64,8 +78,6 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         if iterations == 1 || iterations % 10 == 0 {
             println!("Iteration {}", iterations);
         }
-        
-
         if iterations > max_iterations {
             println!("Max iterations reached, iterations: {}", iterations-1);
             break;
@@ -81,7 +93,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
             centroid.children.clear();
         }
 
-        // 2. Assign
+        // Assign
         // println!("Let's look for my favorit centroid!");
         for (idx, candidate) in dataset.outer_iter().enumerate() {
             let mut best_centroid = -1;
@@ -100,7 +112,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
 
         // print_codebook("Codebook after assign", &codebook);
 
-        // 3. Update
+        // Update
         for (_, centroid) in codebook.iter_mut() {
                 for i in 0..centroid.point.len() {
                     centroid.point[i] = 0.;
@@ -155,8 +167,6 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
         }
     }
 
-    
-
     let mut best_n_candidates: Vec<usize> = Vec::new();
     for _ in 0..result_count {
         let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
@@ -164,26 +174,4 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     }
     println!("best_n_candidates \n{:?}", best_n_candidates);
     best_n_candidates
-}
-
-fn print_sum_codebook_children(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
-    println!("{}", info.to_string().on_white().black());
-    let mut sum = 0;
-    for (_, centroid) in codebook.iter() {
-        sum += centroid.children.len();
-    }
-    println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
-}
-
-fn codebook_simple_hash(info: &str, codebook: &HashMap<i32, Centroid>) {
-    for (key, centroid) in codebook.iter() {
-        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
-    }
-}
-
-fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
-    println!("{}", info.to_string().on_white().black());
-    for (key, centroid) in codebook.iter() {
-        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
-    }
 }
