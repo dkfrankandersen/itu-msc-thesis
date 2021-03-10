@@ -137,7 +137,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     codebook
 }
 
-pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
+pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: &u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
     let centroids_to_search = 3;
@@ -162,18 +162,30 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
             } 
             let candidate = dataset.slice(s![*candidate_key as i32,..]);
             let dist = distance::cosine_similarity(&p, &candidate);
-            best_candidates.push(pq::DataEntry {
-                                                    index: *candidate_key,  
-                                                    distance: dist
-                                                });
+            if best_candidates.len() < *result_count as usize {
+                best_candidates.push(pq::DataEntry {
+                    index: *candidate_key,  
+                    distance: -dist
+                });
+            } else {
+                let min_val: pq::DataEntry = *best_candidates.peek().unwrap();
+                if dist > -min_val.distance {
+                    best_candidates.pop();
+                    best_candidates.push(pq::DataEntry {
+                        index: *candidate_key,  
+                        distance: -dist
+                    });
+                }
+            }
         }
     }
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
-    for _ in 0..result_count {
+    for _ in 0..best_candidates.len() {
         let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
         best_n_candidates.push(idx.index);
     }
+    best_n_candidates.reverse();
     println!("best_n_candidates \n{:?}", best_n_candidates);
     best_n_candidates
 }
