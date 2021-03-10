@@ -137,7 +137,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     codebook
 }
 
-pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: &u32) -> Vec<usize> {
+pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
     let centroids_to_search = 3;
@@ -162,7 +162,7 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: &
             } 
             let candidate = dataset.slice(s![*candidate_key as i32,..]);
             let dist = distance::cosine_similarity(&p, &candidate);
-            if best_candidates.len() < *result_count as usize {
+            if best_candidates.len() < result_count as usize {
                 best_candidates.push(pq::DataEntry {
                     index: *candidate_key,  
                     distance: -dist

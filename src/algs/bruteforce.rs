@@ -7,17 +7,31 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     
     let mut best_candidates = BinaryHeap::new();
     for (idx, candidate) in dataset.outer_iter().enumerate() {
-        best_candidates.push(pq::DataEntry {
-                                                index: idx,  
-                                                distance: distance::cosine_similarity(&p, &candidate)
-                                            });
+        let dist = distance::cosine_similarity(&p, &candidate);
+            if best_candidates.len() < result_count as usize {
+                best_candidates.push(pq::DataEntry {
+                    index: idx,  
+                    distance: -dist
+                });
+            } else {
+                let min_val: pq::DataEntry = *best_candidates.peek().unwrap();
+                if dist > -min_val.distance {
+                    best_candidates.pop();
+                    best_candidates.push(pq::DataEntry {
+                        index: idx,  
+                        distance: -dist
+                    });
+                }
+            }
     }
 
     let mut best_n_candidates: Vec<usize> = Vec::new();
-    for _ in 0..result_count {
+    for _ in 0..best_candidates.len() {
         let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
         best_n_candidates.push(idx.index);
     }
+    best_n_candidates.reverse();
+    
     best_n_candidates
 }
 
