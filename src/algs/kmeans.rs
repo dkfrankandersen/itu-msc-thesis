@@ -1,10 +1,9 @@
-use ndarray::{ArrayBase, Array, Array1, Array2, ArrayView1, ArrayView2, s};
+use ndarray::{Array1, ArrayView1, ArrayView2, s};
 use crate::algs::distance;
 use crate::algs::pq;
 use std::collections::BinaryHeap;
 use rand::prelude::*;
 use std::collections::HashMap;
-use std::cmp::Ordering;
 use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -125,9 +124,8 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
                     }
                 }
 
-                let dimensions = centroid.point.len() as f64;
                 for i in 0..centroid.point.len() {
-                    centroid.point[i] = centroid.point[i]/dimensions;
+                    centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
                 }
         }
         // print_codebook("Codebook after update", &codebook);
@@ -142,7 +140,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
 pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
     
     let codebook = kmeans(10, 200, 10, dataset);
-    let centroids_to_search = 10;
+    let centroids_to_search = 3;
     let mut best_centroids = BinaryHeap::new();
     
     for (key, centroid) in codebook.iter() {
@@ -157,12 +155,16 @@ pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u
     let mut best_candidates = BinaryHeap::new();
     for _ in 0..centroids_to_search {
         let centroid_key = best_centroids.pop().unwrap().index;
-        println!("{}", centroid_key);
         for candidate_key in codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
-            let candidate = dataset.slice(s![centroid_key as i32,..]);
+            let neighbors = vec![97478, 262700, 846101, 671078, 232287, 727732, 544474, 1133489, 723915, 660281];
+            if neighbors.contains(candidate_key) {
+                println!("Best neighbor {:?} is in centroid: {:?}", candidate_key, centroid_key);
+            } 
+            let candidate = dataset.slice(s![*candidate_key as i32,..]);
+            let dist = distance::cosine_similarity(&p, &candidate);
             best_candidates.push(pq::DataEntry {
                                                     index: *candidate_key,  
-                                                    distance: distance::cosine_similarity(&p, &candidate)
+                                                    distance: dist
                                                 });
         }
     }
