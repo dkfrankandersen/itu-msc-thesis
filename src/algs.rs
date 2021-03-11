@@ -9,7 +9,7 @@ use ndarray::{s};
 use bruteforce::Bruteforce;
 use kmeans::KMeans;
 
-pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
     // let alg = Bruteforce::new("bruteforce");
     // let mut alg = Bruteforce::new();
