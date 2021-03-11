@@ -4,13 +4,18 @@ pub mod dataset;
 pub mod distance;
 pub mod pq;
 use std::time::{Instant, Duration};
-use ndarray::{ArrayBase, ArrayView1, ArrayView2};
+use ndarray::{ArrayBase, ArrayView1, ArrayView2, Array2};
 use ndarray::{s};
+use bruteforce::Bruteforce;
 
 pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let alg = Bruteforce::new("bruteforce");
-    let candidates = bruteforce::query(&p, &dataset, result_count);
+    // let alg = Bruteforce::new("bruteforce");
+    let alg = Bruteforce::new();
+    // let dataset = Array2::from(vec![vec![1;1];1]);
+    alg.fit(*dataset);
+    let candidates = alg.query(&p, result_count);
+    // let candidates = bruteforce::query(&p, &dataset, result_count);
     // let candidates = kmeans::query(&p, &dataset, result_count);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
@@ -25,29 +30,17 @@ pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count
     (total_time.as_secs_f64(), candidates_dist)
 }
 
-
-// trait Algorithm {
-//     fn new(name: &'static str) -> Self;
-//     fn name(&self) -> &'static str;
-//     fn definition(&self) -> &'static str;
-
-//     fn query(&self, p: &ArrayBase<ndarray::ViewRepr<&f64>, ndarray::Dim<[usize; 1]>>, 
-//                     dataset: ArrayBase<ndarray::ViewRepr<&f64>, ndarray::Dim<[usize; 2]>>, result_count: u32) -> Vec<usize>;
-// }
-
-
-
 trait AlgorithmImpl {
 
-    fn new(&self, name: String) -> Self;
+    fn new() -> Self;
 
     fn done(&self);
 
     fn get_memory_usage(&self);
 
-    fn fit(&self);
+    fn fit(&mut self, dataset: ArrayView2::<f64>);
 
-    fn query(&self, p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize>;
+    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize>;
 
     fn batch_query(&self);
 

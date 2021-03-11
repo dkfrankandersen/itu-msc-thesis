@@ -51,12 +51,12 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         Pick best result
     */
 
+    // fn init(k: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+        // Init
     let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
     let mut rng = thread_rng();
     let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
     let mut init_k_sampled: Vec<usize> = vec![];
-
-    // Init
     let mut codebook = HashMap::<i32, Centroid>::new();
     for i in 0..k {
         let rand_key = rng.sample(dist_uniform);
@@ -69,6 +69,10 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     println!("Dataset lenght: {}", n);
     println!("Init k-means with centroids: {:?}\n", init_k_sampled);
     print_codebook("Codebook after init", &codebook);
+    // codebook
+    // }
+    
+    // let codebook = init(k, dataset);
 
     // Repeat until convergence or some iteration count
     let mut iterations = 1;
@@ -92,22 +96,27 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
             centroid.children.clear();
         }
 
-        // Assign
-        // println!("Let's look for my favorit centroid!");
-        for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let mut best_centroid = -1;
-            let mut best_distance = f64::NEG_INFINITY;
-            for (&key, centroid) in codebook.iter_mut() {
-                let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                if best_distance < distance {
-                    best_centroid = key;
-                    best_distance = distance;
+        // fn assign(codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) {
+            // Assign
+            // println!("Let's look for my favorit centroid!");
+            for (idx, candidate) in dataset.outer_iter().enumerate() {
+                let mut best_centroid = -1;
+                let mut best_distance = f64::NEG_INFINITY;
+                for (&key, centroid) in codebook.iter_mut() {
+                    let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
+                    if best_distance < distance {
+                        best_centroid = key;
+                        best_distance = distance;
+                    }
                 }
+                if best_centroid >= 0 {
+                    codebook.get_mut(&best_centroid).unwrap().children.push(idx);
+                }            
             }
-            if best_centroid >= 0 {
-                codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-            }            
-        }
+        // }
+
+        // assign(codebook, dataset);
+        
 
         // print_codebook("Codebook after assign", &codebook);
 
@@ -132,7 +141,7 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         iterations += 1;
     }
 
-    print_sum_codebook_children("Does codebook contain all points?", &codebook, *n);
+    print_sum_codebook_children("Does codebook contain all points?", &codebook, dataset.shape()[0]);
     print_codebook("Codebook status", &codebook);
     codebook
 }

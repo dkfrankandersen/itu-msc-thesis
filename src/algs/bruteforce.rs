@@ -4,27 +4,33 @@ use crate::algs::pq;
 use crate::algs::*;
 use std::collections::BinaryHeap;
 
-struct Bruteforce {
-    name: String
+pub struct Bruteforce {
+    name: String,
+    metric: String,
+    dataset: Option<Array2::<f64>>
 }
 
 impl AlgorithmImpl for Bruteforce {
 
-    fn new(&self, name: String) -> Self {
+    fn new() -> Self {
         Bruteforce {
-            name: name
+            name: "FANN_bruteforce()".to_string(),
+            metric: "cosine".to_string(),
+            dataset: None
         }
     }
 
     fn __str__(&self) {
-        self.name;
+        self.name.to_string();
     }
 
     fn done(&self) {}
 
     fn get_memory_usage(&self) {}
 
-    fn fit(&self) {}
+    fn fit(&mut self, dataset: ArrayView2::<f64>) {
+        self.dataset = Some(dataset.to_owned());
+    }
 
     fn batch_query(&self) {}
 
@@ -34,9 +40,12 @@ impl AlgorithmImpl for Bruteforce {
         
     }
     
-    fn query(&self, p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::new();
-        for (idx, candidate) in dataset.outer_iter().enumerate() {
+        if self.dataset.is_none() {
+            println!("Dataset missing");
+        }
+        for (idx, candidate) in self.dataset.as_ref().unwrap().outer_iter().enumerate() {
             let dist = distance::cosine_similarity(&p, &candidate);
             if best_candidates.len() < result_count as usize {
                 best_candidates.push(pq::DataEntry {
