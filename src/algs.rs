@@ -32,6 +32,8 @@ pub fn run_individual_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, resu
     (total_time.as_secs_f64(), candidates_dist)
 }
 
+struct Algorithm {}
+
 trait AlgorithmImpl {
 
     // fn new() -> Self;

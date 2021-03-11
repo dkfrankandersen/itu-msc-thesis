@@ -47,9 +47,9 @@ fn main() {
     // let p = &ds_test_norm.slice(s![0,..]);
         let result = algs::run_individual_query(&p, &ds_train_norm.view(), result_count);
         println!("{:?}", result);
-        break;
+        // break;
         results.push(result);
-        if i > 5 {break}
+        // if i > 5 {break}
     }
     return;
     let mut total_time: f64 = 0.;
