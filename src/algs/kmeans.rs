@@ -61,21 +61,8 @@ impl KMeans {
             println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
         }
     }
-    
-    fn kmeans(&self, k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
-        /*
-            Repeat X times, select best based on cluster density { NOT IMPLEMENTED
-                Repeat until convergence or some iteration count {
-                    Init -> Assign -> Update
-                }
-                Save result
-            }
-    
-            Pick best result
-        */
-    
-        // fn init(k: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
-            // Init
+
+    fn init(&self, k: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
         let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
         let mut rng = thread_rng();
         let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
@@ -92,10 +79,24 @@ impl KMeans {
         println!("Dataset lenght: {}", n);
         println!("Init k-means with centroids: {:?}\n", init_k_sampled);
         self.print_codebook("Codebook after init", &codebook);
-        // codebook
-        // }
+        codebook
+    }
+    
+    fn kmeans(&self, k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+        /*
+            Repeat X times, select best based on cluster density { NOT IMPLEMENTED
+                Repeat until convergence or some iteration count {
+                    Init -> Assign -> Update
+                }
+                Save result
+            }
+    
+            Pick best result
+        */
+    
         
-        // let codebook = init(k, dataset);
+        
+        let mut codebook = self.init(k, dataset);
     
         // Repeat until convergence or some iteration count
         let mut iterations = 1;
