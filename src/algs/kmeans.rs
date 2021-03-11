@@ -81,6 +81,25 @@ impl KMeans {
         self.print_codebook("Codebook after init", &codebook);
         codebook
     }
+
+    fn assign(&self, mut codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+        // println!("Let's look for my favorit centroid!");
+        for (idx, candidate) in dataset.outer_iter().enumerate() {
+            let mut best_centroid = -1;
+            let mut best_distance = f64::NEG_INFINITY;
+            for (&key, centroid) in codebook.iter_mut() {
+                let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
+                if best_distance < distance {
+                    best_centroid = key;
+                    best_distance = distance;
+                }
+            }
+            if best_centroid >= 0 {
+                codebook.get_mut(&best_centroid).unwrap().children.push(idx);
+            }            
+        }
+        codebook
+    }
     
     fn kmeans(&self, k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
         /*
@@ -93,9 +112,7 @@ impl KMeans {
     
             Pick best result
         */
-    
-        
-        
+
         let mut codebook = self.init(k, dataset);
     
         // Repeat until convergence or some iteration count
@@ -119,27 +136,8 @@ impl KMeans {
             for (_, centroid) in codebook.iter_mut() {
                 centroid.children.clear();
             }
-    
-            // fn assign(codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) {
-                // Assign
-                // println!("Let's look for my favorit centroid!");
-                for (idx, candidate) in dataset.outer_iter().enumerate() {
-                    let mut best_centroid = -1;
-                    let mut best_distance = f64::NEG_INFINITY;
-                    for (&key, centroid) in codebook.iter_mut() {
-                        let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                        if best_distance < distance {
-                            best_centroid = key;
-                            best_distance = distance;
-                        }
-                    }
-                    if best_centroid >= 0 {
-                        codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-                    }            
-                }
-            // }
-    
-            // assign(codebook, dataset);
+
+            codebook = self.assign(codebook, dataset);
             // print_codebook("Codebook after assign", &codebook);
     
             // Update
