@@ -10,15 +10,17 @@ pub struct Bruteforce {
     dataset: Option<Array2::<f64>>
 }
 
-impl AlgorithmImpl for Bruteforce {
-
-    fn new() -> Self {
+impl Bruteforce {
+    pub fn new() -> Self {
         Bruteforce {
             name: "FANN_bruteforce()".to_string(),
             metric: "cosine".to_string(),
             dataset: None
         }
     }
+}
+
+impl AlgorithmImpl for Bruteforce {
 
     fn __str__(&self) {
         self.name.to_string();
@@ -71,7 +73,6 @@ impl AlgorithmImpl for Bruteforce {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        
         best_n_candidates
     }
 }

@@ -1,6 +1,7 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
 use crate::algs::distance;
 use crate::algs::pq;
+use crate::algs::*;
 use std::collections::BinaryHeap;
 use rand::prelude::*;
 use std::collections::HashMap;
@@ -39,9 +40,9 @@ fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
     }
 }
 
-pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+pub fn kmeans(k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
     /*
-        Repeat X times, select best based on cluster density {
+        Repeat X times, select best based on cluster density { NOT IMPLEMENTED
             Repeat until convergence or some iteration count {
                 Init -> Assign -> Update
             }
@@ -116,8 +117,6 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
         // }
 
         // assign(codebook, dataset);
-        
-
         // print_codebook("Codebook after assign", &codebook);
 
         // Update
@@ -146,55 +145,110 @@ pub fn kmeans(k: i32, max_iterations: i32, max_samples: i32, dataset: &ArrayView
     codebook
 }
 
-pub fn query(p: &ArrayView1::<f64>, dataset: &ArrayView2::<f64>, result_count: u32) -> Vec<usize> {
-    
-    let codebook = kmeans(10, 200, 10, dataset);
-    let centroids_to_search = 3;
-    let mut best_centroids = BinaryHeap::new();
-    
-    for (key, centroid) in codebook.iter() {
-        best_centroids.push(pq::DataEntry {
-            index: *key as usize,  
-            distance: distance::cosine_similarity(&p, &centroid.point.view())
-        });
+pub struct KMeans {
+    name: String,
+    metric: String,
+    dataset: Option<Array2::<f64>>,
+    codebook: Option<HashMap::<i32, Centroid>>,
+    clusters: i32,
+    max_iterations: i32
+}
+
+impl KMeans {
+
+    pub fn new(clusters: i32, max_iterations: i32) -> Self {
+        KMeans {
+            name: "FANN_bruteforce()".to_string(),
+            metric: "cosine".to_string(),
+            dataset: None,
+            codebook: None,
+            clusters: clusters,
+            max_iterations: max_iterations
+        }
+    }
+}
+
+impl AlgorithmImpl for KMeans {
+
+    fn __str__(&self) {
+        self.name.to_string();
     }
 
-    println!("best_centroids: {:?}", best_centroids);
+    fn done(&self) {}
 
-    let mut best_candidates = BinaryHeap::new();
-    for _ in 0..centroids_to_search {
-        let centroid_key = best_centroids.pop().unwrap().index;
-        for candidate_key in codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
-            let neighbors = vec![97478, 262700, 846101, 671078, 232287, 727732, 544474, 1133489, 723915, 660281];
-            if neighbors.contains(candidate_key) {
-                println!("Best neighbor {:?} is in centroid: {:?}", candidate_key, centroid_key);
-            } 
-            let candidate = dataset.slice(s![*candidate_key as i32,..]);
-            let dist = distance::cosine_similarity(&p, &candidate);
-            if best_candidates.len() < result_count as usize {
-                best_candidates.push(pq::DataEntry {
-                    index: *candidate_key,  
-                    distance: -dist
-                });
-            } else {
-                let min_val: pq::DataEntry = *best_candidates.peek().unwrap();
-                if dist > -min_val.distance {
-                    best_candidates.pop();
+    fn get_memory_usage(&self) {}
+
+    fn fit(&mut self, dataset: ArrayView2::<f64>) {
+        self.dataset = Some(dataset.to_owned());
+        self.codebook = Some(kmeans(self.clusters, self.max_iterations, &dataset));
+        
+    }
+
+    fn batch_query(&self) {}
+
+    fn get_batch_results(&self) {}
+    
+    fn get_additional(&self) {
+        
+    }
+
+    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    
+        if self.dataset.is_none() {
+            println!("Dataset missing");
+            return Vec::new();
+        }
+        let ds = &self.dataset.as_ref().unwrap().view();
+        let codebook = self.codebook.as_ref().unwrap();
+        let centroids_to_search = 3;
+        let mut best_centroids = BinaryHeap::new();
+        
+        for (key, centroid) in codebook.iter() {
+            best_centroids.push(pq::DataEntry {
+                index: *key as usize,  
+                distance: distance::cosine_similarity(&p, &centroid.point.view())
+            });
+        }
+    
+        println!("best_centroids: {:?}", best_centroids);
+    
+        let mut best_candidates = BinaryHeap::new();
+        for _ in 0..centroids_to_search {
+            let centroid_key = best_centroids.pop().unwrap().index;
+            for candidate_key in codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
+                let neighbors = vec![97478, 262700, 846101, 671078, 232287, 727732, 544474, 1133489, 723915, 660281];
+                if neighbors.contains(candidate_key) {
+                    println!("Best neighbor {:?} is in centroid: {:?}", candidate_key, centroid_key);
+                } 
+                let candidate = ds.slice(s![*candidate_key as i32,..]);
+                let dist = distance::cosine_similarity(&p, &candidate);
+                if best_candidates.len() < result_count as usize {
                     best_candidates.push(pq::DataEntry {
                         index: *candidate_key,  
                         distance: -dist
                     });
+                } else {
+                    let min_val: pq::DataEntry = *best_candidates.peek().unwrap();
+                    if dist > -min_val.distance {
+                        best_candidates.pop();
+                        best_candidates.push(pq::DataEntry {
+                            index: *candidate_key,  
+                            distance: -dist
+                        });
+                    }
                 }
             }
         }
+    
+        let mut best_n_candidates: Vec<usize> = Vec::new();
+        for _ in 0..best_candidates.len() {
+            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
+            best_n_candidates.push(idx.index);
+        }
+        best_n_candidates.reverse();
+        println!("best_n_candidates \n{:?}", best_n_candidates);
+        best_n_candidates
     }
 
-    let mut best_n_candidates: Vec<usize> = Vec::new();
-    for _ in 0..best_candidates.len() {
-        let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-        best_n_candidates.push(idx.index);
-    }
-    best_n_candidates.reverse();
-    println!("best_n_candidates \n{:?}", best_n_candidates);
-    best_n_candidates
 }
+
