@@ -100,6 +100,26 @@ impl KMeans {
         }
         codebook
     }
+
+    fn update(&self, mut codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+        for (_, centroid) in codebook.iter_mut() {
+            for i in 0..centroid.point.len() {
+                centroid.point[i] = 0.;
+            }
+            
+            for child_key in centroid.children.iter() {
+                let child_point = dataset.slice(s![*child_key,..]);
+                for (i, x) in child_point.iter().enumerate() {
+                    centroid.point[i] += x;
+                }
+            }
+
+            for i in 0..centroid.point.len() {
+                centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
+            }
+        }
+        codebook
+    }
     
     fn kmeans(&self, k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
         /*
@@ -109,7 +129,6 @@ impl KMeans {
                 }
                 Save result
             }
-    
             Pick best result
         */
 
@@ -117,7 +136,7 @@ impl KMeans {
     
         // Repeat until convergence or some iteration count
         let mut iterations = 1;
-        let mut last_codebook = HashMap::new();
+        let mut last_codebook: HashMap::<i32, Centroid> = HashMap::new();
         loop {
             if iterations == 1 || iterations % 10 == 0 {
                 println!("Iteration {}", iterations);
@@ -139,25 +158,10 @@ impl KMeans {
 
             codebook = self.assign(codebook, dataset);
             // print_codebook("Codebook after assign", &codebook);
-    
-            // Update
-            for (_, centroid) in codebook.iter_mut() {
-                    for i in 0..centroid.point.len() {
-                        centroid.point[i] = 0.;
-                    }
-                    
-                    for child_key in centroid.children.iter() {
-                        let child_point = dataset.slice(s![*child_key,..]);
-                        for (i, x) in child_point.iter().enumerate() {
-                            centroid.point[i] += x;
-                        }
-                    }
-    
-                    for i in 0..centroid.point.len() {
-                        centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
-                    }
-            }
+
+            codebook = self.update(codebook, dataset);
             // print_codebook("Codebook after update", &codebook);
+
             iterations += 1;
         }
     
