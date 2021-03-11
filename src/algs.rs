@@ -11,9 +11,9 @@ use bruteforce::Bruteforce;
 pub fn single_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
     // let alg = Bruteforce::new("bruteforce");
-    let alg = Bruteforce::new();
+    let mut alg = Bruteforce::new();
     // let dataset = Array2::from(vec![vec![1;1];1]);
-    alg.fit(*dataset);
+    alg.fit(dataset.view());
     let candidates = alg.query(&p, result_count);
     // let candidates = bruteforce::query(&p, &dataset, result_count);
     // let candidates = kmeans::query(&p, &dataset, result_count);
