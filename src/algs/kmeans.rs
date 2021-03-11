@@ -24,127 +24,6 @@ impl Centroid {
     }
 }
 
-fn print_sum_codebook_children(info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
-    println!("{}", info.to_string().on_white().black());
-    let mut sum = 0;
-    for (_, centroid) in codebook.iter() {
-        sum += centroid.children.len();
-    }
-    println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
-}
-
-fn print_codebook(info: &str, codebook: &HashMap<i32, Centroid>) {
-    println!("{}", info.to_string().on_white().black());
-    for (key, centroid) in codebook.iter() {
-        println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
-    }
-}
-
-pub fn kmeans(k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
-    /*
-        Repeat X times, select best based on cluster density { NOT IMPLEMENTED
-            Repeat until convergence or some iteration count {
-                Init -> Assign -> Update
-            }
-            Save result
-        }
-
-        Pick best result
-    */
-
-    // fn init(k: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
-        // Init
-    let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
-    let mut rng = thread_rng();
-    let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
-    let mut init_k_sampled: Vec<usize> = vec![];
-    let mut codebook = HashMap::<i32, Centroid>::new();
-    for i in 0..k {
-        let rand_key = rng.sample(dist_uniform);
-        init_k_sampled.push(rand_key);
-        let candidate = dataset.slice(s![rand_key,..]);
-        let new_centroid = Centroid::new(i, candidate.to_owned());
-        codebook.insert(i, new_centroid);
-    }
-
-    println!("Dataset lenght: {}", n);
-    println!("Init k-means with centroids: {:?}\n", init_k_sampled);
-    print_codebook("Codebook after init", &codebook);
-    // codebook
-    // }
-    
-    // let codebook = init(k, dataset);
-
-    // Repeat until convergence or some iteration count
-    let mut iterations = 1;
-    let mut last_codebook = HashMap::new();
-    loop {
-        if iterations == 1 || iterations % 10 == 0 {
-            println!("Iteration {}", iterations);
-        }
-        if iterations > max_iterations {
-            println!("Max iterations reached, iterations: {}", iterations-1);
-            break;
-        } else if codebook == last_codebook {
-            println!("Computation has converged, iterations: {}", iterations-1);
-            break;
-        }
-
-        last_codebook = codebook.clone();
-
-        // Delete points associated to each centroid
-        for (_, centroid) in codebook.iter_mut() {
-            centroid.children.clear();
-        }
-
-        // fn assign(codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) {
-            // Assign
-            // println!("Let's look for my favorit centroid!");
-            for (idx, candidate) in dataset.outer_iter().enumerate() {
-                let mut best_centroid = -1;
-                let mut best_distance = f64::NEG_INFINITY;
-                for (&key, centroid) in codebook.iter_mut() {
-                    let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                    if best_distance < distance {
-                        best_centroid = key;
-                        best_distance = distance;
-                    }
-                }
-                if best_centroid >= 0 {
-                    codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-                }            
-            }
-        // }
-
-        // assign(codebook, dataset);
-        // print_codebook("Codebook after assign", &codebook);
-
-        // Update
-        for (_, centroid) in codebook.iter_mut() {
-                for i in 0..centroid.point.len() {
-                    centroid.point[i] = 0.;
-                }
-                
-                for child_key in centroid.children.iter() {
-                    let child_point = dataset.slice(s![*child_key,..]);
-                    for (i, x) in child_point.iter().enumerate() {
-                        centroid.point[i] += x;
-                    }
-                }
-
-                for i in 0..centroid.point.len() {
-                    centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
-                }
-        }
-        // print_codebook("Codebook after update", &codebook);
-        iterations += 1;
-    }
-
-    print_sum_codebook_children("Does codebook contain all points?", &codebook, dataset.shape()[0]);
-    print_codebook("Codebook status", &codebook);
-    codebook
-}
-
 pub struct KMeans {
     name: String,
     metric: String,
@@ -166,6 +45,127 @@ impl KMeans {
             max_iterations: max_iterations
         }
     }
+
+    fn print_sum_codebook_children(&self, info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
+        println!("{}", info.to_string().on_white().black());
+        let mut sum = 0;
+        for (_, centroid) in codebook.iter() {
+            sum += centroid.children.len();
+        }
+        println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
+    }
+    
+    fn print_codebook(&self, info: &str, codebook: &HashMap<i32, Centroid>) {
+        println!("{}", info.to_string().on_white().black());
+        for (key, centroid) in codebook.iter() {
+            println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
+        }
+    }
+    
+    fn kmeans(&self, k: i32, max_iterations: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+        /*
+            Repeat X times, select best based on cluster density { NOT IMPLEMENTED
+                Repeat until convergence or some iteration count {
+                    Init -> Assign -> Update
+                }
+                Save result
+            }
+    
+            Pick best result
+        */
+    
+        // fn init(k: i32, dataset: &ArrayView2::<f64>) -> HashMap::<i32, Centroid> {
+            // Init
+        let n = &dataset.shape()[0]; // shape of rows, cols (vector dimension)
+        let mut rng = thread_rng();
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, n);
+        let mut init_k_sampled: Vec<usize> = vec![];
+        let mut codebook = HashMap::<i32, Centroid>::new();
+        for i in 0..k {
+            let rand_key = rng.sample(dist_uniform);
+            init_k_sampled.push(rand_key);
+            let candidate = dataset.slice(s![rand_key,..]);
+            let new_centroid = Centroid::new(i, candidate.to_owned());
+            codebook.insert(i, new_centroid);
+        }
+    
+        println!("Dataset lenght: {}", n);
+        println!("Init k-means with centroids: {:?}\n", init_k_sampled);
+        self.print_codebook("Codebook after init", &codebook);
+        // codebook
+        // }
+        
+        // let codebook = init(k, dataset);
+    
+        // Repeat until convergence or some iteration count
+        let mut iterations = 1;
+        let mut last_codebook = HashMap::new();
+        loop {
+            if iterations == 1 || iterations % 10 == 0 {
+                println!("Iteration {}", iterations);
+            }
+            if iterations > max_iterations {
+                println!("Max iterations reached, iterations: {}", iterations-1);
+                break;
+            } else if codebook == last_codebook {
+                println!("Computation has converged, iterations: {}", iterations-1);
+                break;
+            }
+    
+            last_codebook = codebook.clone();
+    
+            // Delete points associated to each centroid
+            for (_, centroid) in codebook.iter_mut() {
+                centroid.children.clear();
+            }
+    
+            // fn assign(codebook: HashMap::<i32, Centroid>, dataset: &ArrayView2::<f64>) {
+                // Assign
+                // println!("Let's look for my favorit centroid!");
+                for (idx, candidate) in dataset.outer_iter().enumerate() {
+                    let mut best_centroid = -1;
+                    let mut best_distance = f64::NEG_INFINITY;
+                    for (&key, centroid) in codebook.iter_mut() {
+                        let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
+                        if best_distance < distance {
+                            best_centroid = key;
+                            best_distance = distance;
+                        }
+                    }
+                    if best_centroid >= 0 {
+                        codebook.get_mut(&best_centroid).unwrap().children.push(idx);
+                    }            
+                }
+            // }
+    
+            // assign(codebook, dataset);
+            // print_codebook("Codebook after assign", &codebook);
+    
+            // Update
+            for (_, centroid) in codebook.iter_mut() {
+                    for i in 0..centroid.point.len() {
+                        centroid.point[i] = 0.;
+                    }
+                    
+                    for child_key in centroid.children.iter() {
+                        let child_point = dataset.slice(s![*child_key,..]);
+                        for (i, x) in child_point.iter().enumerate() {
+                            centroid.point[i] += x;
+                        }
+                    }
+    
+                    for i in 0..centroid.point.len() {
+                        centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
+                    }
+            }
+            // print_codebook("Codebook after update", &codebook);
+            iterations += 1;
+        }
+    
+        self.print_sum_codebook_children("Does codebook contain all points?", &codebook, dataset.shape()[0]);
+        self.print_codebook("Codebook status", &codebook);
+        codebook
+    }
 }
 
 impl AlgorithmImpl for KMeans {
@@ -180,7 +180,7 @@ impl AlgorithmImpl for KMeans {
 
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dataset = Some(dataset.to_owned());
-        self.codebook = Some(kmeans(self.clusters, self.max_iterations, &dataset));
+        self.codebook = Some(self.kmeans(self.clusters, self.max_iterations, &dataset));
         
     }
 
@@ -249,6 +249,4 @@ impl AlgorithmImpl for KMeans {
         println!("best_n_candidates \n{:?}", best_n_candidates);
         best_n_candidates
     }
-
 }
-
