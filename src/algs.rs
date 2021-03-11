@@ -13,7 +13,7 @@ pub fn run_individual_query(p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, resu
     let time_start = Instant::now();
     // let alg = Bruteforce::new("bruteforce");
     // let mut alg = Bruteforce::new();
-    let mut alg = KMeans::new(10, 200);
+    let mut alg = KMeans::new(10, 200, 1);
     // let dataset = Array2::from(vec![vec![1;1];1]);
     alg.fit(dataset.view());
     let candidates = alg.query(&p, result_count);

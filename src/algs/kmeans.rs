@@ -30,18 +30,20 @@ pub struct KMeans {
     dataset: Option<Array2::<f64>>,
     codebook: HashMap::<i32, Centroid>,
     clusters: i32,
-    max_iterations: i32
+    max_iterations: i32,
+    clusters_to_search: i32
 }
 
 impl KMeans {
-    pub fn new(clusters: i32, max_iterations: i32) -> Self {
+    pub fn new(clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         KMeans {
             name: "FANN_bruteforce()".to_string(),
             metric: "cosine".to_string(),
             dataset: None,
             codebook: HashMap::<i32, Centroid>::new(),
             clusters: clusters,
-            max_iterations: max_iterations
+            max_iterations: max_iterations,
+            clusters_to_search: clusters_to_search
         }
     }
 
@@ -181,7 +183,6 @@ impl AlgorithmImpl for KMeans {
             return Vec::new();
         }
         let ds = &self.dataset.as_ref().unwrap().view();
-        let centroids_to_search = 3;
         let mut best_centroids = BinaryHeap::new();
         
         for (key, centroid) in self.codebook.iter() {
@@ -194,7 +195,7 @@ impl AlgorithmImpl for KMeans {
         println!("best_centroids: {:?}", best_centroids);
     
         let mut best_candidates = BinaryHeap::new();
-        for _ in 0..centroids_to_search {
+        for _ in 0..self.clusters_to_search {
             let centroid_key = best_centroids.pop().unwrap().index;
             for candidate_key in self.codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
                 // let neighbors = vec![97478, 262700, 846101, 671078, 232287, 727732, 544474, 1133489, 723915, 660281];
