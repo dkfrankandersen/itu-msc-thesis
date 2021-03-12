@@ -43,9 +43,13 @@ fn main() {
 
     let dataset = &ds_test_norm;
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
+
+    let mut algo = &algs::get_algorithm(&ds_train_norm.view());
+
+
     for (i, p) in dataset.outer_iter().enumerate() {
     // let p = &ds_test_norm.slice(s![0,..]);
-        let result = algs::run_individual_query(&p, &ds_train_norm.view(), result_count);
+        let result = algs::run_individual_query(algo, &p, &ds_train_norm.view(), result_count);
         println!("{:?}", result);
         // break;
         results.push(result);

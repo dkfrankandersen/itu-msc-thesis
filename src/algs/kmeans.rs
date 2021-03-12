@@ -24,6 +24,7 @@ impl Centroid {
     }
 }
 
+#[derive(Debug)]
 pub struct KMeans {
     name: String,
     metric: String,

@@ -4,6 +4,7 @@ use crate::algs::pq;
 use crate::algs::*;
 use std::collections::BinaryHeap;
 
+#[derive(Debug)]
 pub struct Bruteforce {
     name: String,
     metric: String,
