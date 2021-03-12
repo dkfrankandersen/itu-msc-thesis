@@ -24,7 +24,7 @@ impl Centroid {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KMeans {
     name: String,
     metric: String,
@@ -183,7 +183,7 @@ impl AlgorithmImpl for KMeans {
             println!("Dataset missing");
             return Vec::new();
         }
-        let ds = &self.dataset.as_ref().unwrap().view();
+        
         let mut best_centroids = BinaryHeap::new();
         
         for (key, centroid) in self.codebook.iter() {
@@ -194,7 +194,7 @@ impl AlgorithmImpl for KMeans {
         }
     
         println!("best_centroids: {:?}", best_centroids);
-    
+        let ds = &self.dataset.as_ref().unwrap().view();
         let mut best_candidates = BinaryHeap::new();
         for _ in 0..self.clusters_to_search {
             let centroid_key = best_centroids.pop().unwrap().index;

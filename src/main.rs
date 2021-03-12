@@ -1,5 +1,6 @@
 extern crate ndarray;
 extern crate hdf5;
+use std::env;
 use std::time::{Instant, Duration};
 use ndarray::{s};
 mod algs;
@@ -16,46 +17,51 @@ use util::{store_results_and_fix_attributes, hdf5_store_file};
 //     alg_name: String
 // }
 
+struct RunParameters {
+    metric: String,
+    dataset: String,
+    algorithm: String,
+    results: u32,
+    additional: Vec<String>
+}
+
 fn main() {
-    let dataset_name = "glove-100-angular";
+    let args: Vec<String> = env::args().collect();
+    println!("args: {:?}", args);
+
+    let parameters = RunParameters{ 
+                                    metric: args[1].to_string(), 
+                                    dataset: args[2].to_string(),
+                                    algorithm: args[3].to_string(),
+                                    results: args[3].parse::<u32>().unwrap(),
+                                    additional: args[4..].to_vec()
+    };
+
     let run_count = 1;
-    let result_count: u32 = 10;
-    let distance_type = "cosine";
-    let build_time = 0.; // Not used
-    let index_size = 0.; // Not used
-
-    // let algo_definition = "bruteforce";
-    // let alg_name = "bruteforce_basic";
-
-    let algo_definition = "kmeans";
     let alg_name = "kmeans_basic";
 
     let best_search_time = f64::INFINITY;
 
-    let filename = format!("datasets/{}.hdf5",dataset_name);
+    let filename = format!("datasets/{}.hdf5",parameters.dataset);
     let ds = Dataset::new(&filename);
     let ds_train_norm = ds.train_normalize();
     let ds_test_norm = ds.test_normalize();
-    let ds_distances_norm = ds.distances_normalize();
-    let ds_neighbors = ds.neighbors();
+    // let ds_distances_norm = ds.distances_normalize();
+    // let ds_neighbors = ds.neighbors();
 
     ds.print_true_neighbors(0, 5, 10);
 
     let dataset = &ds_test_norm;
+    let (build_time, algo) = algs::get_fitted_algorithm("KMEANS", parameters.additional, &ds_train_norm.view());
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
 
-    let mut algo = &algs::get_algorithm(&ds_train_norm.view());
-
-
-    for (i, p) in dataset.outer_iter().enumerate() {
-    // let p = &ds_test_norm.slice(s![0,..]);
-        let result = algs::run_individual_query(algo, &p, &ds_train_norm.view(), result_count);
+    for (_, p) in dataset.outer_iter().enumerate() {
+        let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
         println!("{:?}", result);
         // break;
         results.push(result);
-        // if i > 5 {break}
     }
-    return;
+
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
     for (time, candidates) in results.iter() {
@@ -69,15 +75,15 @@ fn main() {
 
     let attrs = hdf5_store_file::Attributes {
         build_time: build_time,
-        index_size: index_size,
-        algo: algo_definition.to_string(),
-        dataset: dataset_name.to_string(),
+        index_size: 0.,
+        algo: parameters.algorithm,
+        dataset: parameters.dataset,
 
         batch_mode: false,
         best_search_time: best_search_time,
         candidates: avg_candidates,
-        count: result_count,
-        distance: distance_type.to_string(),
+        count: parameters.results,
+        distance: parameters.metric,
         expect_extra: false,
         name: alg_name.to_string(),
         run_count: run_count
