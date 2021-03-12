@@ -98,8 +98,8 @@ pub struct AlgorithmFactory {}
 impl AlgorithmFactory {
     pub fn get(algorithm: &str, args: Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
-            "BRUTEFORCE" => Algorithm::Bruteforce(Bruteforce::new()),
-            "KMEANS" => Algorithm::KMeans(KMeans::new(args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new()),
+            "kmeans" => Algorithm::KMeans(KMeans::new(args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
     }
