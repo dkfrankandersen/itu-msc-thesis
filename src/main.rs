@@ -26,7 +26,7 @@ fn algo_definition(rp: &RunParameters) -> String {
 }
 
 fn main() {
-    let verbose_print = false;
+    let verbose_print = true;
     let args: Vec<String> = env::args().collect();
     println!("Running algorithm with");
     println!("args: {:?}\n", args);
@@ -53,7 +53,7 @@ fn main() {
     }
     
     let dataset = &ds_test_norm;
-    let (build_time, algo) = algs::get_fitted_algorithm(&parameters.algorithm, parameters.additional, &ds_train_norm.view());
+    let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
 
     for (_, p) in dataset.outer_iter().enumerate() {

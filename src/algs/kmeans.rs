@@ -37,7 +37,7 @@ pub struct KMeans {
 }
 
 impl KMeans {
-    pub fn new(clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
+    pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         KMeans {
             name: "FANN_bruteforce()".to_string(),
             metric: "cosine".to_string(),
@@ -46,7 +46,7 @@ impl KMeans {
             clusters: clusters,
             max_iterations: max_iterations,
             clusters_to_search: clusters_to_search,
-            verbode_print: false
+            verbode_print: verbose_print
         }
     }
 

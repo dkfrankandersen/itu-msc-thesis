@@ -13,12 +13,12 @@ pub struct Bruteforce {
 }
 
 impl Bruteforce {
-    pub fn new() -> Self {
+    pub fn new(verbose_print: bool) -> Self {
         Bruteforce {
             name: "FANN_bruteforce()".to_string(),
             metric: "cosine".to_string(),
             dataset: None,
-            verbose_print: false
+            verbose_print: verbose_print
         }
     }
 }

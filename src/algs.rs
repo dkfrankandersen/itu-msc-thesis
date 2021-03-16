@@ -96,19 +96,19 @@ impl AlgorithmImpl for Algorithm {
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
-    pub fn get(algorithm: &str, args: Vec<String>) -> Algorithm {
+    pub fn get(verbose_print: bool, algorithm: &str, args: Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
-            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new()),
-            "kmeans" => Algorithm::KMeans(KMeans::new(args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
+            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
     }
 }
 
 
-pub fn get_fitted_algorithm(algo: &str, args: Vec<String>, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
+pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
     
-    let mut algo = AlgorithmFactory::get(algo, args);
+    let mut algo = AlgorithmFactory::get(verbose_print, algo, args);
 
     println!("Starting dataset fitting for algorithm");
     let time_start = Instant::now();
