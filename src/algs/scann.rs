@@ -24,7 +24,7 @@ impl Centroid {
 }
 
 #[derive(Debug, Clone)]
-pub struct ProductQuantization {
+pub struct Scann {
     name: String,
     metric: String,
     dataset: Option<Array2::<f64>>,
@@ -36,10 +36,10 @@ pub struct ProductQuantization {
 }
 
 
-impl ProductQuantization {
+impl Scann {
     pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
-        ProductQuantization {
-            name: "FANN_product_quantization()".to_string(),
+        Scann {
+            name: "FANN_scann()".to_string(),
             metric: "cosine".to_string(),
             dataset: None,
             codebook: HashMap::<i32, Centroid>::new(),
@@ -63,30 +63,10 @@ impl ProductQuantization {
     }
 
     fn run_pq(&mut self, max_iterations: i32, dataset: &ArrayView2::<f64>) {
-        // loop {
-        //     if self.verbode_print && (iterations == 1 || iterations % 10 == 0) {
-        //         println!("Iteration {}", iterations);
-        //     }
-        //     if iterations > max_iterations {
-        //         if self.verbode_print {
-        //             println!("Max iterations reached, iterations: {}", iterations-1);
-        //         }
-        //         break;
-        //     } else if self.codebook == last_codebook {
-        //         if self.verbode_print {
-        //             println!("Computation has converged, iterations: {}", iterations-1);
-        //         }
-        //         break;
-        //     }
-
-        //     self.assign();
-        //     self.update();
-        //     iterations += 1;
-        // }
     }
 }
 
-impl AlgorithmImpl for ProductQuantization {
+impl AlgorithmImpl for Scann {
 
     fn __str__(&self) {
         self.name.to_string();

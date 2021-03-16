@@ -1,8 +1,8 @@
 extern crate ndarray;
 extern crate hdf5;
 use std::env;
-use std::time::{Instant, Duration};
-use ndarray::{s};
+// use std::time::{Instant, Duration};
+// use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
@@ -26,7 +26,7 @@ fn algo_definition(rp: &RunParameters) -> String {
 }
 
 fn main() {
-    let verbose_print = true;
+    let verbose_print = false;
     let args: Vec<String> = env::args().collect();
     println!("Running algorithm with");
     println!("args: {:?}\n", args);
