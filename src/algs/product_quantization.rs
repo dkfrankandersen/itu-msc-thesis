@@ -28,14 +28,18 @@ impl ProductQuantization {
 
     fn run_pq(&mut self, max_iterations: i32, dataset: &ArrayView2::<f64>) {
         loop {
-            if iterations == 1 || iterations % 10 == 0 {
+            if self.verbode_print && (iterations == 1 || iterations % 10 == 0) {
                 println!("Iteration {}", iterations);
             }
             if iterations > max_iterations {
-                println!("Max iterations reached, iterations: {}", iterations-1);
+                if self.verbode_print {
+                    println!("Max iterations reached, iterations: {}", iterations-1);
+                }
                 break;
             } else if self.codebook == last_codebook {
-                println!("Computation has converged, iterations: {}", iterations-1);
+                if self.verbode_print {
+                    println!("Computation has converged, iterations: {}", iterations-1);
+                }
                 break;
             }
 
@@ -74,7 +78,9 @@ impl AlgorithmImpl for ProductQuantization {
         
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();
-        println!("best_n_candidates \n{:?}", best_n_candidates);
+        if self.verbode_print {
+            println!("best_n_candidates \n{:?}", best_n_candidates);
+        }
         best_n_candidates
     }
 

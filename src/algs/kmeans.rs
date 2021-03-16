@@ -1,6 +1,6 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
 use crate::algs::distance;
-use crate::algs::pq;
+use crate::algs::data_entry::{DataEntry};
 use crate::algs::*;
 use std::collections::BinaryHeap;
 use rand::prelude::*;
@@ -198,7 +198,7 @@ impl AlgorithmImpl for KMeans {
         let mut best_centroids = BinaryHeap::new();
         
         for (key, centroid) in self.codebook.iter() {
-            best_centroids.push(pq::DataEntry {
+            best_centroids.push(DataEntry {
                 index: *key as usize,  
                 distance: distance::cosine_similarity(&p, &centroid.point.view())
             });
@@ -220,15 +220,15 @@ impl AlgorithmImpl for KMeans {
                 let candidate = ds.slice(s![*candidate_key as i32,..]);
                 let dist = distance::cosine_similarity(&p, &candidate);
                 if best_candidates.len() < result_count as usize {
-                    best_candidates.push(pq::DataEntry {
+                    best_candidates.push(DataEntry {
                         index: *candidate_key,  
                         distance: -dist
                     });
                 } else {
-                    let min_val: pq::DataEntry = *best_candidates.peek().unwrap();
+                    let min_val: DataEntry = *best_candidates.peek().unwrap();
                     if dist > -min_val.distance {
                         best_candidates.pop();
-                        best_candidates.push(pq::DataEntry {
+                        best_candidates.push(DataEntry {
                             index: *candidate_key,  
                             distance: -dist
                         });

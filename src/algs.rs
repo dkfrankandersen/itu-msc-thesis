@@ -2,7 +2,7 @@ pub mod bruteforce;
 pub mod kmeans;
 pub mod dataset;
 pub mod distance;
-pub mod pq;
+pub mod data_entry;
 use std::time::{Instant, Duration};
 use ndarray::{ArrayBase, ArrayView1, ArrayView2, Array2};
 use ndarray::{s};

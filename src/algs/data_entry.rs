@@ -25,7 +25,7 @@ mod tests {
     #[test]
     fn given_2_3_1_return_3() {
         use std::collections::BinaryHeap;
-        use crate::algs::pq::{DataEntry};
+        use crate::algs::data_entry::{DataEntry};
 
         let mut heap = BinaryHeap::new();
         heap.push(DataEntry {index: 2,  distance: 0.2});
@@ -38,7 +38,7 @@ mod tests {
     #[test]
     fn given_neg_2_3_1_return_1() {
         use std::collections::BinaryHeap;
-        use crate::algs::pq::{DataEntry};
+        use crate::algs::data_entry::{DataEntry};
 
         let mut heap = BinaryHeap::new();
         heap.push(DataEntry {index: 2,  distance: -0.2});
