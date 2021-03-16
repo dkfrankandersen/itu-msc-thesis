@@ -1,4 +1,4 @@
-use ndarray::{Array2, ArrayView1, ArrayView2};
+use ndarray::{ArrayView1, ArrayView2};
 use crate::algs::distance;
 use crate::algs::pq;
 use crate::algs::*;
@@ -8,7 +8,8 @@ use std::collections::BinaryHeap;
 pub struct Bruteforce {
     name: String,
     metric: String,
-    dataset: Option<Array2::<f64>>
+    dataset: Option<Array2::<f64>>,
+    verbose_print: bool
 }
 
 impl Bruteforce {
@@ -16,7 +17,8 @@ impl Bruteforce {
         Bruteforce {
             name: "FANN_bruteforce()".to_string(),
             metric: "cosine".to_string(),
-            dataset: None
+            dataset: None,
+            verbose_print: false
         }
     }
 }

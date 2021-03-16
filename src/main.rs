@@ -26,8 +26,10 @@ fn algo_definition(rp: &RunParameters) -> String {
 }
 
 fn main() {
+    let verbose_print = false;
     let args: Vec<String> = env::args().collect();
-    println!("args: {:?}", args);
+    println!("Running algorithm with");
+    println!("args: {:?}\n", args);
 
     let parameters = RunParameters{ 
                                     metric: args[1].to_string(), 
@@ -45,17 +47,20 @@ fn main() {
     let ds_test_norm = ds.test_normalize();
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
-
-    ds.print_true_neighbors(0, 5, 10);
-
+    
+    if verbose_print {
+        ds.print_true_neighbors(0, 5, 10);
+    }
+    
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(&parameters.algorithm, parameters.additional, &ds_train_norm.view());
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
 
     for (_, p) in dataset.outer_iter().enumerate() {
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        println!("{:?}", result);
-        // break;
+        if verbose_print {
+            println!("{:?}", result);
+        }
         results.push(result);
     }
 
@@ -87,8 +92,5 @@ fn main() {
     };
 
     store_results_and_fix_attributes(results, attrs);
-
-    println!("Hello there");
-   
 }
 

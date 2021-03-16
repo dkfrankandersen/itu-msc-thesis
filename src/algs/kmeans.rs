@@ -32,7 +32,8 @@ pub struct KMeans {
     codebook: HashMap::<i32, Centroid>,
     clusters: i32,
     max_iterations: i32,
-    clusters_to_search: i32
+    clusters_to_search: i32,
+    verbode_print: bool
 }
 
 impl KMeans {
@@ -44,7 +45,8 @@ impl KMeans {
             codebook: HashMap::<i32, Centroid>::new(),
             clusters: clusters,
             max_iterations: max_iterations,
-            clusters_to_search: clusters_to_search
+            clusters_to_search: clusters_to_search,
+            verbode_print: false
         }
     }
 
@@ -79,10 +81,13 @@ impl KMeans {
             let new_centroid = Centroid::new(i, candidate.to_owned());
             self.codebook.insert(i, new_centroid);
         }
-    
-        println!("Dataset lenght: {}", self.dataset_size());
-        println!("Init k-means with centroids: {:?}\n", init_k_sampled);
-        self.print_codebook("Codebook after init", &self.codebook);
+
+        if self.verbode_print {
+            println!("Dataset lenght: {}", self.dataset_size());
+            println!("Init k-means with centroids: {:?}\n", init_k_sampled);
+            self.print_codebook("Codebook after init", &self.codebook);
+        }
+        
     }
 
     fn assign(&mut self) {
@@ -131,14 +136,18 @@ impl KMeans {
         let mut iterations = 1;
         let mut last_codebook: HashMap::<i32, Centroid> = HashMap::new();
         loop {
-            if iterations == 1 || iterations % 10 == 0 {
+            if self.verbode_print && (iterations == 1 || iterations % 10 == 0) {
                 println!("Iteration {}", iterations);
             }
             if iterations > max_iterations {
-                println!("Max iterations reached, iterations: {}", iterations-1);
+                if self.verbode_print {
+                    println!("Max iterations reached, iterations: {}", iterations-1);
+                }
                 break;
             } else if self.codebook == last_codebook {
-                println!("Computation has converged, iterations: {}", iterations-1);
+                if self.verbode_print {
+                    println!("Computation has converged, iterations: {}", iterations-1);
+                }
                 break;
             }
     
@@ -148,8 +157,10 @@ impl KMeans {
             self.update();
             iterations += 1;
         }
-        self.print_sum_codebook_children("Does codebook contain all points?", &self.codebook, dataset.shape()[0]);
-        self.print_codebook("Codebook status", &self.codebook);
+        if self.verbode_print {
+            self.print_sum_codebook_children("Does codebook contain all points?", &self.codebook, dataset.shape()[0]);
+            self.print_codebook("Codebook status", &self.codebook);
+        }
     }
 }
 
@@ -192,8 +203,11 @@ impl AlgorithmImpl for KMeans {
                 distance: distance::cosine_similarity(&p, &centroid.point.view())
             });
         }
-    
-        println!("best_centroids: {:?}", best_centroids);
+        
+        if self.verbode_print {
+            println!("best_centroids: {:?}", best_centroids);
+        }
+        
         let ds = &self.dataset.as_ref().unwrap().view();
         let mut best_candidates = BinaryHeap::new();
         for _ in 0..self.clusters_to_search {
@@ -229,7 +243,9 @@ impl AlgorithmImpl for KMeans {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        println!("best_n_candidates \n{:?}", best_n_candidates);
+        if self.verbode_print {
+            println!("best_n_candidates \n{:?}", best_n_candidates);
+        }
         best_n_candidates
     }
 }
