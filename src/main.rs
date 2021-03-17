@@ -26,7 +26,7 @@ fn algo_definition(rp: &RunParameters) -> String {
 }
 
 fn main() {
-    let verbose_print = false;
+    let verbose_print = true;
     let args: Vec<String> = env::args().collect();
     println!("Running algorithm with");
     println!("args: {:?}\n", args);

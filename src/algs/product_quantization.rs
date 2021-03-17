@@ -1,10 +1,10 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
-use crate::algs::data_entry::{DataEntry};
+// use crate::algs::data_entry::{DataEntry};
 use crate::algs::*;
-use std::collections::BinaryHeap;
-use rand::prelude::*;
+// use std::collections::BinaryHeap;
+// use rand::prelude::*;
 use std::collections::HashMap;
-use colored::*;
+// use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {

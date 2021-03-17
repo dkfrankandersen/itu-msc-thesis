@@ -83,7 +83,7 @@ fn get_result_filename(path: &str, attrs: &Attributes) -> ResultFilename {
     ResultFilename {path: path, name: attrs.name.to_string(), filetype: ".hdf5".to_string()}
 }
 
-pub fn store_results(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<String> {
+pub fn store_results(results: Vec<(f64, Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<String> {
     let file = &get_result_filename("results", &attrs);
     println!("Storing result data into: {}", format!("{}{}{}", file.path, file.name, file.filetype));
 
