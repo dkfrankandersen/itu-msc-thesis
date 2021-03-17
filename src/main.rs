@@ -54,6 +54,7 @@ fn main() {
     
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
+    return; // debug
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
 
     for (_, p) in dataset.outer_iter().enumerate() {
@@ -61,8 +62,10 @@ fn main() {
         if verbose_print {
             println!("{:?}", result);
         }
+        break; // debug
         results.push(result);
     }
+    return; // debug
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;

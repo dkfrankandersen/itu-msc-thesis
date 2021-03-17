@@ -15,7 +15,7 @@ pub struct Centroid {
 }
 
 impl Centroid {
-    fn new(id: i32, point: Array1::<f64>) -> Centroid {
+    fn new(id: i32, point: Array1::<f64>) -> Self {
         Centroid {
             id: id,
             point: point,
@@ -87,7 +87,6 @@ impl KMeans {
             println!("Init k-means with centroids: {:?}\n", init_k_sampled);
             self.print_codebook("Codebook after init", &self.codebook);
         }
-        
     }
 
     fn assign(&mut self) {

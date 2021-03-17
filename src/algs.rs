@@ -114,7 +114,7 @@ impl AlgorithmFactory {
         match algorithm.as_ref() {
             "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
             "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
-            "prod_quan" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "prod_quan" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap(), args[3].parse::<i32>().unwrap())),
             "scann" => Algorithm::Scann(Scann::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
