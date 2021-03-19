@@ -9,7 +9,6 @@ use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
-    id: i32,
     pub point: Array1::<f64>,
     pub children: Vec::<usize>
 }
@@ -17,7 +16,6 @@ pub struct Centroid {
 impl Centroid {
     fn new(id: i32, point: Array1::<f64>) -> Self {
         Centroid {
-            id: id,
             point: point,
             children: Vec::<usize>::new()
         }
@@ -217,26 +215,24 @@ impl ProductQuantization {
     }
 }
 
+
 #[derive(Debug, Clone)]
 struct KMeans {
-    dataset: Array2<f64>,
-    clusters: usize,
-    max_iterations: usize
+
 }
 
 impl KMeans {
-    fn run() {
+    pub fn run(&self, dataset: &ArrayView2::<f64>, k: usize, max_iterations: usize) -> Array2::<f64> {
+
+        let codebook = 
+        self.init(dataset, k);
 
     }
 
-    fn dataset_size(&self) -> usize {
-        return self.dataset.shape()[0]; // shape of rows, cols (vector dimension)
-    }
-
-    fn init(&mut self, dataset: &ArrayView2::<f64>) {
+    fn init(&mut self, dataset: &ArrayView2::<f64>, k: usize) {
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, self.dataset_size());
-        for i in 0..self.clusters {
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
+        for i in 0..k {
             let rand_key = rng.sample(dist_uniform);
             let candidate = dataset.slice(s![rand_key,..]);
 
@@ -269,13 +265,15 @@ impl AlgorithmImpl for ProductQuantization {
         self.sub_dimension = self.dimension / self.m;
         self.dataset = Some(dataset.to_owned());
 
-        // Random test data from dataset
-
+        
+        // ######################################################################
         // Create codebook, [m,k,d] m-th subspace, k-th codewords, d-th dimension
         let codebook = Array3::<f64>::zeros((self.m, self.k, self.sub_dimension));
-        
         println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
+        // ######################################################################
 
+
+        // ######################################################################
         // Create random selected train data from dataset
         let train_dataset_len = 2000;
         let mut rng = rand::thread_rng();
@@ -291,12 +289,23 @@ impl AlgorithmImpl for ProductQuantization {
         println!("Train data ready, shape: {:?}", train_data.shape());
         // println!("train_data:\n{}", train_data);
 
-        // for m in 0..self.m {
+        // ######################################################################
 
-        // }
 
-        // let train_data = get_train_data(dataset);
-        // let codebook = KMeans(dataset: train_data, clusters: self.k, max_iterations: self.max_iterations);
+        // ######################################################################
+        // Compute codebook from training data using k-means.
+        for m in 0..self.m {
+
+            let begin = self.sub_dimension * m;
+            let end = begin + self.sub_dimension - 1;
+            let partial_data = train_data.slice(s![.., begin..end]);
+            println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
+            
+            // let codebook = KMeans(dataset: train_data, clusters: self.k, max_iterations: self.max_iterations);
+
+        }
+
+        
 
     }
 
