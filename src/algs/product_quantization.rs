@@ -1,8 +1,9 @@
-use ndarray::{Array1, ArrayView1, ArrayView2, s};
+use ndarray::{Array, Array1, Array2, Array3, ArrayView1, ArrayView2, s};
 // use crate::algs::data_entry::{DataEntry};
 use crate::algs::*;
 // use std::collections::BinaryHeap;
 use rand::prelude::*;
+use rand::{distributions::Uniform, Rng};
 use std::collections::HashMap;
 use colored::*;
 
@@ -55,7 +56,7 @@ pub struct ProductQuantization {
 
 
 impl ProductQuantization {
-    pub fn new(verbose_print: bool, k: usize, m: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+    pub fn new(verbose_print: bool, m: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "cosine".to_string(),
@@ -216,6 +217,43 @@ impl ProductQuantization {
     }
 }
 
+#[derive(Debug, Clone)]
+struct KMeans {
+    dataset: Array2<f64>,
+    clusters: usize,
+    max_iterations: usize
+}
+
+impl KMeans {
+    fn run() {
+
+    }
+
+    fn dataset_size(&self) -> usize {
+        return self.dataset.shape()[0]; // shape of rows, cols (vector dimension)
+    }
+
+    fn init(&mut self, dataset: &ArrayView2::<f64>) {
+        let mut rng = thread_rng();
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, self.dataset_size());
+        for i in 0..self.clusters {
+            let rand_key = rng.sample(dist_uniform);
+            let candidate = dataset.slice(s![rand_key,..]);
+
+        }
+    }
+
+    fn assign() {
+
+    }
+
+    fn update() {
+
+    }
+
+
+}
+
 impl AlgorithmImpl for ProductQuantization {
 
     fn __str__(&self) {
@@ -230,7 +268,36 @@ impl AlgorithmImpl for ProductQuantization {
         self.dimension = dataset.slice(s![0,..]).len();
         self.sub_dimension = self.dimension / self.m;
         self.dataset = Some(dataset.to_owned());
-        self.run_pq(self.max_iterations, &dataset);
+
+        // Random test data from dataset
+
+        // Create codebook, [m,k,d] m-th subspace, k-th codewords, d-th dimension
+        let codebook = Array3::<f64>::zeros((self.m, self.k, self.sub_dimension));
+        
+        println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
+
+        // Create random selected train data from dataset
+        let train_dataset_len = 2000;
+        let mut rng = rand::thread_rng();
+        let range = Uniform::new(0 as usize, self.dataset_size() as usize);
+        let random_datapoints: Vec<usize> = (0..train_dataset_len).map(|_| rng.sample(&range)).collect();
+        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_len, self.dataset_size());
+        
+        let mut train_data = Array2::zeros((train_dataset_len, self.dimension));
+        for (i,v) in random_datapoints.iter().enumerate() {
+            let data_row = dataset.slice(s![*v,..]);
+            train_data.row_mut(i).assign(&data_row);
+        }
+        println!("Train data ready, shape: {:?}", train_data.shape());
+        // println!("train_data:\n{}", train_data);
+
+        // for m in 0..self.m {
+
+        // }
+
+        // let train_data = get_train_data(dataset);
+        // let codebook = KMeans(dataset: train_data, clusters: self.k, max_iterations: self.max_iterations);
+
     }
 
     fn batch_query(&self) {}
