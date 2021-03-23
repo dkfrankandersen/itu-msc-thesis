@@ -22,29 +22,14 @@ impl Centroid {
     }
 }
 
-// #[derive(Clone, PartialEq, Debug)]
-// pub struct SubCodebook {
-//     pub point: Array1::<f64>,
-//     pub children: Vec<Centroid>
-// }
-
-// impl SubCodebook {
-//     fn new(point: Array1::<f64>) -> Self {
-//         SubCodebook {
-//             point: point,
-//             children: Vec::new()
-//         }
-//     }
-// }
-
 #[derive(Debug, Clone)]
 pub struct ProductQuantization {
     name: String,
     metric: String,
     dataset: Option<Array2::<f64>>,
     codebook: Vec<Vec<Centroid>>,
-    k: usize,
     m: usize,
+    k: usize,
     max_iterations: usize,
     clusters_to_search: usize,
     verbose_print: bool,
@@ -60,8 +45,8 @@ impl ProductQuantization {
             metric: "angular".to_string(),
             dataset: None,
             codebook: Vec::with_capacity(m),
+            m: m,         // M
             k: k,         // K
-            m: m,              // M
             max_iterations: max_iterations,
             clusters_to_search: clusters_to_search,
             verbose_print: verbose_print,
@@ -107,7 +92,8 @@ impl ProductQuantization {
             What we want is:
                 1. Uniform sample M candidates
                 2. For each datapoint split into partial_candidates with partial dimension 
-                3. Init sub codebooks for each partial dimension
+                3. Init sub codebooks for each partial dimension as k-means
+                4. 
         */
 
         // Create M sub codebooks with capacity of k sub centroids
@@ -130,60 +116,11 @@ impl ProductQuantization {
 
         }
 
-
-        // for i in 0..self.m {
-        //     let rand_key = rng.sample(dist_uniform);
-        //     init_k_sampled.push(rand_key);
-        //     let candidate = dataset.slice(s![rand_key,..]);
-        //     let mut sub_codebook = SubCodebook::new(i, candidate.to_owned());
-        //     let mut partial_dim = 0;
-        //     loop {
-        //         if partial_dim >= self.dimension {
-        //             break
-        //         }
-        //         let partial_candidate = candidate.slice(s![partial_dim..partial_dim+self.sub_dimension]);
-        //         // println!("partial_candidate {} to {}\n {:?}", d, d+sub_dimensions, partial_candidate);
-        //         partial_dim = partial_dim+self.sub_dimension;
-        //         let new_centroid = Centroid::new(partial_dim as i32, partial_candidate.to_owned());
-        //         sub_codebook.children.insert(partial_dim as i32, new_centroid);
-        //     }
-        //     self.codebook.insert(i, sub_codebook);
-            
-        // }
-
         println!("\n\n CODEBOOK \n{:?}", self.codebook);
     }
 
     fn assign(&mut self) {
-        // for (_, sub_codebook) in self.codebook.iter_mut() {
-        //     for (_, centroid) in sub_codebook.children.iter_mut() {
-        //         centroid.children.clear();
-        //     }
-        // }
 
-        // for (idx, candidate) in self.dataset.as_ref().unwrap().outer_iter().enumerate() {
-        //     let mut best_centroid = -1;
-        //     let mut best_distance = f64::NEG_INFINITY;
-        //     let mut partial_dim = 0;
-
-        //     loop {
-        //         if partial_dim >= self.dimension {
-        //             break;
-        //         }
-        //         let partial_candidate = candidate.slice(s![partial_dim..partial_dim+self.sub_dimension]);
-
-        //         for (&key, centroid) in self.codebook.iter_mut() {
-        //             let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-        //             if best_distance < distance {
-        //                 best_centroid = key;
-        //                 best_distance = distance;
-        //             }
-        //         }
-        //         if best_centroid >= 0 {
-        //             self.codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-        //         }  
-        //     }           
-        // }
     }
 
     fn update(&mut self) { 
@@ -218,28 +155,62 @@ impl ProductQuantization {
 
 #[derive(Debug, Clone)]
 struct KMeans {
-
+    k: usize,
+    max_iterations: usize,
+    codebook: Vec::<(Array1::<f64>, Vec::<usize>)>,
 }
 
 impl KMeans {
-    pub fn run(&self, dataset: &ArrayView2::<f64>, k: usize, max_iterations: usize) -> Array2::<f64> {
 
-        let codebook = 
-        self.init(dataset, k);
-
-    }
-
-    fn init(&mut self, dataset: &ArrayView2::<f64>, k: usize) {
-        let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
-        for i in 0..k {
-            let rand_key = rng.sample(dist_uniform);
-            let candidate = dataset.slice(s![rand_key,..]);
-
+    pub fn new(k: usize, max_iterations: usize) -> Self {
+        KMeans{
+            k: k,
+            max_iterations: max_iterations,
+            codebook: Vec::with_capacity(k)
         }
     }
 
-    fn assign() {
+    pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> Vec::<(Array1::<f64>, Vec::<usize>)> {
+
+        self.init(dataset);
+        self.init(dataset);
+
+        
+        return vec![(Array::zeros(self.k),  Vec::<usize>::new())];
+    }
+
+    fn init(&mut self, dataset: ArrayView2::<f64>) {
+        let mut rng = thread_rng();
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows()-1);
+        for i in 0..self.k {
+            let rand_key = rng.sample(dist_uniform);
+            let candidate = dataset.slice(s![rand_key,..]);
+            self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));
+        }
+
+        // println!("K-Means Init Codebook:\n{:?}", self.codebook);
+    }
+
+    fn assign(&mut self, dataset: ArrayView2::<f64>) {
+
+        for (_,children) in self.codebook.iter_mut() {
+            children.clear();
+        }
+
+        for (idx, candidate) in dataset.outer_iter().enumerate() {
+            let mut best_centroid = None;
+            let mut best_distance = f64::NEG_INFINITY;
+            for (k, centroid) in self.codebook.iter().enumerate() {
+                let distance = distance::cosine_similarity(&(centroid.0).view(), &candidate);
+                if best_distance < distance {
+                    best_centroid = Some(k);
+                    best_distance = distance;
+                }
+            }
+            if best_centroid.is_some() {
+                self.codebook[best_centroid.unwrap()].1.push(idx);
+            } 
+        }
 
     }
 
@@ -300,8 +271,7 @@ impl AlgorithmImpl for ProductQuantization {
             let end = begin + self.sub_dimension - 1;
             let partial_data = train_data.slice(s![.., begin..end]);
             println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
-            
-            // let codebook = KMeans(dataset: train_data, clusters: self.k, max_iterations: self.max_iterations);
+            let codebook_for_m = KMeans::new(self.k, self.max_iterations).run(train_data.view());
 
         }
 
