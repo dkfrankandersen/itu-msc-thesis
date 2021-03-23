@@ -57,7 +57,7 @@ impl ProductQuantization {
     pub fn new(verbose_print: bool, m: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
-            metric: "cosine".to_string(),
+            metric: "angular".to_string(),
             dataset: None,
             codebook: Vec::with_capacity(m),
             k: k,         // K

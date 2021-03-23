@@ -40,7 +40,7 @@ impl Scann {
     pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         Scann {
             name: "FANN_scann()".to_string(),
-            metric: "cosine".to_string(),
+            metric: "angular".to_string(),
             dataset: None,
             codebook: HashMap::<i32, Centroid>::new(),
             clusters: clusters,

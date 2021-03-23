@@ -22,7 +22,7 @@ fn algo_definition(rp: &RunParameters) -> String {
         if i>0 { val.push_str("_"); }
         val.push_str(v);
     }
-    return format!("{}({})", rp.algorithm, val);
+    return format!("{}({}_{})", rp.algorithm, rp.metric, val);
 }
 
 fn main() {

@@ -39,8 +39,8 @@ pub struct KMeans {
 impl KMeans {
     pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         KMeans {
-            name: "FANN_bruteforce()".to_string(),
-            metric: "cosine".to_string(),
+            name: "FANN_kmeans()".to_string(),
+            metric: "angular".to_string(),
             dataset: None,
             codebook: HashMap::<i32, Centroid>::new(),
             clusters: clusters,
