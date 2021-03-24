@@ -29,6 +29,7 @@ pub struct ProductQuantization {
     dataset: Option<Array2::<f64>>,
     codebook: Vec<Vec<Centroid>>,
     m: usize,
+    training_size: usize,
     k: usize,
     max_iterations: usize,
     clusters_to_search: usize,
@@ -39,13 +40,14 @@ pub struct ProductQuantization {
 
 
 impl ProductQuantization {
-    pub fn new(verbose_print: bool, m: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+    pub fn new(verbose_print: bool, m: usize, training_size: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
             dataset: None,
             codebook: Vec::with_capacity(m),
             m: m,         // M
+            training_size: training_size,
             k: k,         // K
             max_iterations: max_iterations,
             clusters_to_search: clusters_to_search,
@@ -53,10 +55,6 @@ impl ProductQuantization {
             dimension: 0,
             sub_dimension: 0
         }
-    }
-
-    fn dataset_size(&self) -> usize {
-        return self.dataset.as_ref().unwrap().shape()[0]; // shape of rows, cols (vector dimension)
     }
 
     fn print_sum_codebook_children(&self, info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
@@ -84,7 +82,7 @@ impl ProductQuantization {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) { 
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, self.dataset_size());
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
         let mut init_k_sampled: Vec<usize> = vec![];
 
 
@@ -172,14 +170,20 @@ impl KMeans {
         }
     }
 
-    pub fn create_random_traindata(&self, dataset: ArrayView2::<f64>) -> Array2::<f64> {
-        let train_dataset_len = 2000;
+    fn print_codebook(&self, info: &str, codebook: &Vec::<(Array1::<f64>, Vec::<usize>)>) {
+        println!("{}", info.to_string().on_white().black());
+        for (k, (centroid, children)) in codebook.iter().enumerate() {
+            println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", k, children.len(), centroid.sum());
+        }
+    }
+
+    pub fn create_random_traindata(dataset: ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
         let mut rng = rand::thread_rng();
         let range = Uniform::new(0 as usize, dataset.nrows() as usize);
-        let random_datapoints: Vec<usize> = (0..train_dataset_len).map(|_| rng.sample(&range)).collect();
-        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_len, dataset.nrows());
+        let random_datapoints: Vec<usize> = (0..train_dataset_size).map(|_| rng.sample(&range)).collect();
+        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_size, dataset.nrows());
         
-        let mut train_data = Array2::zeros((train_dataset_len, dataset.ncols()));
+        let mut train_data = Array2::zeros((train_dataset_size, dataset.ncols()));
         for (i,v) in random_datapoints.iter().enumerate() {
             let data_row = dataset.slice(s![*v,..]);
             train_data.row_mut(i).assign(&data_row);
@@ -191,9 +195,9 @@ impl KMeans {
 
     pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
 
+        self.codebook = Vec::with_capacity(self.k);
         self.init(dataset);
-        self.init(dataset);
-
+        // self.print_codebook("Codebook after init: ", &self.codebook);
         
         let mut last_codebook = Vec::with_capacity(self.k);
         let mut iterations = 1;
@@ -219,7 +223,7 @@ impl KMeans {
             self.update(dataset);
             iterations += 1;
         }
-
+        self.print_codebook("Codebook after run: ", &self.codebook);
         return &self.codebook;
     }
 
@@ -232,7 +236,9 @@ impl KMeans {
             self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));
         }
 
-        // println!("K-Means Init Codebook:\n{:?}", self.codebook);
+        if self.verbose_print {
+            self.print_codebook("Codebook after init: ", &self.codebook);
+        }      
     }
 
     fn assign(&mut self, dataset: ArrayView2::<f64>) {
@@ -251,27 +257,31 @@ impl KMeans {
                 }
             }
             if best_centroid.is_some() {
+                if best_centroid.unwrap() > 19 {
+                    println!("WHAT THE FUCK?");
+                }
                 self.codebook[best_centroid.unwrap()].1.push(idx);
             } 
         }
-
     }
 
     fn update(&mut self, dataset: ArrayView2::<f64>) {
         for (centroid, childeren) in self.codebook.iter_mut() {
-            for i in 0..centroid.len() {
-                centroid[i]= 0.;
-            }
-            
-            for child_key in childeren.iter() {
-                let child_point = dataset.slice(s![*child_key,..]);
-                for (i, x) in child_point.iter().enumerate() {
-                    centroid[i] += x;
+            if childeren.len() > 0 {
+                for i in 0..centroid.len() {
+                    centroid[i]= 0.;
                 }
-            }
-
-            for i in 0..centroid.len() {
-                centroid[i] = centroid[i]/childeren.len() as f64;
+                
+                for child_key in childeren.iter() {
+                    let child_point = dataset.slice(s![*child_key,..]);
+                    for (i, x) in child_point.iter().enumerate() {
+                        centroid[i] += x;
+                    }
+                }
+    
+                for i in 0..centroid.len() {  
+                    centroid[i] = centroid[i]/childeren.len() as f64;
+                }
             }
         }
     }
@@ -294,21 +304,14 @@ impl AlgorithmImpl for ProductQuantization {
         self.dimension = dataset.slice(s![0,..]).len();
         self.sub_dimension = self.dimension / self.m;
         self.dataset = Some(dataset.to_owned());
-
         
         // ######################################################################
         // Create codebook, [m,k,d] m-th subspace, k-th codewords, d-th dimension
-        let codebook = Array3::<f64>::zeros((self.m, self.k, self.sub_dimension));
+        let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
         println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
         // ######################################################################
-
-
-        // ######################################################################
         // Create random selected train data from dataset
-        let mut kmeans = KMeans::new(self.k, self.max_iterations);
-        let train_data = kmeans.create_random_traindata(dataset);
-        // ######################################################################
-
+        let train_data = KMeans::create_random_traindata(dataset, self.training_size);
 
         // ######################################################################
         // Compute codebook from training data using k-means.
@@ -316,10 +319,18 @@ impl AlgorithmImpl for ProductQuantization {
             let begin = self.sub_dimension * m;
             let end = begin + self.sub_dimension - 1;
             let partial_data = train_data.slice(s![.., begin..end]);
-            println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
-            let codebook_for_m = kmeans.run(partial_data.view());
-            println!("Codebook for m {}\n{:?}",self.m, codebook_for_m[0]);
-            break;
+            if self.verbose_print {
+                println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
+            }
+            let mut kmeans = KMeans::new(self.k, self.max_iterations);
+            let codewords = kmeans.run(partial_data.view());
+            for (k, (centroid,_)) in codewords.iter().enumerate() {
+                    codebook[[m,k]] = centroid.to_owned();
+            }
+            if self.verbose_print {
+                // println!("Codebook for m {} childeren: {:?} \n{:?}", m, codebook_for_m[0].1.len(), codebook_for_m[0]);
+            }
+            
         }
 
         

@@ -74,8 +74,8 @@ fn main() {
         total_candidates += candidates.len();
     }
 
-    let search_time = total_time / dataset.len() as f64;
-    let avg_candidates = total_candidates as f64 / dataset.len() as f64;
+    let search_time = total_time / dataset.nrows() as f64;
+    let avg_candidates = total_candidates as f64 / dataset.nrows() as f64;
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }};
 
     let attrs = hdf5_store_file::Attributes {
