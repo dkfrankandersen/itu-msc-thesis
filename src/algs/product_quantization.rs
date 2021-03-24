@@ -28,6 +28,7 @@ pub struct ProductQuantization {
     metric: String,
     dataset: Option<Array2::<f64>>,
     codebook: Vec<Vec<Centroid>>,
+    pqcodes: Option::<Array2::<usize>>,
     m: usize,
     training_size: usize,
     k: usize,
@@ -46,6 +47,7 @@ impl ProductQuantization {
             metric: "angular".to_string(),
             dataset: None,
             codebook: Vec::with_capacity(m),
+            pqcodes: None,
             m: m,         // M
             training_size: training_size,
             k: k,         // K
@@ -257,9 +259,6 @@ impl KMeans {
                 }
             }
             if best_centroid.is_some() {
-                if best_centroid.unwrap() > 19 {
-                    println!("WHAT THE FUCK?");
-                }
                 self.codebook[best_centroid.unwrap()].1.push(idx);
             } 
         }
@@ -306,7 +305,7 @@ impl AlgorithmImpl for ProductQuantization {
         self.dataset = Some(dataset.to_owned());
         
         // ######################################################################
-        // Create codebook, [m,k,d] m-th subspace, k-th codewords, d-th dimension
+        // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
         println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
         // ######################################################################
@@ -330,10 +329,37 @@ impl AlgorithmImpl for ProductQuantization {
             if self.verbose_print {
                 // println!("Codebook for m {} childeren: {:?} \n{:?}", m, codebook_for_m[0].1.len(), codebook_for_m[0]);
             }
-            
         }
 
-        
+        // ######################################################################
+        // Compute PQ Codes
+        let mut pq_code = Array::from_elem((self.m, dataset.nrows()), 0);
+        for idx in 0..dataset.nrows() {
+            for m in 0..self.m {
+                let begin = self.sub_dimension * m;
+                let end = begin + self.sub_dimension - 1;
+                let partial_data = dataset.slice(s![idx, begin..end]);
+
+
+                let mut best_centroid: Option::<usize> = None;
+                let mut best_distance = f64::NEG_INFINITY;
+
+                for k in 0..self.k {
+                    let centroid = &codebook[[m,k]];
+                    let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
+                    if best_distance < distance {
+                        best_centroid = Some(k);
+                        best_distance = distance;
+                    }
+                }
+                if best_centroid.is_some() {
+                    pq_code[[m, idx]] = best_centroid.unwrap();
+                } 
+            }   
+        }
+
+        println!("{:?}", pq_code.column(5));
+        self.pqcodes = Some(pq_code);
 
     }
 
