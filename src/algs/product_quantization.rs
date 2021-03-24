@@ -130,16 +130,16 @@ impl ProductQuantization {
     fn run_pq(&mut self, max_iterations: usize, dataset: &ArrayView2::<f64>) {
         self.init(dataset);
         // loop {
-        //     if self.verbode_print && (iterations == 1 || iterations % 10 == 0) {
+        //     if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
         //         println!("Iteration {}", iterations);
         //     }
         //     if iterations > max_iterations {
-        //         if self.verbode_print {
+        //         if self.verbose_print {
         //             println!("Max iterations reached, iterations: {}", iterations-1);
         //         }
         //         break;
         //     } else if self.codebook == last_codebook {
-        //         if self.verbode_print {
+        //         if self.verbose_print {
         //             println!("Computation has converged, iterations: {}", iterations-1);
         //         }
         //         break;
@@ -158,6 +158,7 @@ struct KMeans {
     k: usize,
     max_iterations: usize,
     codebook: Vec::<(Array1::<f64>, Vec::<usize>)>,
+    verbose_print: bool
 }
 
 impl KMeans {
@@ -166,17 +167,60 @@ impl KMeans {
         KMeans{
             k: k,
             max_iterations: max_iterations,
-            codebook: Vec::with_capacity(k)
+            codebook: Vec::with_capacity(k),
+            verbose_print: true
         }
     }
 
-    pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> Vec::<(Array1::<f64>, Vec::<usize>)> {
+    pub fn create_random_traindata(&self, dataset: ArrayView2::<f64>) -> Array2::<f64> {
+        let train_dataset_len = 2000;
+        let mut rng = rand::thread_rng();
+        let range = Uniform::new(0 as usize, dataset.nrows() as usize);
+        let random_datapoints: Vec<usize> = (0..train_dataset_len).map(|_| rng.sample(&range)).collect();
+        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_len, dataset.nrows());
+        
+        let mut train_data = Array2::zeros((train_dataset_len, dataset.ncols()));
+        for (i,v) in random_datapoints.iter().enumerate() {
+            let data_row = dataset.slice(s![*v,..]);
+            train_data.row_mut(i).assign(&data_row);
+    }
+        println!("Train data ready, shape: {:?}", train_data.shape());
+        // println!("train_data:\n{}", train_data);
+        return train_data;
+    }
+
+    pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
 
         self.init(dataset);
         self.init(dataset);
 
         
-        return vec![(Array::zeros(self.k),  Vec::<usize>::new())];
+        let mut last_codebook = Vec::with_capacity(self.k);
+        let mut iterations = 1;
+        loop {
+            if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
+                println!("Iteration {}", iterations);
+            }
+            if iterations > self.max_iterations {
+                if self.verbose_print {
+                    println!("Max iterations reached, iterations: {}", iterations-1);
+                }
+                break;
+            } else if self.codebook == last_codebook {
+                if self.verbose_print {
+                    println!("Computation has converged, iterations: {}", iterations-1);
+                }
+                break;
+            }
+    
+            last_codebook = self.codebook.clone();
+
+            self.assign(dataset);
+            self.update(dataset);
+            iterations += 1;
+        }
+
+        return &self.codebook;
     }
 
     fn init(&mut self, dataset: ArrayView2::<f64>) {
@@ -192,7 +236,6 @@ impl KMeans {
     }
 
     fn assign(&mut self, dataset: ArrayView2::<f64>) {
-
         for (_,children) in self.codebook.iter_mut() {
             children.clear();
         }
@@ -214,8 +257,23 @@ impl KMeans {
 
     }
 
-    fn update() {
+    fn update(&mut self, dataset: ArrayView2::<f64>) {
+        for (centroid, childeren) in self.codebook.iter_mut() {
+            for i in 0..centroid.len() {
+                centroid[i]= 0.;
+            }
+            
+            for child_key in childeren.iter() {
+                let child_point = dataset.slice(s![*child_key,..]);
+                for (i, x) in child_point.iter().enumerate() {
+                    centroid[i] += x;
+                }
+            }
 
+            for i in 0..centroid.len() {
+                centroid[i] = centroid[i]/childeren.len() as f64;
+            }
+        }
     }
 
 
@@ -230,6 +288,7 @@ impl AlgorithmImpl for ProductQuantization {
     fn done(&self) {}
 
     fn get_memory_usage(&self) {}
+    
 
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dimension = dataset.slice(s![0,..]).len();
@@ -246,33 +305,21 @@ impl AlgorithmImpl for ProductQuantization {
 
         // ######################################################################
         // Create random selected train data from dataset
-        let train_dataset_len = 2000;
-        let mut rng = rand::thread_rng();
-        let range = Uniform::new(0 as usize, self.dataset_size() as usize);
-        let random_datapoints: Vec<usize> = (0..train_dataset_len).map(|_| rng.sample(&range)).collect();
-        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_len, self.dataset_size());
-        
-        let mut train_data = Array2::zeros((train_dataset_len, self.dimension));
-        for (i,v) in random_datapoints.iter().enumerate() {
-            let data_row = dataset.slice(s![*v,..]);
-            train_data.row_mut(i).assign(&data_row);
-        }
-        println!("Train data ready, shape: {:?}", train_data.shape());
-        // println!("train_data:\n{}", train_data);
-
+        let mut kmeans = KMeans::new(self.k, self.max_iterations);
+        let train_data = kmeans.create_random_traindata(dataset);
         // ######################################################################
 
 
         // ######################################################################
         // Compute codebook from training data using k-means.
         for m in 0..self.m {
-
             let begin = self.sub_dimension * m;
             let end = begin + self.sub_dimension - 1;
             let partial_data = train_data.slice(s![.., begin..end]);
             println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
-            let codebook_for_m = KMeans::new(self.k, self.max_iterations).run(train_data.view());
-
+            let codebook_for_m = kmeans.run(partial_data.view());
+            println!("Codebook for m {}\n{:?}",self.m, codebook_for_m[0]);
+            break;
         }
 
         

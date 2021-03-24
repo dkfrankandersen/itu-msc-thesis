@@ -33,7 +33,7 @@ pub struct KMeans {
     clusters: i32,
     max_iterations: i32,
     clusters_to_search: i32,
-    verbode_print: bool
+    verbose_print: bool
 }
 
 impl KMeans {
@@ -46,7 +46,7 @@ impl KMeans {
             clusters: clusters,
             max_iterations: max_iterations,
             clusters_to_search: clusters_to_search,
-            verbode_print: verbose_print
+            verbose_print: verbose_print
         }
     }
 
@@ -82,7 +82,7 @@ impl KMeans {
             self.codebook.insert(i, new_centroid);
         }
 
-        if self.verbode_print {
+        if self.verbose_print {
             println!("Dataset lenght: {}", self.dataset_size());
             println!("Init k-means with centroids: {:?}\n", init_k_sampled);
             self.print_codebook("Codebook after init", &self.codebook);
@@ -135,16 +135,16 @@ impl KMeans {
         let mut iterations = 1;
         let mut last_codebook: HashMap::<i32, Centroid> = HashMap::new();
         loop {
-            if self.verbode_print && (iterations == 1 || iterations % 10 == 0) {
+            if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
                 println!("Iteration {}", iterations);
             }
             if iterations > max_iterations {
-                if self.verbode_print {
+                if self.verbose_print {
                     println!("Max iterations reached, iterations: {}", iterations-1);
                 }
                 break;
             } else if self.codebook == last_codebook {
-                if self.verbode_print {
+                if self.verbose_print {
                     println!("Computation has converged, iterations: {}", iterations-1);
                 }
                 break;
@@ -156,7 +156,7 @@ impl KMeans {
             self.update();
             iterations += 1;
         }
-        if self.verbode_print {
+        if self.verbose_print {
             self.print_sum_codebook_children("Does codebook contain all points?", &self.codebook, dataset.shape()[0]);
             self.print_codebook("Codebook status", &self.codebook);
         }
@@ -203,7 +203,7 @@ impl AlgorithmImpl for KMeans {
             });
         }
         
-        if self.verbode_print {
+        if self.verbose_print {
             println!("best_centroids: {:?}", best_centroids);
         }
         
@@ -242,7 +242,7 @@ impl AlgorithmImpl for KMeans {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        if self.verbode_print {
+        if self.verbose_print {
             println!("best_n_candidates \n{:?}", best_n_candidates);
         }
         best_n_candidates
