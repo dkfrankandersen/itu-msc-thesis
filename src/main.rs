@@ -25,6 +25,7 @@ fn algo_definition(rp: &RunParameters) -> String {
     return format!("{}({}_{})", rp.algorithm, rp.metric, val);
 }
 
+
 fn main() {
     let verbose_print = true;
     let args: Vec<String> = env::args().collect();
@@ -38,7 +39,7 @@ fn main() {
                                     results: args[4].parse::<u32>().unwrap(),
                                     additional: args[5..].to_vec(),
     };
-
+    
     let algo_def = algo_definition(&parameters);
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5",parameters.dataset);

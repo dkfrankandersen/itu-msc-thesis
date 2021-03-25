@@ -20,7 +20,7 @@ impl PQKMeans {
             k: k,
             max_iterations: max_iterations,
             codebook: Vec::with_capacity(k),
-            verbose_print: true
+            verbose_print: false
         }
     }
 
@@ -66,7 +66,7 @@ impl PQKMeans {
     fn init(&mut self, dataset: ArrayView2::<f64>) {
         let mut rng = thread_rng();
         let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows()-1);
-        for i in 0..self.k {
+        for _ in 0..self.k {
             let rand_key = rng.sample(dist_uniform);
             let candidate = dataset.slice(s![rand_key,..]);
             self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));

@@ -1,8 +1,6 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::algs::*;
 use rand::{distributions::Uniform, Rng};
-use std::collections::HashMap;
-use colored::*;
 use pq_kmeans::{PQKMeans};
 
 #[derive(Debug, Clone)]
@@ -38,13 +36,6 @@ impl ProductQuantization {
             dimension: 0,
             sub_dimension: 0
         }
-    }
-
-    fn partial_dimension_from_datapoint(&self, pos: usize,  datapoint: &ArrayView1::<f64>) -> Array1<f64> {
-        let begin = self.sub_dimension * pos;
-        let end = begin + self.sub_dimension - 1;
-
-        datapoint.slice(s![begin..end]).to_owned()
     }
 
     pub fn random_traindata(&self, dataset: ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {

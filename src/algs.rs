@@ -11,7 +11,6 @@ use ndarray::{ArrayView1, ArrayView2, Array2};
 use ndarray::{s};
 use bruteforce::Bruteforce;
 use kmeans::KMeans;
-use pq_kmeans::PQKMeans;
 use product_quantization::ProductQuantization;
 use scann::Scann;
 

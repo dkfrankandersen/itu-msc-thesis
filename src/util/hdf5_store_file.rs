@@ -68,6 +68,7 @@ struct ResultFilename {
     filetype: String
 }
 
+#[allow(dead_code)]
 impl ResultFilename {
     fn filename(&self) -> String {
         format!("{}{}", self.name, self.filetype)
