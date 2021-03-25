@@ -1,5 +1,6 @@
 pub mod bruteforce;
 pub mod kmeans;
+pub mod pq_kmeans;
 pub mod product_quantization;
 pub mod scann;
 pub mod dataset;
@@ -10,6 +11,7 @@ use ndarray::{ArrayView1, ArrayView2, Array2};
 use ndarray::{s};
 use bruteforce::Bruteforce;
 use kmeans::KMeans;
+use pq_kmeans::PQKMeans;
 use product_quantization::ProductQuantization;
 use scann::Scann;
 
