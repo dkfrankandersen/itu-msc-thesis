@@ -59,7 +59,7 @@ impl ProductQuantization {
         }
     }
 
-    fn print_sum_codebook_children(&self, info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
+    fn _print_sum_codebook_children(&self, info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
         println!("{}", info.to_string().on_white().black());
         let mut sum = 0;
         for (_, centroid) in codebook.iter() {
@@ -68,87 +68,79 @@ impl ProductQuantization {
         println!("children: {} == {} dataset points, equal {}", sum.to_string().blue(), dataset_len.to_string().blue(), (sum == dataset_len).to_string().blue());
     }
     
-    fn print_codebook(&self, info: &str, codebook: &HashMap<i32, Centroid>) {
+    fn _print_codebook(&self, info: &str, codebook: &HashMap<i32, Centroid>) {
         println!("{}", info.to_string().on_white().black());
         for (key, centroid) in codebook.iter() {
             println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", key, centroid.children.len(), centroid.point.sum());
         }
     }
 
-    fn partial_dimension_from_datapoint(&self, pos: usize,  datapoint: &ArrayView1::<f64>)
-    -> Array1<f64> {
+    fn partial_dimension_from_datapoint(&self, pos: usize,  datapoint: &ArrayView1::<f64>) -> Array1<f64> {
         let begin = self.sub_dimension * pos;
         let end = begin + self.sub_dimension - 1;
-        return datapoint.slice(s![begin..end]).to_owned();
+
+        datapoint.slice(s![begin..end]).to_owned()
     }
 
-    fn init(&mut self, dataset: &ArrayView2::<f64>) { 
-        let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
-        let mut init_k_sampled: Vec<usize> = vec![];
-
-
-        /*
-            What we want is:
-                1. Uniform sample M candidates
-                2. For each datapoint split into partial_candidates with partial dimension 
-                3. Init sub codebooks for each partial dimension as k-means
-                4. 
-        */
-
-        // Create M sub codebooks with capacity of k sub centroids
-        for i in 0..self.m {
-            self.codebook[i] = Vec::with_capacity(self.k);
+    pub fn random_traindata(&self, dataset: ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
+        let mut rng = rand::thread_rng();
+        let range = Uniform::new(0 as usize, dataset.nrows() as usize);
+        let random_datapoints: Vec<usize> = (0..train_dataset_size).map(|_| rng.sample(&range)).collect();
+        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_size, dataset.nrows());
+        
+        let mut train_data = Array2::zeros((train_dataset_size, dataset.ncols()));
+        for (i,v) in random_datapoints.iter().enumerate() {
+            let data_row = dataset.slice(s![*v,..]);
+            train_data.row_mut(i).assign(&data_row);
         }
+        train_data
+    }
 
-        // For each codebook perform k-means init
-        for (i, sub_codebook) in self.codebook.iter_mut().enumerate() {
-            let rand_key = rng.sample(dist_uniform);
-            let candidate = dataset.slice(s![rand_key,..]);
-            let begin = self.sub_dimension * i;
+    fn encode_codebook(&self, train_data: ArrayView2::<f64>) -> Array2::<Array1::<f64>>{
+        // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
+        let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
+        for m in 0..self.m {
+            let begin = self.sub_dimension * m;
             let end = begin + self.sub_dimension - 1;
-            let partial_candidate = candidate.slice(s![begin..end]).to_owned();
-
-            for (j, centroid) in sub_codebook.iter_mut().enumerate() {
-                
-                
+            let partial_data = train_data.slice(s![.., begin..end]);
+            if self.verbose_print {
+                println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
             }
-
+            let mut kmeans = KMeans::new(self.k, self.max_iterations);
+            let codewords = kmeans.run(partial_data.view());
+            for (k, (centroid,_)) in codewords.iter().enumerate() {
+                    codebook[[m,k]] = centroid.to_owned();
+            }
         }
-
-        println!("\n\n CODEBOOK \n{:?}", self.codebook);
+        codebook
     }
 
-    fn assign(&mut self) {
+    fn compute_pqcodes(&self, dataset: ArrayView2::<f64>, codebook: Array2::<Array1::<f64>>) -> Array2::<usize> {
+        let mut pq_codes = Array::from_elem((self.m, dataset.nrows()), 0);
+        for idx in 0..dataset.nrows() {
+            for m in 0..self.m {
+                let begin = self.sub_dimension * m;
+                let end = begin + self.sub_dimension - 1;
+                let partial_data = dataset.slice(s![idx, begin..end]);
 
-    }
 
-    fn update(&mut self) { 
+                let mut best_centroid: Option::<usize> = None;
+                let mut best_distance = f64::NEG_INFINITY;
 
-    }
-
-    fn run_pq(&mut self, max_iterations: usize, dataset: &ArrayView2::<f64>) {
-        self.init(dataset);
-        // loop {
-        //     if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
-        //         println!("Iteration {}", iterations);
-        //     }
-        //     if iterations > max_iterations {
-        //         if self.verbose_print {
-        //             println!("Max iterations reached, iterations: {}", iterations-1);
-        //         }
-        //         break;
-        //     } else if self.codebook == last_codebook {
-        //         if self.verbose_print {
-        //             println!("Computation has converged, iterations: {}", iterations-1);
-        //         }
-        //         break;
-        //     }
-
-        //     self.assign();
-        //     self.update();
-        //     iterations += 1;
-        // }
+                for k in 0..self.k {
+                    let centroid = &codebook[[m,k]];
+                    let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
+                    if best_distance < distance {
+                        best_centroid = Some(k);
+                        best_distance = distance;
+                    }
+                }
+                if best_centroid.is_some() {
+                    pq_codes[[m, idx]] = best_centroid.unwrap();
+                } 
+            }   
+        }
+        pq_codes
     }
 }
 
@@ -172,35 +164,19 @@ impl KMeans {
         }
     }
 
-    fn print_codebook(&self, info: &str, codebook: &Vec::<(Array1::<f64>, Vec::<usize>)>) {
+    fn _print_codebook(&self, info: &str, codebook: &Vec::<(Array1::<f64>, Vec::<usize>)>) {
         println!("{}", info.to_string().on_white().black());
         for (k, (centroid, children)) in codebook.iter().enumerate() {
             println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", k, children.len(), centroid.sum());
         }
     }
 
-    pub fn create_random_traindata(dataset: ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
-        let mut rng = rand::thread_rng();
-        let range = Uniform::new(0 as usize, dataset.nrows() as usize);
-        let random_datapoints: Vec<usize> = (0..train_dataset_size).map(|_| rng.sample(&range)).collect();
-        println!("Random datapoints [{}] for training, between [0..{}]", train_dataset_size, dataset.nrows());
-        
-        let mut train_data = Array2::zeros((train_dataset_size, dataset.ncols()));
-        for (i,v) in random_datapoints.iter().enumerate() {
-            let data_row = dataset.slice(s![*v,..]);
-            train_data.row_mut(i).assign(&data_row);
-    }
-        println!("Train data ready, shape: {:?}", train_data.shape());
-        // println!("train_data:\n{}", train_data);
-        return train_data;
-    }
+    
 
     pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
 
         self.codebook = Vec::with_capacity(self.k);
-        self.init(dataset);
-        // self.print_codebook("Codebook after init: ", &self.codebook);
-        
+        self.init(dataset);        
         let mut last_codebook = Vec::with_capacity(self.k);
         let mut iterations = 1;
         loop {
@@ -225,7 +201,7 @@ impl KMeans {
             self.update(dataset);
             iterations += 1;
         }
-        self.print_codebook("Codebook after run: ", &self.codebook);
+        self._print_codebook("Codebook after run: ", &self.codebook);
         return &self.codebook;
     }
 
@@ -239,7 +215,7 @@ impl KMeans {
         }
 
         if self.verbose_print {
-            self.print_codebook("Codebook after init: ", &self.codebook);
+            self._print_codebook("Codebook after init: ", &self.codebook);
         }      
     }
 
@@ -297,7 +273,6 @@ impl AlgorithmImpl for ProductQuantization {
     fn done(&self) {}
 
     fn get_memory_usage(&self) {}
-    
 
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dimension = dataset.slice(s![0,..]).len();
@@ -305,61 +280,26 @@ impl AlgorithmImpl for ProductQuantization {
         self.dataset = Some(dataset.to_owned());
         
         // ######################################################################
-        // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
-        let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
-        println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
-        // ######################################################################
         // Create random selected train data from dataset
-        let train_data = KMeans::create_random_traindata(dataset, self.training_size);
+        let train_data = self.random_traindata(dataset, self.training_size);
+        if self.verbose_print {
+            println!("Traing data created shape: {:?}", train_data.shape());
+        }
 
         // ######################################################################
+        // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         // Compute codebook from training data using k-means.
-        for m in 0..self.m {
-            let begin = self.sub_dimension * m;
-            let end = begin + self.sub_dimension - 1;
-            let partial_data = train_data.slice(s![.., begin..end]);
-            if self.verbose_print {
-                println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
-            }
-            let mut kmeans = KMeans::new(self.k, self.max_iterations);
-            let codewords = kmeans.run(partial_data.view());
-            for (k, (centroid,_)) in codewords.iter().enumerate() {
-                    codebook[[m,k]] = centroid.to_owned();
-            }
-            if self.verbose_print {
-                // println!("Codebook for m {} childeren: {:?} \n{:?}", m, codebook_for_m[0].1.len(), codebook_for_m[0]);
-            }
+        let codebook = self.encode_codebook(train_data.view());
+        if self.verbose_print {
+            println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
         }
 
-        // ######################################################################
         // Compute PQ Codes
-        let mut pq_code = Array::from_elem((self.m, dataset.nrows()), 0);
-        for idx in 0..dataset.nrows() {
-            for m in 0..self.m {
-                let begin = self.sub_dimension * m;
-                let end = begin + self.sub_dimension - 1;
-                let partial_data = dataset.slice(s![idx, begin..end]);
-
-
-                let mut best_centroid: Option::<usize> = None;
-                let mut best_distance = f64::NEG_INFINITY;
-
-                for k in 0..self.k {
-                    let centroid = &codebook[[m,k]];
-                    let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
-                    if best_distance < distance {
-                        best_centroid = Some(k);
-                        best_distance = distance;
-                    }
-                }
-                if best_centroid.is_some() {
-                    pq_code[[m, idx]] = best_centroid.unwrap();
-                } 
-            }   
+        self.pqcodes = Some(self.compute_pqcodes(dataset, codebook));
+        if self.verbose_print {
+            println!("PQ Codes computed, shape {:?}", self.pqcodes.as_ref().unwrap().shape());
         }
 
-        println!("{:?}", pq_code.column(5));
-        self.pqcodes = Some(pq_code);
 
     }
 
