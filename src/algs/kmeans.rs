@@ -50,10 +50,6 @@ impl KMeans {
         }
     }
 
-    fn dataset_size(&self) -> usize {
-        return self.dataset.as_ref().unwrap().shape()[0]; // shape of rows, cols (vector dimension)
-    }
-
     fn print_sum_codebook_children(&self, info: &str, codebook: &HashMap<i32, Centroid>, dataset_len: usize) {
         println!("{}", info.to_string().on_white().black());
         let mut sum = 0;
@@ -72,7 +68,7 @@ impl KMeans {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, self.dataset_size());
+        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
         let mut init_k_sampled: Vec<usize> = vec![];
         for i in 0..self.clusters {
             let rand_key = rng.sample(dist_uniform);
@@ -83,7 +79,7 @@ impl KMeans {
         }
 
         if self.verbose_print {
-            println!("Dataset lenght: {}", self.dataset_size());
+            println!("Dataset rows: {}", dataset.nrows());
             println!("Init k-means with centroids: {:?}\n", init_k_sampled);
             self.print_codebook("Codebook after init", &self.codebook);
         }
@@ -132,8 +128,8 @@ impl KMeans {
     fn run_kmeans(&mut self, max_iterations: i32, dataset: &ArrayView2::<f64>) {
         self.init(dataset);
         // Repeat until convergence or some iteration count
-        let mut iterations = 1;
         let mut last_codebook: HashMap::<i32, Centroid> = HashMap::new();
+        let mut iterations = 1;
         loop {
             if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
                 println!("Iteration {}", iterations);
@@ -176,16 +172,13 @@ impl AlgorithmImpl for KMeans {
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dataset = Some(dataset.to_owned());
         self.run_kmeans(self.max_iterations, &dataset);
-        
     }
 
     fn batch_query(&self) {}
 
     fn get_batch_results(&self) {}
     
-    fn get_additional(&self) {
-        
-    }
+    fn get_additional(&self) {}
 
     fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
     
@@ -212,10 +205,6 @@ impl AlgorithmImpl for KMeans {
         for _ in 0..self.clusters_to_search {
             let centroid_key = best_centroids.pop().unwrap().index;
             for candidate_key in self.codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
-                // let neighbors = vec![97478, 262700, 846101, 671078, 232287, 727732, 544474, 1133489, 723915, 660281];
-                // if neighbors.contains(candidate_key) {
-                //     println!("Best neighbor {:?} is in centroid: {:?}", candidate_key, centroid_key);
-                // } 
                 let candidate = ds.slice(s![*candidate_key as i32,..]);
                 let dist = distance::cosine_similarity(&p, &candidate);
                 if best_candidates.len() < result_count as usize {

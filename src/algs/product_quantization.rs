@@ -112,6 +112,12 @@ impl AlgorithmImpl for ProductQuantization {
 
     fn get_memory_usage(&self) {}
 
+    fn batch_query(&self) {}
+
+    fn get_batch_results(&self) {}
+    
+    fn get_additional(&self) {}
+
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dimension = dataset.slice(s![0,..]).len();
         self.sub_dimension = self.dimension / self.m;
@@ -139,14 +145,6 @@ impl AlgorithmImpl for ProductQuantization {
         }
 
 
-    }
-
-    fn batch_query(&self) {}
-
-    fn get_batch_results(&self) {}
-    
-    fn get_additional(&self) {
-        
     }
 
     fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
