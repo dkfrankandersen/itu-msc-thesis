@@ -8,7 +8,7 @@ pub struct ProductQuantization {
     name: String,
     metric: String,
     dataset: Option<Array2::<f64>>,
-    pqcodes: Option::<Array2::<usize>>,
+    codebook: Option::<Array2::<Array1::<f64>>>,
     m: usize,
     training_size: usize,
     k: usize,
@@ -26,7 +26,7 @@ impl ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
             dataset: None,
-            pqcodes: None,
+            codebook: None,
             m: m,         // M
             training_size: training_size,
             k: k,         // K
@@ -52,7 +52,7 @@ impl ProductQuantization {
         train_data
     }
 
-    fn encode_codebook(&self, train_data: ArrayView2::<f64>) -> Array2::<Array1::<f64>>{
+    fn encode_codebook(&mut self, train_data: ArrayView2::<f64>) {
         // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
         for m in 0..self.m {
@@ -68,11 +68,11 @@ impl ProductQuantization {
                     codebook[[m,k]] = centroid.to_owned();
             }
         }
-        codebook
+        self.codebook = Some(codebook);
     }
 
-    fn compute_pqcodes(&self, dataset: ArrayView2::<f64>, codebook: Array2::<Array1::<f64>>) -> Array2::<usize> {
-        let mut pq_codes = Array::from_elem((self.m, dataset.nrows()), 0);
+    fn compute_pqcodes(&self, dataset: ArrayView2::<f64>) -> Array2::<usize> {
+        let mut pqcodes = Array::from_elem((self.m, dataset.nrows()), 0);
         for idx in 0..dataset.nrows() {
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
@@ -84,7 +84,7 @@ impl ProductQuantization {
                 let mut best_distance = f64::NEG_INFINITY;
 
                 for k in 0..self.k {
-                    let centroid = &codebook[[m,k]];
+                    let centroid = &self.codebook.as_ref().unwrap()[[m,k]];
                     let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
                     if best_distance < distance {
                         best_centroid = Some(k);
@@ -92,11 +92,30 @@ impl ProductQuantization {
                     }
                 }
                 if best_centroid.is_some() {
-                    pq_codes[[m, idx]] = best_centroid.unwrap();
+                    pqcodes[[m, idx]] = best_centroid.unwrap();
                 } 
             }   
         }
-        pq_codes
+        pqcodes
+    }
+
+    fn distance_table(&self, query: Array1<f64>) {
+        let mut dtable = Vec::<Vec::<f64>>::new();
+
+        for m in 0..self.m {
+            let begin = self.sub_dimension * m;
+            let end = begin + self.sub_dimension - 1;
+            let partial_data = query.slice(s![begin..end]);
+
+            println!("partial_data: {}", partial_data);
+             
+
+            for k in 0..self.k {
+                let code = &self.codebook.as_ref().unwrap();
+                let sub_centroid = &code[[m,k]];
+                dtable[m][k] = distance::cosine_similarity(&sub_centroid.view(), &partial_data);
+            }
+        }
     }
 }
 
@@ -123,28 +142,24 @@ impl AlgorithmImpl for ProductQuantization {
         self.sub_dimension = self.dimension / self.m;
         self.dataset = Some(dataset.to_owned());
         
-        // ######################################################################
         // Create random selected train data from dataset
         let train_data = self.random_traindata(dataset, self.training_size);
         if self.verbose_print {
             println!("Traing data created shape: {:?}", train_data.shape());
         }
 
-        // ######################################################################
         // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         // Compute codebook from training data using k-means.
-        let codebook = self.encode_codebook(train_data.view());
+        self.encode_codebook(train_data.view());
         if self.verbose_print {
-            println!("Codebook created [m, k, d], shape: {:?}", codebook.shape());
+            println!("Codebook created [m, k, d], shape: {:?}", self.codebook.as_ref().unwrap().shape());
         }
 
         // Compute PQ Codes
-        self.pqcodes = Some(self.compute_pqcodes(dataset, codebook));
+        let pqcodes = self.compute_pqcodes(dataset);
         if self.verbose_print {
-            println!("PQ Codes computed, shape {:?}", self.pqcodes.as_ref().unwrap().shape());
+            println!("PQ Codes computed, shape {:?}", pqcodes.shape());
         }
-
-
     }
 
     fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
