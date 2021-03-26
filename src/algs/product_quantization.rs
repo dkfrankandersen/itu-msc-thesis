@@ -2,6 +2,8 @@ use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::algs::*;
 use rand::{distributions::Uniform, Rng};
 use pq_kmeans::{PQKMeans};
+use std::collections::BinaryHeap;
+use crate::algs::pq_data_entry::{PQDataEntry};
 
 #[derive(Debug, Clone)]
 pub struct ProductQuantization {
@@ -99,24 +101,26 @@ impl ProductQuantization {
         pqcodes
     }
 
-    fn distance_table(&self, query: Array1<f64>) {
-        let mut dtable = Vec::<Vec::<f64>>::new();
-
+    fn distance_table(&self, query: &ArrayView1<f64>) -> Vec::<Vec::<f64>> {
+        let mut dtable = Vec::<Vec::<f64>>::with_capacity(self.m);
+        
         for m in 0..self.m {
+            dtable.push(Vec::with_capacity(self.k));
             let begin = self.sub_dimension * m;
             let end = begin + self.sub_dimension - 1;
-            let partial_data = query.slice(s![begin..end]);
-
-            println!("partial_data: {}", partial_data);
-             
-
+            let partial_data = &query.slice(s![begin..end]);
             for k in 0..self.k {
                 let code = &self.codebook.as_ref().unwrap();
                 let sub_centroid = &code[[m,k]];
-                dtable[m][k] = distance::cosine_similarity(&sub_centroid.view(), &partial_data);
+                
+                let dist = distance::cosine_similarity(&sub_centroid.view(), &partial_data);
+                dtable[m].push(dist);
             }
         }
+
+        dtable
     }
+    
 }
 
 
@@ -162,8 +166,20 @@ impl AlgorithmImpl for ProductQuantization {
         }
     }
 
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, query: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
         
+
+        let dtable = self.distance_table(query);
+        let mut best_centroids = BinaryHeap::new();
+        
+        for m in 0..self.m {
+            for k in 0..self.k {
+                best_centroids.push(PQDataEntry{cluster: m, centroid: k, distance: dtable[m][m]});
+            }
+        }
+
+        // println!("{:?}", dtable);
+
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();
         if self.verbose_print {
