@@ -25,34 +25,12 @@ pub enum Algorithm {
 }
 
 trait AlgorithmImpl {
-    fn done(&self);
-    fn get_memory_usage(&self);
     fn fit(&mut self, dataset: ArrayView2::<f64>);
     fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize>;
-    fn batch_query(&self);
-    fn get_batch_results(&self);
-    fn get_additional(&self);
     fn __str__(&self);
 }
 
 impl AlgorithmImpl for Algorithm {
-    fn done(&self) {
-        match *self {
-            Algorithm::Bruteforce(ref x) => x.done(),
-            Algorithm::KMeans(ref x) => x.done(),
-            Algorithm::ProductQuantization(ref x) => x.done(),
-            Algorithm::Scann(ref x) => x.done(),
-        }
-    }
-
-    fn get_memory_usage(&self) {
-        match *self {
-            Algorithm::Bruteforce(ref x) => x.get_memory_usage(),
-            Algorithm::KMeans(ref x) => x.get_memory_usage(),
-            Algorithm::ProductQuantization(ref x) => x.get_memory_usage(),
-            Algorithm::Scann(ref x) => x.get_memory_usage(),
-        }
-    }
 
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         match *self {
@@ -69,33 +47,6 @@ impl AlgorithmImpl for Algorithm {
             Algorithm::KMeans(ref x) => x.query(p, result_count),
             Algorithm::ProductQuantization(ref x) => x.query(p, result_count),
             Algorithm::Scann(ref x) => x.query(p, result_count),
-        }
-    }
-
-    fn batch_query(&self) {
-        match *self {
-            Algorithm::Bruteforce(ref x) => x.batch_query(),
-            Algorithm::KMeans(ref x) => x.batch_query(),
-            Algorithm::ProductQuantization(ref x) => x.batch_query(),
-            Algorithm::Scann(ref x) => x.batch_query(),
-        }
-    }
-
-    fn get_batch_results(&self) {
-        match *self {
-            Algorithm::Bruteforce(ref x) => x.get_batch_results(),
-            Algorithm::KMeans(ref x) => x.get_batch_results(),
-            Algorithm::ProductQuantization(ref x) => x.get_batch_results(),
-            Algorithm::Scann(ref x) => x.get_batch_results(),
-        }
-    }
-    
-    fn get_additional(&self) {
-        match *self {
-            Algorithm::Bruteforce(ref x) => x.get_additional(),
-            Algorithm::KMeans(ref x) => x.get_additional(),
-            Algorithm::ProductQuantization(ref x) => x.get_additional(),
-            Algorithm::Scann(ref x) => x.get_additional(),
         }
     }
 
@@ -124,7 +75,6 @@ impl AlgorithmFactory {
         }
     }
 }
-
 
 pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
     

@@ -165,20 +165,10 @@ impl AlgorithmImpl for KMeans {
         self.name.to_string();
     }
 
-    fn done(&self) {}
-
-    fn get_memory_usage(&self) {}
-
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dataset = Some(dataset.to_owned());
         self.run_kmeans(self.max_iterations, &dataset);
     }
-
-    fn batch_query(&self) {}
-
-    fn get_batch_results(&self) {}
-    
-    fn get_additional(&self) {}
 
     fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
     

@@ -131,16 +131,6 @@ impl AlgorithmImpl for ProductQuantization {
         self.name.to_string();
     }
 
-    fn done(&self) {}
-
-    fn get_memory_usage(&self) {}
-
-    fn batch_query(&self) {}
-
-    fn get_batch_results(&self) {}
-    
-    fn get_additional(&self) {}
-
     fn fit(&mut self, dataset: ArrayView2::<f64>) {
         self.dimension = dataset.slice(s![0,..]).len();
         self.sub_dimension = self.dimension / self.m;
