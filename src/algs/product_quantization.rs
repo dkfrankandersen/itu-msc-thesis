@@ -11,6 +11,7 @@ pub struct ProductQuantization {
     metric: String,
     dataset: Option<Array2::<f64>>,
     codebook: Option::<Array2::<Array1::<f64>>>,
+    pqcodes: Option::<Array2::<usize>>,
     m: usize,
     training_size: usize,
     k: usize,
@@ -29,6 +30,7 @@ impl ProductQuantization {
             metric: "angular".to_string(),
             dataset: None,
             codebook: None,
+            pqcodes: None,
             m: m,         // M
             training_size: training_size,
             k: k,         // K
@@ -150,9 +152,9 @@ impl AlgorithmImpl for ProductQuantization {
         }
 
         // Compute PQ Codes
-        let pqcodes = self.compute_pqcodes(dataset);
+        self.pqcodes = Some(self.compute_pqcodes(dataset));
         if self.verbose_print {
-            println!("PQ Codes computed, shape {:?}", pqcodes.shape());
+            println!("PQ Codes computed, shape {:?}", self.pqcodes.as_ref().unwrap().shape());
         }
     }
 
@@ -160,15 +162,38 @@ impl AlgorithmImpl for ProductQuantization {
         
 
         let dtable = self.distance_table(query);
+        // println!("Query with dtable\n {:?}", dtable);
         let mut best_centroids = BinaryHeap::new();
         
         for m in 0..self.m {
             for k in 0..self.k {
-                best_centroids.push(PQDataEntry{cluster: m, centroid: k, distance: dtable[m][m]});
+                best_centroids.push(PQDataEntry{cluster: m, centroid: k, distance: -dtable[m][k]});
             }
         }
+        
+        for i in 0..self.clusters_to_search {
+            let centroid = (best_centroids.pop()).unwrap();
 
-        // println!("{:?}", dtable);
+            let pqcode = self.pqcodes.as_ref().unwrap();
+            let pqcodes = pqcode.slice(s![centroid.cluster, ..]);
+            let mut datapoints = Vec::new();
+            for m in 0..self.m {
+                for c in pqcodes.iter() {
+                    let what = &self.codebook.as_ref().unwrap()[[centroid.cluster,centroid.centroid]];
+                    datapoints.push(what);
+                }
+                
+
+            }
+            
+            println!("PQ {}: datapoints:\n {:?}", i, datapoints);
+
+
+            // println!("{:?}", centroid);
+        }
+
+
+        println!("best_centroids len {:?}", best_centroids.len());
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();

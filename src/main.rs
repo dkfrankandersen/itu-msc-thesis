@@ -62,8 +62,9 @@ fn main() {
         if verbose_print {
             println!("{:?}", result);
         }
-        break; // debug
+        
         results.push(result);
+        break; // debug
     }
     return; // debug
 
