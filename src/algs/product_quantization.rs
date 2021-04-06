@@ -1,9 +1,12 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
+use std::collections::HashMap;
 use crate::algs::*;
 use rand::{distributions::Uniform, Rng};
 use pq_kmeans::{PQKMeans};
 use std::collections::BinaryHeap;
 use crate::algs::pq_data_entry::{PQDataEntry};
+use crate::algs::data_entry::{DataEntry};
+
 
 #[derive(Debug, Clone)]
 pub struct ProductQuantization {
@@ -56,7 +59,7 @@ impl ProductQuantization {
         train_data
     }
 
-    fn encode_codebook(&mut self, train_data: ArrayView2::<f64>) {
+    fn train_codebook(&mut self, train_data: ArrayView2::<f64>) {
         // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         let mut codebook = Array::from_elem((self.m, self.k), Array::zeros(self.sub_dimension));
         for m in 0..self.m {
@@ -64,7 +67,7 @@ impl ProductQuantization {
             let end = begin + self.sub_dimension - 1;
             let partial_data = train_data.slice(s![.., begin..end]);
             if self.verbose_print {
-                println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
+                // println!("Run k-means for m [{}], sub dim {:?}, first element [{}]", m, partial_data.shape(), partial_data[[0,0]]);
             }
             let mut pq_kmeans = PQKMeans::new(self.k, self.max_iterations);
             let codewords = pq_kmeans.run(partial_data.view());
@@ -75,14 +78,13 @@ impl ProductQuantization {
         self.codebook = Some(codebook);
     }
 
-    fn compute_pqcodes(&self, dataset: ArrayView2::<f64>) -> Array2::<usize> {
-        let mut pqcodes = Array::from_elem((self.m, dataset.nrows()), 0);
-        for idx in 0..dataset.nrows() {
+    fn dataset_to_pqcodes(&self, dataset: ArrayView2::<f64>) -> Array2::<usize> {
+        let mut pqcodes = Array::from_elem((dataset.nrows(), self.m), 0);
+        for n in 0..dataset.nrows() {
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
                 let end = begin + self.sub_dimension - 1;
-                let partial_data = dataset.slice(s![idx, begin..end]);
-
+                let partial_data = dataset.slice(s![n, begin..end]);
 
                 let mut best_centroid: Option::<usize> = None;
                 let mut best_distance = f64::NEG_INFINITY;
@@ -96,7 +98,7 @@ impl ProductQuantization {
                     }
                 }
                 if best_centroid.is_some() {
-                    pqcodes[[m, idx]] = best_centroid.unwrap();
+                    pqcodes[[n, m]] = best_centroid.unwrap();
                 } 
             }   
         }
@@ -122,6 +124,18 @@ impl ProductQuantization {
 
         dtable
     }
+
+    fn adist(&self, dtable: Vec::<Vec::<f64>>) -> Array1::<f64> {
+        let n = self.dataset.as_ref().unwrap().nrows();
+        let pqcode = self.pqcodes.as_ref().unwrap();
+        let mut dists = Array1::<f64>::zeros(n);
+        for n in 0..n {
+            for m in 0..self.m {
+                dists[n] += dtable[m][pqcode[[n,m]]];
+            }
+        }
+        dists
+    }
     
 }
 
@@ -146,56 +160,41 @@ impl AlgorithmImpl for ProductQuantization {
 
         // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
         // Compute codebook from training data using k-means.
-        self.encode_codebook(train_data.view());
+        self.train_codebook(train_data.view());
         if self.verbose_print {
             println!("Codebook created [m, k, d], shape: {:?}", self.codebook.as_ref().unwrap().shape());
         }
 
+        // println!("CODEBOOK: \n {:?}", self.codebook);
+
         // Compute PQ Codes
-        self.pqcodes = Some(self.compute_pqcodes(dataset));
+        self.pqcodes = Some(self.dataset_to_pqcodes(dataset));
         if self.verbose_print {
             println!("PQ Codes computed, shape {:?}", self.pqcodes.as_ref().unwrap().shape());
         }
+
+        // println!("PQ CODES: \n {:?}", self.pqcodes);
     }
 
     fn query(&self, query: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
-        
 
         let dtable = self.distance_table(query);
         // println!("Query with dtable\n {:?}", dtable);
-        let mut best_centroids = BinaryHeap::new();
         
-        for m in 0..self.m {
-            for k in 0..self.k {
-                best_centroids.push(PQDataEntry{cluster: m, centroid: k, distance: -dtable[m][k]});
-            }
-        }
+
+        let dists = self.adist(dtable);
+        // println!("adists:\n {:?}", dists);
         
-        for i in 0..self.clusters_to_search {
-            let centroid = (best_centroids.pop()).unwrap();
-
-            let pqcode = self.pqcodes.as_ref().unwrap();
-            let pqcodes = pqcode.slice(s![centroid.cluster, ..]);
-            let mut datapoints = Vec::new();
-            for m in 0..self.m {
-                for c in pqcodes.iter() {
-                    let what = &self.codebook.as_ref().unwrap()[[centroid.cluster,centroid.centroid]];
-                    datapoints.push(what);
-                }
-                
-
-            }
-            
-            println!("PQ {}: datapoints:\n {:?}", i, datapoints);
-
-
-            // println!("{:?}", centroid);
+        let mut best_candidates = BinaryHeap::new();
+        for i in 0..dists.len() {
+            best_candidates.push(DataEntry{index: i, distance: dists[i]});
         }
-
-
-        println!("best_centroids len {:?}", best_centroids.len());
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
+        for _ in 0..result_count {
+            best_n_candidates.push(best_candidates.pop().unwrap().index);
+        }
+        
         best_n_candidates.reverse();
         if self.verbose_print {
             println!("best_n_candidates \n{:?}", best_n_candidates);

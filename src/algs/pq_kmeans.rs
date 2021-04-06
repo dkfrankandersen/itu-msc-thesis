@@ -59,7 +59,10 @@ impl PQKMeans {
             self.update(dataset);
             iterations += 1;
         }
-        self._print_codebook("Codebook after run: ", &self.codebook);
+        if self.verbose_print {
+            self._print_codebook("Codebook after run: ", &self.codebook);
+        }
+        
         return &self.codebook;
     }
 
