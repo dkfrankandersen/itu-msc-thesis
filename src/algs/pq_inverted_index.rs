@@ -78,9 +78,23 @@ impl ProductQuantization {
         self.codebook = Some(codebook);
     }
 
+    struct QuantizerCentroid {
+        id: usize,
+        childern: Vec::<QuantizedDataPoint>
+    }
+
+    struct QuantizedDataPoint {
+        index: usize,
+        codes: Vec::<usize>
+    }
+
     fn dataset_to_pqcodes(&self, dataset: ArrayView2::<f64>) -> Array2::<usize> {
-        let mut pqcodes = Array::from_elem((dataset.nrows(), self.m), 0);
+
+        let mut pqcodes = Array::from_elem((self.m, self.k), 0)
+        // let mut pqcodes = Array::from_elem((dataset.nrows(), self.m), 0);
         for n in 0..dataset.nrows() {
+            let codes = vec::new();
+            let qpd QuantizedDataPoint {index: n, Vec::with_capacity(capacity: usize)()};
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
                 let end = begin + self.sub_dimension - 1;
@@ -98,9 +112,10 @@ impl ProductQuantization {
                     }
                 }
                 if best_centroid.is_some() {
-                    pqcodes[[n, m]] = best_centroid.unwrap();
+                    qpd.codes.push(best_centroid.unwrap())
                 } 
-            }   
+            }
+            pqcodes[] .insert(k, Centroid{id: k, index: n, pqcodes})
         }
         pqcodes
     }
