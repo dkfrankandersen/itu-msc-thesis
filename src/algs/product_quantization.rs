@@ -1,12 +1,13 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::HashMap;
 use crate::algs::*;
-use rand::{distributions::Uniform, Rng};
+use rand::{distributions::Uniform, Rng, prelude::*};
 use pq_kmeans::{PQKMeans};
 use std::collections::BinaryHeap;
 use crate::algs::pq_data_entry::{PQDataEntry};
 use crate::algs::data_entry::{DataEntry};
 
+use colored::*;
 
 #[derive(Debug, Clone)]
 pub struct ProductQuantization {
@@ -86,20 +87,18 @@ impl ProductQuantization {
                 let end = begin + self.sub_dimension - 1;
                 let partial_data = dataset.slice(s![n, begin..end]);
 
-                let mut best_centroid: Option::<usize> = None;
+                let mut best_centroid = 0;
                 let mut best_distance = f64::NEG_INFINITY;
 
                 for k in 0..self.k {
                     let centroid = &self.codebook.as_ref().unwrap()[[m,k]];
                     let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
                     if best_distance < distance {
-                        best_centroid = Some(k);
+                        best_centroid = k;
                         best_distance = distance;
                     }
                 }
-                if best_centroid.is_some() {
-                    pqcodes[[n, m]] = best_centroid.unwrap();
-                } 
+                    pqcodes[[n, m]] = best_centroid;
             }   
         }
         pqcodes
@@ -117,8 +116,9 @@ impl ProductQuantization {
                 let code = &self.codebook.as_ref().unwrap();
                 let sub_centroid = &code[[m,k]];
                 
-                let dist = distance::cosine_similarity(&sub_centroid.view(), &partial_data);
-                dtable[m].push(-dist);
+                // let dist = distance::cosine_similarity(&sub_centroid.view(), &partial_data);
+                let dist = (sub_centroid.view()).dot(partial_data);
+                dtable[m].push(dist);
             }
         }
 
@@ -136,12 +136,101 @@ impl ProductQuantization {
                 }
                 dists[n] += dtable[m][pqcode[[n,m]]];
             }
-            dists[n] = dists[n]/self.m as f64;
             if n == 97478 {
                 println!("%%%%%%%%%%%%%%% \nadist for dists[{}] {}", n, dists[n]);
             }
         }
         dists
+    }
+
+    fn invertedList(&self, dataset: ArrayView2::<f64>) {
+        
+        let k = 7;
+        let max_iterations = 200;
+
+        #[derive(Clone, PartialEq, Debug)]
+        struct Centroid {
+            id: usize,
+            point: Array1<f64>,
+            children: Vec::<usize>
+        }
+
+        let datapoint_dimension = dataset.ncols();
+
+        // Init
+        let mut centroids = Vec::<Centroid>::with_capacity(k);
+        let mut rng = thread_rng();
+        let dist_uniform = Uniform::new_inclusive(0, dataset.nrows()-1);
+        for i in 0..k {
+            let rand_key = rng.sample(dist_uniform);
+            let datapoint = dataset.slice(s![rand_key,..]);
+            centroids[i] = Centroid{id: i, point: datapoint.to_owned(), children: Vec::<usize>::new()}
+        }
+
+        // Repeat
+        let mut last_centroids = Vec::<Centroid>::with_capacity(k);
+        let mut iterations = 1;
+        loop  {
+            if iterations > max_iterations {
+                if self.verbose_print {
+                    println!("Max iterations reached, iterations: {}", iterations-1);
+                }
+                break;
+            } else if centroids == last_centroids {
+                if self.verbose_print {
+                    println!("Computation has converged, iterations: {}", iterations-1);
+                }
+                break;
+            }
+    
+            last_centroids = centroids.clone();
+    
+            // Remove centroid children
+            centroids.iter_mut().for_each(|c| c.children.clear());
+            
+            // Assign
+            for (idx, candidate) in dataset.outer_iter().enumerate() {
+                let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
+                for (k, centroid) in centroids.iter().enumerate() {
+                    let distance = distance::cosine_similarity(&centroid.point.view() , &candidate);
+                    if best_match.0 < distance { best_match = (distance, k); }
+                }
+                centroids[best_match.1].children.push(idx);
+            }
+            
+            // Update
+            for centroid in centroids.iter_mut() {
+                if centroid.children.len() > 0 {
+                    centroid.point = Array::from_elem(datapoint_dimension, 0.);
+                    
+                    for child_key in centroid.children.iter() {
+                        let child_point = dataset.slice(s![*child_key,..]);
+                        for (i, x) in child_point.iter().enumerate() {
+                            centroid.point[i] += x;
+                        }
+                    }
+
+                    for i in 0..datapoint_dimension {  
+                        centroid.point[i] = centroid.point[i]/centroid.children.len() as f64;
+                    }
+                }
+            }
+            iterations += 1;
+        }
+        
+        // Encode residuals
+        let mut result = Vec::<Vec::<f64>>::new();
+        for (c, centroid) in centroids.iter().enumerate() {
+            for child_key in centroid.children.iter() {
+                let child_point = dataset.slice(s![*child_key,..]);
+                
+                for i in 0..datapoint_dimension {
+                    result[c][i] =  child_point[i] - centroid.point[i] 
+                }
+            }
+        }
+
+
     }
     
 }
@@ -162,7 +251,7 @@ impl AlgorithmImpl for ProductQuantization {
         // Create random selected train data from dataset
         let train_data = self.random_traindata(dataset, self.training_size);
         if self.verbose_print {
-            println!("Traing data created shape: {:?}", train_data.shape());
+            println!("Training data created shape: {:?}", train_data.shape());
         }
 
         // Create codebook, [m,k,[sd]] m-th subspace, k-th codewords, sd-th dimension
@@ -197,9 +286,9 @@ impl AlgorithmImpl for ProductQuantization {
         let mut best_candidates = BinaryHeap::new();
         for i in 0..dists.len() {
             if lookfor.contains(&(i as i32)) {
-                println!("found {} with value {}", i, -dists[i]);
+                println!("found {} with value {}", i, dists[i]);
             }
-            best_candidates.push(DataEntry{index: i, distance: -dists[i]});
+            best_candidates.push(DataEntry{index: i, distance: dists[i]});
         }
 
         let mut best_n_candidates: Vec<usize> = Vec::new();

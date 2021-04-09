@@ -86,29 +86,27 @@ impl PQKMeans {
         }
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let mut best_centroid = None;
+            let mut best_centroid = 0;
             let mut best_distance = f64::NEG_INFINITY;
             for (k, centroid) in self.codebook.iter().enumerate() {
                 let distance = distance::cosine_similarity(&(centroid.0).view(), &candidate);
                 if best_distance < distance {
-                    best_centroid = Some(k);
+                    best_centroid = k;
                     best_distance = distance;
                 }
             }
-            if best_centroid.is_some() {
-                self.codebook[best_centroid.unwrap()].1.push(idx);
-            } 
+            self.codebook[best_centroid].1.push(idx);
         }
     }
 
     fn update(&mut self, dataset: ArrayView2::<f64>) {
-        for (centroid, childeren) in self.codebook.iter_mut() {
-            if childeren.len() > 0 {
+        for (centroid, children) in self.codebook.iter_mut() {
+            if children.len() > 0 {
                 for i in 0..centroid.len() {
                     centroid[i]= 0.;
                 }
                 
-                for child_key in childeren.iter() {
+                for child_key in children.iter() {
                     let child_point = dataset.slice(s![*child_key,..]);
                     for (i, x) in child_point.iter().enumerate() {
                         centroid[i] += x;
@@ -116,7 +114,7 @@ impl PQKMeans {
                 }
     
                 for i in 0..centroid.len() {  
-                    centroid[i] = centroid[i]/childeren.len() as f64;
+                    centroid[i] = centroid[i]/children.len() as f64;
                 }
             }
         }
