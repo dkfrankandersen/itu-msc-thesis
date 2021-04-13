@@ -46,8 +46,8 @@ fn main() {
     let ds = Dataset::new(&filename);
     // let ds_train_norm = ds.train_normalize();
     // let ds_test_norm = ds.test_normalize();
-    let ds_train_norm = testcases::get_small_20_6().dataset_norm;
-    let ds_test_norm = testcases::get_small_20_6().query_norm;
+    let ds_train_norm = testcases::get_small_1000_6().dataset_norm;
+    let ds_test_norm = testcases::get_small_1000_6().query_norm;
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
@@ -71,7 +71,7 @@ fn main() {
         debug_best_res.push(res.0);
     }
 
-    println!("#### Expected : {:?}", testcases::get_small_20_6().best_10_results.row(0));
+    println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
     println!("#### Found    : {:?}", debug_best_res);
     return; // debug
 

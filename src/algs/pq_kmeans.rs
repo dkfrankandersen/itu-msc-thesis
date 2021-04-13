@@ -89,7 +89,8 @@ impl PQKMeans {
             let mut best_centroid = 0;
             let mut best_distance = f64::NEG_INFINITY;
             for (k, centroid) in self.codebook.iter().enumerate() {
-                let distance = distance::cosine_similarity(&(centroid.0).view(), &candidate);
+                // let distance = distance::cosine_similarity(&(centroid.0).view(), &candidate);
+                let distance = (centroid.0).view().dot(&candidate);
                 if best_distance < distance {
                     best_centroid = k;
                     best_distance = distance;

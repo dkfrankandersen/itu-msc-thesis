@@ -143,6 +143,7 @@ impl ProductQuantization {
                 for i in 0..point.len() {
                     residuals[[*index, i]] =  point[i] - centroid.point[i];
                 }
+                // println!("{} {}\ndp{}\ncp: {}\nrpc: {}", centroid.id, index, point, centroid.point, residuals.slice(s![*index,..]));
             }
         }
 
@@ -163,6 +164,7 @@ impl ProductQuantization {
                 residuals_codebook[[m,k]] = centroid.to_owned();
             }
         }
+        println!("################ residuals_codebook\n{:?}",residuals_codebook);
         residuals_codebook
     }
 
@@ -244,6 +246,7 @@ impl ProductQuantization {
             for k in 0..k_codewords {
                 let centroid = &residuals_codebook[[m,k]];
                 let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
+                // let distance = (centroid).view().dot(&partial_data);
                 if best_match.0 < distance {
                     best_match = (distance, k)
                 }
@@ -271,9 +274,12 @@ impl AlgorithmImpl for ProductQuantization {
         let centroids = self.kmeans(self.m, self.max_iterations, dataset, verbose_print);
         let residuals = self.compute_residuals(&centroids, dataset, verbose_print);
 
+        println!("{:?}", residuals);
+        println!("{:?}", centroids[0].point);
+
 
         // Residuals PQ Training data
-        let residuals_training_data = self.random_traindata(residuals.view(), 2000, true);
+        let residuals_training_data = self.random_traindata(residuals.view(), self.training_size, true);
         if verbose_print { println!("residuals_training_data, shape {:?}", residuals_training_data.shape()); }
 
         self.residuals_codebook = self.train_residuals_codebook(residuals_training_data, self.m, self.k, self.sub_dimension);
@@ -296,11 +302,12 @@ impl AlgorithmImpl for ProductQuantization {
             // Compute residuals between query and coarse_quantizer
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
 
+            println!("{:?}", best_coares_quantizer);
+
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
             // Compute pq codes for query residuals and get values from codebook
             let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
-            println!("rq_pq_codes shape {:?}", &rq_pq_codes.shape());
 
             let mut pq_res_values = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
             let mut rq_point = Vec::<f64>::new();
@@ -312,7 +319,6 @@ impl AlgorithmImpl for ProductQuantization {
                 }   
             }
             let arqpoint = Array::from(rq_point);
-            println!("pq_res_values shape {:?}", pq_res_values.shape());
 
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
@@ -327,6 +333,8 @@ impl AlgorithmImpl for ProductQuantization {
 
                 let acpoint = Array::from(c_point);
                 let distance = distance::cosine_similarity(&arqpoint.view() , &acpoint.view());
+
+                // println!("child_key: {}, dist: {}", child_key, distance);
 
                 if best_candidates.len() < result_count as usize {
                     best_candidates.push(DataEntry {
