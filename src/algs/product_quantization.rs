@@ -156,15 +156,18 @@ impl ProductQuantization {
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_codewords), Array::zeros(sub_dimension));
         for m in 0..m_subspaces {
             let begin = sub_dimension * m;
-            let end = begin + sub_dimension - 1;
+            let end = begin + sub_dimension;
             let partial_data = residuals_training_data.slice(s![.., begin..end]);
             let mut pq_kmeans = PQKMeans::new(k_codewords, 200);
+            // println!("begin {}, end {}, partial_data len {}", begin, end, partial_data.len());
+            // println!("LETS LOOK AT SAPCE M {} with partial_data:\n{}\n", m, partial_data);
             let codewords = pq_kmeans.run(partial_data.view());
+            // println!("codewords m{} \n{:?}\n", m, codewords);
             for (k, (centroid,_)) in codewords.iter().enumerate() {
                 residuals_codebook[[m,k]] = centroid.to_owned();
             }
         }
-        println!("################ residuals_codebook\n{:?}",residuals_codebook);
+        // println!("################ residuals_codebook\n{:?}",residuals_codebook[[0,0]]);
         residuals_codebook
     }
 
@@ -174,13 +177,14 @@ impl ProductQuantization {
         for n in 0..residuals.nrows() {
             for m in 0..m_subspaces {
                 let begin = sub_dimension * m;
-                let end = begin + sub_dimension - 1;
+                let end = begin + sub_dimension;
                 let partial_dimension = residuals.slice(s![n, begin..end]);
 
                 let mut best_match = (f64::NEG_INFINITY, 0);
                 for k in 0..k_codewords {
                     let centroid = &residuals_codebook[[m,k]];
-                    let distance = distance::cosine_similarity(&(centroid).view(), &partial_dimension);
+                    // let distance = distance::cosine_similarity(&(centroid).view(), &partial_dimension);
+                    let distance = (centroid).view().dot(&partial_dimension);
                     if best_match.0 < distance { best_match = (distance, k) };
                 }
                 pqcodes[n][m] = best_match.1;
@@ -239,14 +243,14 @@ impl ProductQuantization {
         let mut rq_pq_codes = Array::from_elem(m_subspaces, 0);
         for m in 0..m_subspaces {
             let begin = sub_dimension * m;
-            let end = begin + sub_dimension - 1;
+            let end = begin + sub_dimension;
             let partial_data = rq.slice(s![begin..end]);
 
             let mut best_match = (f64::NEG_INFINITY, 0);
             for k in 0..k_codewords {
                 let centroid = &residuals_codebook[[m,k]];
-                let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
-                // let distance = (centroid).view().dot(&partial_data);
+                // let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
+                let distance = (centroid).view().dot(&partial_data);
                 if best_match.0 < distance {
                     best_match = (distance, k)
                 }
