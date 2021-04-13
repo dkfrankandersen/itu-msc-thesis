@@ -301,13 +301,11 @@ impl AlgorithmImpl for ProductQuantization {
         // Lets find matches in best coarse_quantizers
         let mut best_candidates = BinaryHeap::<DataEntry>::new();
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
-
+            
+            // Get coarse_quantizer from index
+            let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
             // Compute residuals between query and coarse_quantizer
-            let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
-
-            println!("{:?}", best_coares_quantizer);
-
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
             // Compute pq codes for query residuals and get values from codebook
@@ -323,6 +321,7 @@ impl AlgorithmImpl for ProductQuantization {
                 }   
             }
             let arqpoint = Array::from(rq_point);
+            // println!("arqpoint shape {}", arqpoint);
 
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
@@ -337,6 +336,7 @@ impl AlgorithmImpl for ProductQuantization {
 
                 let acpoint = Array::from(c_point);
                 let distance = distance::cosine_similarity(&arqpoint.view() , &acpoint.view());
+                // println!("acpoint {}", acpoint);
 
                 // println!("child_key: {}, dist: {}", child_key, distance);
 
@@ -346,9 +346,11 @@ impl AlgorithmImpl for ProductQuantization {
                         distance: -distance
                     });
                 } else {
-                    let min_val: DataEntry = *best_candidates.peek().unwrap();
-                    if distance > -min_val.distance {
-                        best_candidates.pop();
+                    let peek_val: DataEntry = *best_candidates.peek().unwrap();
+                    if distance > -peek_val.distance {
+                        let pop = best_candidates.pop();
+                        println!("pop {}", pop.unwrap().distance);
+                        println!("push {}", -distance);
                         best_candidates.push(DataEntry {
                             index: *child_key,  
                             distance: -distance
