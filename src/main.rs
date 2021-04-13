@@ -6,7 +6,7 @@ use std::env;
 mod algs;
 use algs::dataset::Dataset;
 mod util;
-use util::{store_results_and_fix_attributes, hdf5_store_file};
+use util::{store_results_and_fix_attributes, hdf5_store_file, testcases};
 
 struct RunParameters {
     metric: String,
@@ -44,14 +44,16 @@ fn main() {
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5",parameters.dataset);
     let ds = Dataset::new(&filename);
-    let ds_train_norm = ds.train_normalize();
-    let ds_test_norm = ds.test_normalize();
+    // let ds_train_norm = ds.train_normalize();
+    // let ds_test_norm = ds.test_normalize();
+    let ds_train_norm = testcases::get_small_20_6().dataset_norm;
+    let ds_test_norm = testcases::get_small_20_6().query_norm;
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
-    if verbose_print {
-        ds.print_true_neighbors(0, 5, 10);
-    }
+    // if verbose_print {
+    //     ds.print_true_neighbors(0, 5, 10);
+    // }
     
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
@@ -66,6 +68,7 @@ fn main() {
         results.push(result);
         break; // debug
     }
+    println!("#### Expected NN\n{}", testcases::get_small_20_6().best_10_results);
     return; // debug
 
     let mut total_time: f64 = 0.;

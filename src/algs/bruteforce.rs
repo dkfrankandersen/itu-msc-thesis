@@ -64,6 +64,9 @@ impl AlgorithmImpl for Bruteforce {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
+        if self.verbose_print {
+            println!("best_n_candidates \n{:?}", best_n_candidates);
+        }
         best_n_candidates
     }
 }
