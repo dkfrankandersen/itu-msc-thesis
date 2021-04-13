@@ -61,14 +61,18 @@ fn main() {
 
     for (_, p) in dataset.outer_iter().enumerate() {
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        if verbose_print {
-            println!("{:?}", result);
-        }
-        
         results.push(result);
         break; // debug
     }
-    println!("#### Expected NN\n{}", testcases::get_small_20_6().best_10_results);
+    
+    // Debug stuff
+    let mut debug_best_res = Vec::<usize>::new();
+    for res in results[0].1.iter() {
+        debug_best_res.push(res.0);
+    }
+
+    println!("#### Expected : {:?}", testcases::get_small_20_6().best_10_results.row(0));
+    println!("#### Found    : {:?}", debug_best_res);
     return; // debug
 
     let mut total_time: f64 = 0.;

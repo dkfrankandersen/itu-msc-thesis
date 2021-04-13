@@ -231,6 +231,28 @@ impl ProductQuantization {
         }
         result_indexes
     }
+
+    fn rq_pq_codes(&self, rq: Array1::<f64>, residuals_codebook: &Array2::<Array1<f64>>, m_subspaces: usize, k_codewords: usize,  sub_dimension: usize) -> Array1<usize> {
+        // Compute pq codes for query residuals and get values from codebook
+        let mut rq_pq_codes = Array::from_elem(m_subspaces, 0);
+        for m in 0..m_subspaces {
+            let begin = sub_dimension * m;
+            let end = begin + sub_dimension - 1;
+            let partial_data = rq.slice(s![begin..end]);
+
+            let mut best_match = (f64::NEG_INFINITY, 0);
+            for k in 0..k_codewords {
+                let centroid = &residuals_codebook[[m,k]];
+                let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
+                if best_match.0 < distance {
+                    best_match = (distance, k)
+                }
+            }
+            rq_pq_codes[m] = best_match.1;
+        }
+        println!("rq_pq_codes shape {:?}", rq_pq_codes.shape());
+        rq_pq_codes
+    }
     
 }
 
@@ -267,34 +289,18 @@ impl AlgorithmImpl for ProductQuantization {
         println!("Best coarse_quantizers to search in {:?}", best_coarse_quantizers);
 
         // Lets find matches in best coarse_quantizers
-        for m in best_coarse_quantizers.iter() {
+        let mut best_candidates = BinaryHeap::<DataEntry>::new();
+        for coarse_quantizer_index in best_coarse_quantizers.iter() {
 
             
             // Compute residuals between query and coarse_quantizer
-            let bcq = &self.coarse_quantizer[*m];
-            let mut rq = Array::from_elem(query.len(), 0.);
-            for i in 0..query.len() {
-                rq[i] = query[i] - bcq.point[i];
-            }
+            let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
+
+            let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
             // Compute pq codes for query residuals and get values from codebook
-            let mut rq_pq_codes = Array::from_elem(self.m, 0);
-            for m in 0..self.m {
-                let begin = self.sub_dimension * m;
-                let end = begin + self.sub_dimension - 1;
-                let partial_data = rq.slice(s![begin..end]);
-
-                let mut best_match = (f64::NEG_INFINITY, 0);
-                for k in 0..self.k {
-                    let centroid = &self.residuals_codebook[[m,k]];
-                    let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
-                    if best_match.0 < distance {
-                        best_match = (distance, k)
-                    }
-                }
-                rq_pq_codes[m] = best_match.1;
-            }
-            println!("rq_pq_codes shape {:?}", rq_pq_codes.shape());
+            let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
+            println!("rq_pq_codes shape {:?}", &rq_pq_codes.shape());
 
             let mut pq_res_values = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
             let mut rq_point = Vec::<f64>::new();
@@ -308,42 +314,44 @@ impl AlgorithmImpl for ProductQuantization {
             let arqpoint = Array::from(rq_point);
             println!("pq_res_values shape {:?}", pq_res_values.shape());
 
-            let mut matches = Vec::<usize>::new();
-            let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
-            for child in bcq.children.iter() {
+            for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
                 let mut c_point = Vec::<f64>::new();
-                for (m, k) in child.1.iter().enumerate() {
+                for (m, k) in child_values.iter().enumerate() {
                     let blah = &self.residuals_codebook[[m, *k]];
                     point[m] = blah.to_owned();
                     for b in blah.iter() {
                         c_point.push(*b)
                     }   
                 }
+
                 let acpoint = Array::from(c_point);
                 let distance = distance::cosine_similarity(&arqpoint.view() , &acpoint.view());
-                if best_match.0 < distance { 
-                    best_match = (distance, *child.0); 
-                    matches.push(*child.0);
+
+                if best_candidates.len() < result_count as usize {
+                    best_candidates.push(DataEntry {
+                        index: *child_key,  
+                        distance: -distance
+                    });
+                } else {
+                    let min_val: DataEntry = *best_candidates.peek().unwrap();
+                    if distance > -min_val.distance {
+                        best_candidates.pop();
+                        best_candidates.push(DataEntry {
+                            index: *child_key,  
+                            distance: -distance
+                        });
+                    }
                 }
             }
-
-            println!("best_match!!! {:?}", matches);
         }
 
-        
-
-        
-
-        
-
+               
         let mut best_n_candidates: Vec<usize> = Vec::new();
-        // for _ in 0..result_count {
-        //     let cand = best_candidates.pop().unwrap();
-        //     println!("Candidate {:?}", cand);
-        //     best_n_candidates.push(cand.index);
-        // }
-        
+        for _ in 0..best_candidates.len() {
+            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
+            best_n_candidates.push(idx.index);
+        }
         best_n_candidates.reverse();
         if self.verbose_print {
             println!("best_n_candidates \n{:?}", best_n_candidates);
