@@ -402,6 +402,7 @@ impl AlgorithmImpl for ProductQuantization {
         let arqpoint = Array::from(rq_point);
         println!("pq_res_values \n{:?}", pq_res_values);
 
+        let mut matches = Vec::<usize>::new();
         let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
         for child in bcq.children.iter() {
             let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
@@ -415,9 +416,13 @@ impl AlgorithmImpl for ProductQuantization {
             }
             let acpoint = Array::from(c_point);
             let distance = distance::cosine_similarity(&arqpoint.view() , &acpoint.view());
-            if best_match.0 < distance { best_match = (distance, *child.0); }
+            if best_match.0 < distance { 
+                best_match = (distance, *child.0); 
+                matches.push(*child.0);
+            }
         }
-        println!("best_match!!! {}", best_match.1);
+
+        println!("best_match!!! {:?}", matches);
                 
         
         // for (index, pq_residuals) in bcq.children.iter() {
