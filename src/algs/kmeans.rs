@@ -28,7 +28,6 @@ impl Centroid {
 pub struct KMeans {
     name: String,
     metric: String,
-    dataset: Option<Array2::<f64>>,
     codebook: HashMap::<i32, Centroid>,
     clusters: i32,
     max_iterations: i32,
@@ -37,11 +36,10 @@ pub struct KMeans {
 }
 
 impl KMeans {
-    pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         KMeans {
             name: "FANN_kmeans()".to_string(),
             metric: "angular".to_string(),
-            dataset: None,
             codebook: HashMap::<i32, Centroid>::new(),
             clusters: clusters,
             max_iterations: max_iterations,
@@ -85,12 +83,12 @@ impl KMeans {
         }
     }
 
-    fn assign(&mut self) {
+    fn assign(&mut self, dataset: &ArrayView2::<f64>) {
         // Delete points associated to each centroid
         for (_, centroid) in self.codebook.iter_mut() {
             centroid.children.clear();
         }
-        for (idx, candidate) in self.dataset.as_ref().unwrap().outer_iter().enumerate() {
+        for (idx, candidate) in dataset.outer_iter().enumerate() {
             let mut best_centroid = -1;
             let mut best_distance = f64::NEG_INFINITY;
             for (&key, centroid) in self.codebook.iter_mut() {
@@ -106,14 +104,14 @@ impl KMeans {
         }
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, dataset: &ArrayView2::<f64>) {
         for (_, centroid) in self.codebook.iter_mut() {
             for i in 0..centroid.point.len() {
                 centroid.point[i] = 0.;
             }
             
             for child_key in centroid.children.iter() {
-                let child_point = self.dataset.as_ref().unwrap().slice(s![*child_key,..]);
+                let child_point = dataset.slice(s![*child_key,..]);
                 for (i, x) in child_point.iter().enumerate() {
                     centroid.point[i] += x;
                 }
@@ -148,8 +146,8 @@ impl KMeans {
     
             last_codebook = self.codebook.clone();
 
-            self.assign();
-            self.update();
+            self.assign(dataset);
+            self.update(dataset);
             iterations += 1;
         }
         if self.verbose_print {
@@ -165,18 +163,11 @@ impl AlgorithmImpl for KMeans {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: ArrayView2::<f64>) {
-        self.dataset = Some(dataset.to_owned());
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.run_kmeans(self.max_iterations, &dataset);
     }
 
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
-    
-        if self.dataset.is_none() {
-            println!("Dataset missing");
-            return Vec::new();
-        }
-        
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {        
         let mut best_centroids = BinaryHeap::new();
         
         for (key, centroid) in self.codebook.iter() {
@@ -189,13 +180,12 @@ impl AlgorithmImpl for KMeans {
         if self.verbose_print {
             println!("best_centroids: {:?}", best_centroids);
         }
-        
-        let ds = &self.dataset.as_ref().unwrap().view();
+    
         let mut best_candidates = BinaryHeap::new();
         for _ in 0..self.clusters_to_search {
             let centroid_key = best_centroids.pop().unwrap().index;
             for candidate_key in self.codebook.get(&(centroid_key as i32)).unwrap().children.iter() {
-                let candidate = ds.slice(s![*candidate_key as i32,..]);
+                let candidate = dataset.slice(s![*candidate_key as i32,..]);
                 let dist = distance::cosine_similarity(&p, &candidate);
                 if best_candidates.len() < result_count as usize {
                     best_candidates.push(DataEntry {

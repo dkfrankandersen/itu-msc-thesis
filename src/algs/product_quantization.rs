@@ -34,12 +34,12 @@ pub struct ProductQuantization {
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
     residuals_codebook: Array2::<Array1::<f64>>,
-    sub_dimension: usize
+    sub_dimension: usize,
 }
 
 
 impl ProductQuantization {
-    pub fn new(verbose_print: bool, m: usize, training_size: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, training_size: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
@@ -50,8 +50,8 @@ impl ProductQuantization {
             clusters_to_search: clusters_to_search,
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
-            residuals_codebook: Array::from_elem((m, k), Array::zeros(100/m)), //TODO Dimension
-            sub_dimension: 0,
+            residuals_codebook: Array::from_elem((m, k), Array::zeros(dataset.ncols()/m)),
+            sub_dimension: dataset.ncols() / m,
         }
     }
 
@@ -68,7 +68,7 @@ impl ProductQuantization {
         train_data
     }
 
-    fn kmeans(&self, k_centroids: usize, max_iterations: usize, dataset: ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+    fn kmeans(&self, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
         let datapoint_dimension = dataset.ncols();
 
@@ -133,7 +133,7 @@ impl ProductQuantization {
         centroids
     }
 
-    fn compute_residuals(&self, centroids: &Vec::<Centroid>, dataset: ArrayView2::<f64>, verbose_print: bool) -> Array2<f64> {
+    fn compute_residuals(&self, centroids: &Vec::<Centroid>, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Array2<f64> {
         // Compute residuals for each centroid
         if verbose_print { println!("Compute residuals for each centroid"); }
         let mut residuals = Array::from_elem((dataset.nrows(), dataset.ncols()), 0.);
@@ -271,7 +271,7 @@ impl AlgorithmImpl for ProductQuantization {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: ArrayView2::<f64>) {
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.sub_dimension = dataset.ncols() / self.m;
 
         let verbose_print = true;
@@ -292,66 +292,61 @@ impl AlgorithmImpl for ProductQuantization {
 
     }
 
-    fn query(&self, query: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
 
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
 
         println!("Best coarse_quantizers to search in {:?}", best_coarse_quantizers);
 
         // Lets find matches in best coarse_quantizers
-        let mut best_candidates = BinaryHeap::<DataEntry>::new();
+        let mut best_quantizer_candidates = BinaryHeap::<DataEntry>::new();
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
             
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
             // Compute residuals between query and coarse_quantizer
+            println!("Compute residuals between query and coarse_quantizer");
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
+            println!("{}", rq);
 
             // Compute pq codes for query residuals
             // let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
             
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-            
-            //  Get query residuals point from codebook
-            // let mut rq_point = Vec::<f64>::new();
-            // for (m, k) in rq_pq_codes.iter().enumerate() {
-            //     let blah = &self.residuals_codebook[[m, *k]];
-            //     for b in blah.iter() {
-            //         rq_point.push(*b)
-            //     }   
-            // }
-            // let arqpoint = Array::from(rq_point);
+            println!("Compute distance table");
+            let mut distance_table = Array::from_elem((self.m, self.k), 0.);
+            for m in 0..self.m {
+                let begin = self.sub_dimension * m;
+                let end = begin + self.sub_dimension;
+                let partial_query = rq.slice(s![begin..end]);
+                // println!("{}", partial_query);
+                for k in 0..self.k {
+                    let partial_residual_codeword = &self.residuals_codebook[[m, k]];
+                    distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
+                }
+            }
 
+            println!("distance_table \n{:?}", distance_table);
             
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
-                let mut c_point = Vec::<f64>::new();
+                let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
                     // Read off the distance using the distance table
-                    let blah = &self.residuals_codebook[[m, *k]];
-                    point[m] = blah.to_owned();
-                    for b in blah.iter() {
-                        c_point.push(*b)
-                    }   
+                    let m_dist = distance_table[[m,*k]];
+                    distance += m_dist;
                 }
 
-                let acpoint = Array::from(c_point);
-                let distance = distance::cosine_similarity(&arqpoint.view() , &acpoint.view());
-                // println!("acpoint {}", acpoint);
-
-                // println!("child_key: {}, dist: {}", child_key, distance);
-
-                if best_candidates.len() < result_count as usize {
-                    best_candidates.push(DataEntry {
+                if best_quantizer_candidates.len() < (result_count as usize) * 10 {
+                    best_quantizer_candidates.push(DataEntry {
                         index: *child_key,  
                         distance: -distance
                     });
                 } else {
-                    let peek_val: DataEntry = *best_candidates.peek().unwrap();
+                    let peek_val: DataEntry = *best_quantizer_candidates.peek().unwrap();
                     if distance > -peek_val.distance {
-                        let pop = best_candidates.pop();
-                        best_candidates.push(DataEntry {
+                        let pop = best_quantizer_candidates.pop();
+                        best_quantizer_candidates.push(DataEntry {
                             index: *child_key,  
                             distance: -distance
                         });
@@ -360,6 +355,31 @@ impl AlgorithmImpl for ProductQuantization {
             }
         }
 
+
+        // Rescore with true distance value of query and candidates
+        let mut best_candidates = BinaryHeap::<DataEntry>::new();
+        // for data_entry in best_quantizer_candidates.iter() {
+        //     let index = data_entry.index;
+        //     let datapoint = dataset.slice(s![index,..]);
+        //     let distance = distance::cosine_similarity(&(query.view(), );
+            
+
+        //     if best_candidates.len() < (result_count as usize) {
+        //         best_candidates.push(DataEntry {
+        //             index: *child_key,  
+        //             distance: -distance
+        //         });
+        //     } else {
+        //         let peek_val: DataEntry = *best_candidates.peek().unwrap();
+        //         if distance > -peek_val.distance {
+        //             let pop = best_quantizer_candidates.pop();
+        //             best_candidates.push(DataEntry {
+        //                 index: *child_key,  
+        //                 distance: -distance
+        //             });
+        //         }
+        //     }
+        // }
                
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {

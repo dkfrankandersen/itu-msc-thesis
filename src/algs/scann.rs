@@ -33,7 +33,7 @@ pub struct Scann {
 
 
 impl Scann {
-    pub fn new(verbose_print: bool, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
         Scann {
             name: "FANN_scann()".to_string(),
             metric: "angular".to_string(),
@@ -52,11 +52,11 @@ impl AlgorithmImpl for Scann {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: ArrayView2::<f64>) {
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.dataset = Some(dataset.to_owned());
     }
 
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
         
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();

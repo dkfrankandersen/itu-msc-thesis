@@ -8,16 +8,14 @@ use std::collections::BinaryHeap;
 pub struct Bruteforce {
     name: String,
     metric: String,
-    dataset: Option<Array2::<f64>>,
     verbose_print: bool
 }
 
 impl Bruteforce {
-    pub fn new(verbose_print: bool) -> Self {
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>) -> Self {
         Bruteforce {
             name: "FANN_bruteforce()".to_string(),
             metric: "angular".to_string(),
-            dataset: None,
             verbose_print: verbose_print
         }
     }
@@ -29,16 +27,13 @@ impl AlgorithmImpl for Bruteforce {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: ArrayView2::<f64>) {
-        self.dataset = Some(dataset.to_owned());
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
     }
     
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::new();
-        if self.dataset.is_none() {
-            println!("Dataset missing");
-        }
-        for (idx, candidate) in self.dataset.as_ref().unwrap().outer_iter().enumerate() {
+
+        for (idx, candidate) in dataset.outer_iter().enumerate() {
             let dist = distance::cosine_similarity(&p, &candidate);
             if best_candidates.len() < result_count as usize {
                 best_candidates.push(DataEntry {

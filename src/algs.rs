@@ -25,14 +25,14 @@ pub enum Algorithm {
 }
 
 trait AlgorithmImpl {
-    fn fit(&mut self, dataset: ArrayView2::<f64>);
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize>;
+    fn fit(&mut self, dataset: &ArrayView2::<f64>);
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize>;
     fn __str__(&self);
 }
 
 impl AlgorithmImpl for Algorithm {
 
-    fn fit(&mut self, dataset: ArrayView2::<f64>) {
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         match *self {
             Algorithm::Bruteforce(ref mut x) => x.fit(dataset),
             Algorithm::KMeans(ref mut x) => x.fit(dataset),
@@ -41,12 +41,12 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 
-    fn query(&self, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
         match *self {
-            Algorithm::Bruteforce(ref x) => x.query(p, result_count),
-            Algorithm::KMeans(ref x) => x.query(p, result_count),
-            Algorithm::ProductQuantization(ref x) => x.query(p, result_count),
-            Algorithm::Scann(ref x) => x.query(p, result_count),
+            Algorithm::Bruteforce(ref x) => x.query(dataset, p, result_count),
+            Algorithm::KMeans(ref x) => x.query(dataset, p, result_count),
+            Algorithm::ProductQuantization(ref x) => x.query(dataset, p, result_count),
+            Algorithm::Scann(ref x) => x.query(dataset, p, result_count),
         }
     }
 
@@ -63,14 +63,14 @@ impl AlgorithmImpl for Algorithm {
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
-    pub fn get(verbose_print: bool, algorithm: &str, args: Vec<String>) -> Algorithm {
+    pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
-            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
-            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
-            "pq" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, args[0].parse::<usize>().unwrap(), 
+            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print, dataset)),
+            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "pq" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
                                                                             args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
                                                                             args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap())),
-            "scann" => Algorithm::Scann(Scann::new(verbose_print, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "scann" => Algorithm::Scann(Scann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
     }
@@ -78,11 +78,11 @@ impl AlgorithmFactory {
 
 pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
     
-    let mut algo = AlgorithmFactory::get(verbose_print, algo, args);
+    let mut algo = AlgorithmFactory::get(verbose_print, dataset, algo, args);
 
     println!("Starting dataset fitting for algorithm");
     let time_start = Instant::now();
-    algo.fit(dataset.view());
+    algo.fit(&dataset);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
     println!("Timespend in algorithm fitting: {}s", total_time.as_secs());
@@ -92,7 +92,7 @@ pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, 
 
 pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let candidates = algo.query(&p, result_count);
+    let candidates = algo.query(dataset, &p, result_count);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
 
