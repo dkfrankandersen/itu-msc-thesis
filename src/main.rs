@@ -44,34 +44,41 @@ fn main() {
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5",parameters.dataset);
     let ds = Dataset::new(&filename);
-    // let ds_train_norm = ds.train_normalize();
-    // let ds_test_norm = ds.test_normalize();
-    let ds_train_norm = testcases::get_small_1000_6().dataset_norm;
-    let ds_test_norm = testcases::get_small_1000_6().query_norm;
+    let ds_train_norm = ds.train_normalize();
+    let ds_test_norm = ds.test_normalize();
+    // let ds_train_norm = testcases::get_small_1000_6().dataset_norm;
+    // let ds_test_norm = testcases::get_small_1000_6().query_norm;
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
-    // if verbose_print {
-    //     ds.print_true_neighbors(0, 5, 10);
-    // }
+    if verbose_print {
+        ds.print_true_neighbors(0, 5, 10);
+    }
     
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
 
-    for (_, p) in dataset.outer_iter().enumerate() {
+    for (i, p) in dataset.outer_iter().enumerate() {
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
         results.push(result);
-        break; // debug
+
+        // Debugging on 5 querys
+        if i >= 5 {
+            break; // debug
+        }
     }
     
     // Debug stuff
-    let mut debug_best_res = Vec::<usize>::new();
-    for res in results[0].1.iter() {
-        debug_best_res.push(res.0);
+    let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    for (i, (_, res)) in results.iter().enumerate() {
+        debug_best_res.push(Vec::<usize>::new());
+        for (index, _) in res.iter() {
+            debug_best_res[i].push(*index);
+        }
     }
 
-    println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
+    // println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
     println!("#### Found    : {:?}", debug_best_res);
     return; // debug
 
