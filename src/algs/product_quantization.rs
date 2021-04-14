@@ -308,25 +308,27 @@ impl AlgorithmImpl for ProductQuantization {
             // Compute residuals between query and coarse_quantizer
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
-            // Compute pq codes for query residuals and get values from codebook
-            let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
+            // Compute pq codes for query residuals
+            // let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
+            
+            // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
+            
+            //  Get query residuals point from codebook
+            // let mut rq_point = Vec::<f64>::new();
+            // for (m, k) in rq_pq_codes.iter().enumerate() {
+            //     let blah = &self.residuals_codebook[[m, *k]];
+            //     for b in blah.iter() {
+            //         rq_point.push(*b)
+            //     }   
+            // }
+            // let arqpoint = Array::from(rq_point);
 
-            let mut pq_res_values = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
-            let mut rq_point = Vec::<f64>::new();
-            for (m, k) in rq_pq_codes.iter().enumerate() {
-                let blah = &self.residuals_codebook[[m, *k]];
-                pq_res_values[m] = blah.to_owned();
-                for b in blah.iter() {
-                    rq_point.push(*b)
-                }   
-            }
-            let arqpoint = Array::from(rq_point);
-            // println!("arqpoint shape {}", arqpoint);
-
+            
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut point = Array::from_elem(self.m, Array::from_elem(self.sub_dimension, 0.));
                 let mut c_point = Vec::<f64>::new();
                 for (m, k) in child_values.iter().enumerate() {
+                    // Read off the distance using the distance table
                     let blah = &self.residuals_codebook[[m, *k]];
                     point[m] = blah.to_owned();
                     for b in blah.iter() {
@@ -349,8 +351,6 @@ impl AlgorithmImpl for ProductQuantization {
                     let peek_val: DataEntry = *best_candidates.peek().unwrap();
                     if distance > -peek_val.distance {
                         let pop = best_candidates.pop();
-                        println!("pop {}", pop.unwrap().distance);
-                        println!("push {}", -distance);
                         best_candidates.push(DataEntry {
                             index: *child_key,  
                             distance: -distance
