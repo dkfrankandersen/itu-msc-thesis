@@ -64,23 +64,23 @@ fn main() {
         results.push(result);
 
         // Debugging on 5 querys
-        if i >= 5 {
-            break; // debug
-        }
+        // if i > 5 {
+        //     break; // debug
+        // }
     }
     
     // Debug stuff
-    let mut debug_best_res = Vec::<Vec::<usize>>::new();
-    for (i, (_, res)) in results.iter().enumerate() {
-        debug_best_res.push(Vec::<usize>::new());
-        for (index, _) in res.iter() {
-            debug_best_res[i].push(*index);
-        }
-    }
+    // let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    // for (i, (_, res)) in results.iter().enumerate() {
+    //     debug_best_res.push(Vec::<usize>::new());
+    //     for (index, _) in res.iter() {
+    //         debug_best_res[i].push(*index);
+    //     }
+    // }
 
     // println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
-    println!("#### Found    : {:?}", debug_best_res);
-    return; // debug
+    // println!("#### Found    : {:?}", debug_best_res);
+    // return; // debug
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;

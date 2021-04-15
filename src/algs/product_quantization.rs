@@ -268,12 +268,12 @@ impl AlgorithmImpl for ProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.sub_dimension = dataset.ncols() / self.m;
 
-        let verbose_print = true;
+        let verbose_print = false;
         let centroids = self.kmeans(self.m, self.max_iterations, dataset, verbose_print);
         let residuals = self.compute_residuals(&centroids, dataset, verbose_print);
 
         // Residuals PQ Training data
-        let residuals_training_data = self.random_traindata(residuals.view(), self.training_size, true);
+        let residuals_training_data = self.random_traindata(residuals.view(), self.training_size, verbose_print);
         if verbose_print { println!("residuals_training_data, shape {:?}", residuals_training_data.shape()); }
 
         self.residuals_codebook = self.train_residuals_codebook(residuals_training_data, self.m, self.k, self.sub_dimension);
@@ -286,7 +286,7 @@ impl AlgorithmImpl for ProductQuantization {
 
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
 
-        println!("Best coarse_quantizers to search in {:?}", best_coarse_quantizers);
+        // println!("Best coarse_quantizers to search in {:?}", best_coarse_quantizers);
 
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<DataEntry>::new();
@@ -327,7 +327,7 @@ impl AlgorithmImpl for ProductQuantization {
                     distance += m_dist;
                 }
 
-                if best_quantizer_candidates.len() < (result_count as usize) * 10 {
+                if best_quantizer_candidates.len() < (result_count as usize) * 100 {
                     best_quantizer_candidates.push(DataEntry {
                         index: *child_key,  
                         distance: -distance
@@ -376,9 +376,9 @@ impl AlgorithmImpl for ProductQuantization {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        if self.verbose_print {
-            println!("best_n_candidates \n{:?}", best_n_candidates);
-        }
+        // if self.verbose_print {
+        //     println!("best_n_candidates \n{:?}", best_n_candidates);
+        // }
         best_n_candidates
     }
 
