@@ -4,7 +4,6 @@ use crate::algs::*;
 use rand::{distributions::Uniform, Rng, prelude::*};
 use pq_kmeans::{PQKMeans};
 use std::collections::BinaryHeap;
-use crate::algs::pq_data_entry::{PQDataEntry};
 use crate::algs::data_entry::{DataEntry};
 use colored::*;
 
@@ -34,11 +33,12 @@ pub struct ProductQuantization {
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
     residuals_codebook: Array2::<Array1::<f64>>,
+    residuals_codebook_k: usize,
     sub_dimension: usize,
 }
 
 impl ProductQuantization {
-    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, training_size: usize, k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, k: usize, training_size: usize, residuals_codebook_k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
@@ -50,6 +50,7 @@ impl ProductQuantization {
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, k), Array::zeros(dataset.ncols()/m)),
+            residuals_codebook_k: residuals_codebook_k,
             sub_dimension: dataset.ncols() / m,
         }
     }
@@ -149,15 +150,15 @@ impl ProductQuantization {
         residuals
     }
 
-    fn train_residuals_codebook(&self, residuals_training_data: Array2<f64>, m_subspaces: usize, k_codewords: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
+    fn train_residuals_codebook(&self, residuals_training_data: &ArrayView2<f64>, m_subspaces: usize, k_centroids: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
         // Train residuals codebook
-        let mut residuals_codebook = Array::from_elem((m_subspaces, k_codewords), Array::zeros(sub_dimension));
+        let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
         for m in 0..m_subspaces {
             let begin = sub_dimension * m;
             let end = begin + sub_dimension;
             let partial_data = residuals_training_data.slice(s![.., begin..end]);
-            let mut pq_kmeans = PQKMeans::new(k_codewords, 200);
-            let codewords = pq_kmeans.run(partial_data.view());
+            let mut pq_kmeans = PQKMeans::new(k_centroids, 200);
+            let codewords = pq_kmeans.run(&partial_data.view());
             for (k, (centroid,_)) in codewords.iter().enumerate() {
                 residuals_codebook[[m,k]] = centroid.to_owned();
             }
@@ -165,19 +166,18 @@ impl ProductQuantization {
         residuals_codebook
     }
 
-    fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>, m_subspaces: usize, k_codewords: usize, sub_dimension: usize) -> Array1<Array1<usize>> {
+    fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>, sub_dimension: usize) -> Array1<Array1<usize>> {
         // Residuals Encoding
-        let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(self.m, 0));
+        let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
         for n in 0..residuals.nrows() {
-            for m in 0..m_subspaces {
+            for m in 0..residuals_codebook.nrows() {
                 let begin = sub_dimension * m;
                 let end = begin + sub_dimension;
                 let partial_dimension = residuals.slice(s![n, begin..end]);
 
                 let mut best_match = (f64::NEG_INFINITY, 0);
-                for k in 0..k_codewords {
+                for k in 0..residuals_codebook.ncols() {
                     let centroid = &residuals_codebook[[m,k]];
-                    // let distance = distance::cosine_similarity(&(centroid).view(), &partial_dimension);
                     let distance = (centroid).view().dot(&partial_dimension);
                     if best_match.0 < distance { best_match = (distance, k) };
                 }
@@ -231,30 +231,6 @@ impl ProductQuantization {
         }
         result_indexes
     }
-
-    fn rq_pq_codes(&self, rq: Array1::<f64>, residuals_codebook: &Array2::<Array1<f64>>, m_subspaces: usize, k_codewords: usize,  sub_dimension: usize) -> Array1<usize> {
-        // Compute pq codes for query residuals and get values from codebook
-        let mut rq_pq_codes = Array::from_elem(m_subspaces, 0);
-        for m in 0..m_subspaces {
-            let begin = sub_dimension * m;
-            let end = begin + sub_dimension;
-            let partial_data = rq.slice(s![begin..end]);
-
-            let mut best_match = (f64::NEG_INFINITY, 0);
-            for k in 0..k_codewords {
-                let centroid = &residuals_codebook[[m,k]];
-                // let distance = distance::cosine_similarity(&(centroid).view(), &partial_data);
-                let distance = (centroid).view().dot(&partial_data);
-                if best_match.0 < distance {
-                    best_match = (distance, k)
-                }
-            }
-            rq_pq_codes[m] = best_match.1;
-        }
-        println!("rq_pq_codes shape {:?}", rq_pq_codes.shape());
-        rq_pq_codes
-    }
-    
 }
 
 
@@ -273,11 +249,11 @@ impl AlgorithmImpl for ProductQuantization {
         let residuals = self.compute_residuals(&centroids, dataset, verbose_print);
 
         // Residuals PQ Training data
+        
         let residuals_training_data = self.random_traindata(residuals.view(), self.training_size, verbose_print);
         if verbose_print { println!("residuals_training_data, shape {:?}", residuals_training_data.shape()); }
-
-        self.residuals_codebook = self.train_residuals_codebook(residuals_training_data, self.m, self.k, self.sub_dimension);
-        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.m, self.k, self.sub_dimension);
+        self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
+        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
 
     }
@@ -298,26 +274,19 @@ impl AlgorithmImpl for ProductQuantization {
             // Compute residuals between query and coarse_quantizer
             // println!("Compute residuals between query and coarse_quantizer");
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
-            // println!("{}", rq);
 
-            // Compute pq codes for query residuals
-            // let rq_pq_codes = &self.rq_pq_codes(rq, &self.residuals_codebook, self.m, self.k,  self.sub_dimension);
-            
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
             // println!("Compute distance table");
-            let mut distance_table = Array::from_elem((self.m, self.k), 0.);
+            let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
                 let end = begin + self.sub_dimension;
                 let partial_query = rq.slice(s![begin..end]);
-                // println!("{}", partial_query);
-                for k in 0..self.k {
+                for k in 0..self.residuals_codebook_k {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]];
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
                 }
             }
-
-            // println!("distance_table \n{:?}", distance_table);
             
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut distance: f64 = 0.;
@@ -327,7 +296,7 @@ impl AlgorithmImpl for ProductQuantization {
                     distance += m_dist;
                 }
 
-                if best_quantizer_candidates.len() < (result_count as usize) * 100 {
+                if best_quantizer_candidates.len() < (result_count as usize) * 1000 {
                     best_quantizer_candidates.push(DataEntry {
                         index: *child_key,  
                         distance: -distance

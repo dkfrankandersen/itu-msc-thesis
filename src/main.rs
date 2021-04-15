@@ -57,18 +57,19 @@ fn main() {
     
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
+    
+    println!("Start running individual querys");
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
-
     for (i, p) in dataset.outer_iter().enumerate() {
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
         results.push(result);
 
-        // Debugging on 5 querys
+        // // Debugging on 5 querys
         // if i > 5 {
         //     break; // debug
         // }
     }
-    
+    println!("Finised running individual querys");
     // Debug stuff
     // let mut debug_best_res = Vec::<Vec::<usize>>::new();
     // for (i, (_, res)) in results.iter().enumerate() {
@@ -108,7 +109,7 @@ fn main() {
         name: algo_def,
         run_count: 1
     };
-
+    println!("Store results into HD5F file");
     store_results_and_fix_attributes(results, attrs);
 }
 
