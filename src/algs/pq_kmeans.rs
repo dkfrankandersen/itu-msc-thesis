@@ -31,7 +31,7 @@ impl PQKMeans {
         }
     }
 
-    pub fn run(&mut self, dataset: ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
+    pub fn run(&mut self, dataset: &ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
 
         self.codebook = Vec::with_capacity(self.k);
         self.init(dataset);        
@@ -66,7 +66,7 @@ impl PQKMeans {
         return &self.codebook;
     }
 
-    fn init(&mut self, dataset: ArrayView2::<f64>) {
+    fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
         let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows()-1);
         for _ in 0..self.k {
@@ -80,7 +80,7 @@ impl PQKMeans {
         }      
     }
 
-    fn assign(&mut self, dataset: ArrayView2::<f64>) {
+    fn assign(&mut self, dataset: &ArrayView2::<f64>) {
         for (_,children) in self.codebook.iter_mut() {
             children.clear();
         }
@@ -100,7 +100,7 @@ impl PQKMeans {
         }
     }
 
-    fn update(&mut self, dataset: ArrayView2::<f64>) {
+    fn update(&mut self, dataset: &ArrayView2::<f64>) {
         for (centroid, children) in self.codebook.iter_mut() {
             if children.len() > 0 {
                 for i in 0..centroid.len() {

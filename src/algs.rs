@@ -69,7 +69,7 @@ impl AlgorithmFactory {
             "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             "pq" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
                                                                             args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
-                                                                            args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap())),
+                                                                            args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap(), args[5].parse::<usize>().unwrap())),
             "scann" => Algorithm::Scann(Scann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
