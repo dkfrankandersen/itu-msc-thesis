@@ -6,6 +6,8 @@ pub struct Dataset {
     hdf5_file: hdf5::File
 }
 
+
+#[allow(dead_code)]
 impl Dataset {
 
     pub fn new(filename: &str) -> Self {

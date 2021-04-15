@@ -1,11 +1,13 @@
 use ndarray::{ArrayView1};
 
+#[allow(dead_code)]
 pub enum DistType {
     Angular,
     Cosine,
     Euclidian
 }
 
+#[allow(dead_code)]
 pub fn euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let mut sum_val = 0.0;
     for i in 0..p.len() {
@@ -22,6 +24,7 @@ pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     return cos_sim;
 }
 
+#[allow(dead_code)]
 pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
