@@ -5,7 +5,6 @@ use rand::{distributions::Uniform, Rng, prelude::*};
 use pq_kmeans::{PQKMeans};
 use std::collections::BinaryHeap;
 use crate::algs::data_entry::{DataEntry};
-use colored::*;
 
 #[derive(Clone, PartialEq, Debug)]
 struct Centroid {
@@ -55,14 +54,14 @@ impl ProductQuantization {
         }
     }
 
-    pub fn random_traindata(&self, dataset: ArrayView2::<f64>, train_dataset_size: usize, verbose_print: bool) -> Array2::<f64> {
+    pub fn random_traindata(&self, dataset: &ArrayView2::<f64>, train_dataset_size: usize, verbose_print: bool) -> Array2::<f64> {
         let mut rng = rand::thread_rng();
         let range = Uniform::new(0 as usize, dataset.nrows() as usize);
         let random_datapoints: Vec<usize> = (0..train_dataset_size).map(|_| rng.sample(&range)).collect();
         
-        let mut train_data = Array2::zeros((train_dataset_size, dataset.ncols()));
-        for (i,v) in random_datapoints.iter().enumerate() {
-            let data_row = dataset.slice(s![*v,..]);
+        let mut train_data = Array2::zeros((random_datapoints.len(), dataset.ncols()));
+        for (i, index) in random_datapoints.iter().enumerate() {
+            let data_row = dataset.slice(s![*index,..]);
             train_data.row_mut(i).assign(&data_row);
         }
         train_data
@@ -78,8 +77,8 @@ impl ProductQuantization {
         let mut rng = thread_rng();
         let dist_uniform = Uniform::new_inclusive(0, dataset.nrows()-1);
         for k in 0..k_centroids {
-            let rand_key = rng.sample(dist_uniform);
-            let datapoint = dataset.slice(s![rand_key,..]);
+            let rand_index = rng.sample(dist_uniform);
+            let datapoint = dataset.slice(s![rand_index,..]);
             centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
         }
 
@@ -213,7 +212,7 @@ impl ProductQuantization {
                     distance: -distance
                 });
             } else {
-                let min_val = *best_coarse_quantizers.peek().unwrap();
+                let min_val = best_coarse_quantizers.peek().unwrap();
                 if distance > -min_val.distance {
                     best_coarse_quantizers.pop();
                     best_coarse_quantizers.push(DataEntry {
@@ -233,8 +232,6 @@ impl ProductQuantization {
     }
 }
 
-
-
 impl AlgorithmImpl for ProductQuantization {
 
     fn __str__(&self) {
@@ -250,19 +247,16 @@ impl AlgorithmImpl for ProductQuantization {
 
         // Residuals PQ Training data
         
-        let residuals_training_data = self.random_traindata(residuals.view(), self.training_size, verbose_print);
-        if verbose_print { println!("residuals_training_data, shape {:?}", residuals_training_data.shape()); }
+        let residuals_training_data = self.random_traindata(&residuals.view(), self.training_size, verbose_print);
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
         let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
 
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
 
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
-
-        // println!("Best coarse_quantizers to search in {:?}", best_coarse_quantizers);
 
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<DataEntry>::new();
@@ -272,11 +266,10 @@ impl AlgorithmImpl for ProductQuantization {
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
             // Compute residuals between query and coarse_quantizer
-            // println!("Compute residuals between query and coarse_quantizer");
+
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-            // println!("Compute distance table");
             let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
@@ -288,10 +281,10 @@ impl AlgorithmImpl for ProductQuantization {
                 }
             }
             
+            // Read off the distance using the distance table
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
-                    // Read off the distance using the distance table
                     let m_dist = distance_table[[m,*k]];
                     distance += m_dist;
                 }
@@ -321,8 +314,7 @@ impl AlgorithmImpl for ProductQuantization {
             let datapoint = dataset.slice(s![index,..]);
             let distance = distance::cosine_similarity(&query.view(), &datapoint);
             
-
-            if best_candidates.len() < (result_count as usize) {
+            if best_candidates.len() < result_count {
                 best_candidates.push(DataEntry {
                     index: index,  
                     distance: -distance
@@ -345,9 +337,6 @@ impl AlgorithmImpl for ProductQuantization {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        // if self.verbose_print {
-        //     println!("best_n_candidates \n{:?}", best_n_candidates);
-        // }
         best_n_candidates
     }
 

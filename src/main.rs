@@ -12,7 +12,7 @@ struct RunParameters {
     metric: String,
     dataset: String,
     algorithm: String,
-    results: u32,
+    results: usize,
     additional: Vec<String>,
 }
 
@@ -36,7 +36,7 @@ fn main() {
                                     metric: args[1].to_string(), 
                                     dataset: args[2].to_string(),
                                     algorithm: args[3].to_string(),
-                                    results: args[4].parse::<u32>().unwrap(),
+                                    results: args[4].parse::<usize>().unwrap(),
                                     additional: args[5..].to_vec(),
     };
     
@@ -64,24 +64,24 @@ fn main() {
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
         results.push(result);
 
-        // // Debugging on 5 querys
-        // if i > 5 {
-        //     break; // debug
-        // }
+        // Debugging on 5 querys
+        if i > 5 {
+            break; // debug
+        }
     }
     println!("Finised running individual querys");
     // Debug stuff
-    // let mut debug_best_res = Vec::<Vec::<usize>>::new();
-    // for (i, (_, res)) in results.iter().enumerate() {
-    //     debug_best_res.push(Vec::<usize>::new());
-    //     for (index, _) in res.iter() {
-    //         debug_best_res[i].push(*index);
-    //     }
-    // }
+    let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    for (i, (_, res)) in results.iter().enumerate() {
+        debug_best_res.push(Vec::<usize>::new());
+        for (index, _) in res.iter() {
+            debug_best_res[i].push(*index);
+        }
+    }
 
-    // println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
-    // println!("#### Found    : {:?}", debug_best_res);
-    // return; // debug
+    println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
+    println!("#### Found    : {:?}", debug_best_res);
+    return; // debug
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
@@ -103,7 +103,7 @@ fn main() {
         batch_mode: false,
         best_search_time: best_search_time,
         candidates: avg_candidates,
-        count: parameters.results,
+        count: parameters.results as u32,
         distance: parameters.metric,
         expect_extra: false,
         name: algo_def,
