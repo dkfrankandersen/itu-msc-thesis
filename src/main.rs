@@ -1,8 +1,6 @@
 extern crate ndarray;
 extern crate hdf5;
 use std::env;
-// use std::time::{Instant, Duration};
-// use ndarray::{s};
 mod algs;
 use algs::dataset::Dataset;
 mod util;
