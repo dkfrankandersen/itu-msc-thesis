@@ -30,15 +30,10 @@ impl PQKMeans {
         self.init(dataset);        
         let mut last_codebook = Vec::with_capacity(self.k);
         let mut iterations = 1;
-        loop {
-            if iterations > self.max_iterations {
+        for iterations in 0..self.max_iterations {
+            if self.codebook == last_codebook {
                 if self.verbose_print {
-                    println!("Max iterations reached, iterations: {}", iterations-1);
-                }
-                break;
-            } else if self.codebook == last_codebook {
-                if self.verbose_print {
-                    println!("Computation has converged, iterations: {}", iterations-1);
+                    println!("Computation has converged, iterations: {}", iterations);
                 }
                 break;
             }
@@ -47,7 +42,6 @@ impl PQKMeans {
 
             self.assign(dataset);
             self.update(dataset);
-            iterations += 1;
         }
         
         return &self.codebook;
@@ -96,7 +90,7 @@ impl PQKMeans {
                     }
                 }
     
-                centroid.mapv_inplace(|a| a/children.len() as f64)
+                centroid.mapv_inplace(|a| a/children.len() as f64);
             }
         }
     }

@@ -207,33 +207,33 @@ impl ProductQuantization {
 
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, result_quantizers: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
-        let mut best_coarse_quantizers = BinaryHeap::<DataEntry>::new();
+        let mut best_coarse_quantizers = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid in coarse_quantizer.iter() {
             let distance = cosine_similarity(&centroid.point.view() , &query);
             if best_coarse_quantizers.len() < result_quantizers {
-                best_coarse_quantizers.push(DataEntry {
-                    index: centroid.id,  
-                    distance: -distance
-                });
+                best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
             } else {
-                let min_val = best_coarse_quantizers.peek().unwrap();
-                if OrderedFloat(distance) > OrderedFloat(-min_val.distance) {
+                if OrderedFloat(distance) >= best_coarse_quantizers.peek().unwrap().0 {
                     best_coarse_quantizers.pop();
-                    best_coarse_quantizers.push(DataEntry {
-                        index: centroid.id,  
-                        distance: -distance
-                    });
+                    best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
                 }
             }
         }
 
         let mut result_indexes = Vec::<usize>::new();        
         for _ in 0..best_coarse_quantizers.len() {
-            let data_entry = best_coarse_quantizers.pop().unwrap();
-            result_indexes.push(data_entry.index);
+            result_indexes.push(best_coarse_quantizers.pop().unwrap().1);
         }
         result_indexes
     }
+}
+
+fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<usize>) -> f64 {
+    let mut distance: f64 = 0.;
+    for (m, k) in child_values.iter().enumerate() {
+        distance += distance_table[[m, *k]];
+    }
+    distance
 }
 
 impl AlgorithmImpl for ProductQuantization {
@@ -274,7 +274,6 @@ impl AlgorithmImpl for ProductQuantization {
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
         t.stop_and_print_as_millis();
         // Lets find matches in best coarse_quantizers
-        // let mut best_quantizer_candidates = BinaryHeap::<DataEntry>::new();
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         let candidates_to_consider = result_count * 1000;
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
@@ -303,21 +302,12 @@ impl AlgorithmImpl for ProductQuantization {
                 if best_quantizer_candidates.len() > candidates_to_consider {
                     break;
                 }
-                let mut distance: f64 = 0.;
-                for (m, k) in child_values.iter().enumerate() {
-                    let m_dist = distance_table[[m,*k]];
-                    distance += m_dist;
-                }
+                let distance = distance_from_indexes(&distance_table.view(), &child_values);
                 best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
             }
             
-            
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let mut distance: f64 = 0.;
-                for (m, k) in child_values.iter().enumerate() {
-                    let m_dist = distance_table[[m,*k]];
-                    distance += m_dist;
-                }
+                let distance = distance_from_indexes(&distance_table.view(), &child_values);
                 if OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
                         best_quantizer_candidates.pop();
                         best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
