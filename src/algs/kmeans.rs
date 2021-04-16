@@ -5,6 +5,8 @@ use crate::algs::*;
 use std::collections::BinaryHeap;
 use rand::prelude::*;
 use std::collections::HashMap;
+extern crate ordered_float;
+pub use ordered_float::*;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -68,7 +70,7 @@ impl KMeans {
             let mut best_distance = f64::NEG_INFINITY;
             for (&key, centroid) in self.codebook.iter_mut() {
                 let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                if best_distance < distance {
+                if OrderedFloat(best_distance) < OrderedFloat(distance) {
                     best_centroid = key;
                     best_distance = distance;
                 }
@@ -156,7 +158,7 @@ impl AlgorithmImpl for KMeans {
                     });
                 } else {
                     let min_val: DataEntry = *best_candidates.peek().unwrap();
-                    if dist > -min_val.distance {
+                    if OrderedFloat(dist) > OrderedFloat(-min_val.distance) {
                         best_candidates.pop();
                         best_candidates.push(DataEntry {
                             index: *candidate_key,  

@@ -71,18 +71,18 @@ fn main() {
 
         
     }
-    // println!("Finised running individual querys");
-    // // Debug stuff
-    // let mut debug_best_res = Vec::<Vec::<usize>>::new();
-    // for (i, (_, res)) in results.iter().enumerate() {
-    //     debug_best_res.push(Vec::<usize>::new());
-    //     for (index, _) in res.iter() {
-    //         debug_best_res[i].push(*index);
-    //     }
-    // }
+    println!("Finised running individual querys");
+    // Debug stuff
+    let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    for (i, (_, res)) in results.iter().enumerate() {
+        debug_best_res.push(Vec::<usize>::new());
+        for (index, _) in res.iter() {
+            debug_best_res[i].push(*index);
+        }
+    }
 
-    // println!("#### Found    : {:?}", debug_best_res);
-
+    println!("#### Found    : {:?}", debug_best_res);
+    return;
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;

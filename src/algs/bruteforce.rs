@@ -3,6 +3,8 @@ use crate::algs::distance;
 use crate::algs::data_entry::{DataEntry};
 use crate::algs::*;
 use std::collections::BinaryHeap;
+extern crate ordered_float;
+pub use ordered_float::*;
 
 #[derive(Debug, Clone)]
 pub struct Bruteforce {
@@ -43,7 +45,7 @@ impl AlgorithmImpl for Bruteforce {
                 
             } else {
                 let min_val: DataEntry = *best_candidates.peek().unwrap();
-                if dist > -min_val.distance {
+                if OrderedFloat(dist) > OrderedFloat(-min_val.distance) {
                     best_candidates.pop();
                     best_candidates.push(DataEntry {
                         index: idx,  

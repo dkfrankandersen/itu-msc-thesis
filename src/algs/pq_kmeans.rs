@@ -2,6 +2,8 @@
 use ndarray::{Array1, ArrayView2, s};
 use rand::prelude::*;
 use rand::{Rng};
+extern crate ordered_float;
+pub use ordered_float::*;
 
 #[derive(Debug, Clone)]
 pub struct PQKMeans {
@@ -71,7 +73,7 @@ impl PQKMeans {
             let mut best_distance = f64::NEG_INFINITY;
             for (k, centroid) in self.codebook.iter().enumerate() {
                 let distance = (centroid.0).view().dot(&candidate);
-                if best_distance < distance {
+                if OrderedFloat(best_distance) < OrderedFloat(distance) {
                     best_centroid = k;
                     best_distance = distance;
                 }
@@ -94,9 +96,7 @@ impl PQKMeans {
                     }
                 }
     
-                for i in 0..centroid.len() {  
-                    centroid[i] = centroid[i]/children.len() as f64;
-                }
+                centroid.mapv_inplace(|a| a/children.len() as f64)
             }
         }
     }
