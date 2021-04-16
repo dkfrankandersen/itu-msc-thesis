@@ -71,7 +71,7 @@ impl Dataset {
 
     pub fn print_true_neighbors(&self, from : usize, to: usize, m: usize) {
         let dataset = self.neighbors();
-        println!("| Distance for 5 closests neighbors from {} to {}:", from, to);
+        println!("| Distance for {} closests neighbors from {} to {}:", m, from, to);
         for i in from..to {
             let mut neighbors = Vec::new();
             for j in 0..m {
