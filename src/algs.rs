@@ -26,7 +26,7 @@ pub enum Algorithm {
 
 trait AlgorithmImpl {
     fn fit(&mut self, dataset: &ArrayView2::<f64>);
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize>;
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize>;
     fn __str__(&self);
 }
 
@@ -41,7 +41,7 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
         match *self {
             Algorithm::Bruteforce(ref x) => x.query(dataset, p, result_count),
             Algorithm::KMeans(ref x) => x.query(dataset, p, result_count),
@@ -65,8 +65,8 @@ pub struct AlgorithmFactory {}
 impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
-            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print, dataset)),
-            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
+            "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
+            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap())),
             "pq" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
                                                                             args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
                                                                             args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap(), args[5].parse::<usize>().unwrap())),
@@ -90,7 +90,7 @@ pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, 
     (total_time.as_secs_f64(), algo)
 }
 
-pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: u32) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: usize) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
     let candidates = algo.query(dataset, &p, result_count);
     let time_finish = Instant::now();
@@ -98,7 +98,7 @@ pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &Arr
 
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
     for i in candidates.iter() {
-        let q = &dataset.slice(s![*i as i32,..]);
+        let q = &dataset.slice(s![*i,..]);
         let dist = distance::cosine_similarity(p, q);
         candidates_dist.push((*i, 1.-dist));
     }

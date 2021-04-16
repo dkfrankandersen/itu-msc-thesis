@@ -12,7 +12,7 @@ pub struct Bruteforce {
 }
 
 impl Bruteforce {
-    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>) -> Self {
+    pub fn new(verbose_print: bool) -> Self {
         Bruteforce {
             name: "FANN_bruteforce()".to_string(),
             metric: "angular".to_string(),
@@ -30,12 +30,12 @@ impl AlgorithmImpl for Bruteforce {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: u32) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::new();
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
             let dist = distance::cosine_similarity(&p, &candidate);
-            if best_candidates.len() < result_count as usize {
+            if best_candidates.len() < result_count {
                 best_candidates.push(DataEntry {
                     index: idx,  
                     distance: -dist
@@ -59,9 +59,6 @@ impl AlgorithmImpl for Bruteforce {
             best_n_candidates.push(idx.index);
         }
         best_n_candidates.reverse();
-        if self.verbose_print {
-            println!("best_n_candidates \n{:?}", best_n_candidates);
-        }
         best_n_candidates
     }
 }

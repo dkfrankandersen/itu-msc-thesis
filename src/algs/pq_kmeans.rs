@@ -2,8 +2,6 @@
 use ndarray::{Array1, ArrayView2, s};
 use rand::prelude::*;
 use rand::{Rng};
-use colored::*;
-use crate::algs::{distance};
 
 #[derive(Debug, Clone)]
 pub struct PQKMeans {
@@ -24,13 +22,6 @@ impl PQKMeans {
         }
     }
 
-    fn _print_codebook(&self, info: &str, codebook: &Vec::<(Array1::<f64>, Vec::<usize>)>) {
-        println!("{}", info.to_string().on_white().black());
-        for (k, (centroid, children)) in codebook.iter().enumerate() {
-            println!("-> centroid C{:?} |  children: {:?} | point sum: {:?}", k, children.len(), centroid.sum());
-        }
-    }
-
     pub fn run(&mut self, dataset: &ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
 
         self.codebook = Vec::with_capacity(self.k);
@@ -38,9 +29,6 @@ impl PQKMeans {
         let mut last_codebook = Vec::with_capacity(self.k);
         let mut iterations = 1;
         loop {
-            if self.verbose_print && (iterations == 1 || iterations % 10 == 0) {
-                println!("Iteration {}", iterations);
-            }
             if iterations > self.max_iterations {
                 if self.verbose_print {
                     println!("Max iterations reached, iterations: {}", iterations-1);
@@ -59,9 +47,6 @@ impl PQKMeans {
             self.update(dataset);
             iterations += 1;
         }
-        if self.verbose_print {
-            self._print_codebook("Codebook after run: ", &self.codebook);
-        }
         
         return &self.codebook;
     }
@@ -73,11 +58,7 @@ impl PQKMeans {
             let rand_key = rng.sample(dist_uniform);
             let candidate = dataset.slice(s![rand_key,..]);
             self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));
-        }
-
-        if self.verbose_print {
-            self._print_codebook("Codebook after init: ", &self.codebook);
-        }      
+        }    
     }
 
     fn assign(&mut self, dataset: &ArrayView2::<f64>) {
@@ -89,7 +70,6 @@ impl PQKMeans {
             let mut best_centroid = 0;
             let mut best_distance = f64::NEG_INFINITY;
             for (k, centroid) in self.codebook.iter().enumerate() {
-                // let distance = distance::cosine_similarity(&(centroid.0).view(), &candidate);
                 let distance = (centroid.0).view().dot(&candidate);
                 if best_distance < distance {
                     best_centroid = k;
