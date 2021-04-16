@@ -4,8 +4,8 @@ use std::env;
 mod algs;
 use algs::dataset::Dataset;
 mod util;
-use util::{store_results_and_fix_attributes, hdf5_store_file, testcases};
-
+use util::{store_results_and_fix_attributes, hdf5_store_file};
+use crate::util::{TimerDebug};
 struct RunParameters {
     metric: String,
     dataset: String,
@@ -59,27 +59,30 @@ fn main() {
     println!("Start running individual querys");
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
-        let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        results.push(result);
 
         // Debugging on 5 querys
-        if i > 5 {
+        if i > 0 {
             break; // debug
         }
-    }
-    println!("Finised running individual querys");
-    // Debug stuff
-    let mut debug_best_res = Vec::<Vec::<usize>>::new();
-    for (i, (_, res)) in results.iter().enumerate() {
-        debug_best_res.push(Vec::<usize>::new());
-        for (index, _) in res.iter() {
-            debug_best_res[i].push(*index);
-        }
-    }
+        let mut t = TimerDebug::start("MAIN run_individual_query");
+        let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
+        t.stop_and_print_as_millis();
+        results.push(result);
 
-    println!("#### Expected : {:?}", testcases::get_small_1000_6().best_10_results.row(0));
-    println!("#### Found    : {:?}", debug_best_res);
-    return; // debug
+        
+    }
+    // println!("Finised running individual querys");
+    // // Debug stuff
+    // let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    // for (i, (_, res)) in results.iter().enumerate() {
+    //     debug_best_res.push(Vec::<usize>::new());
+    //     for (index, _) in res.iter() {
+    //         debug_best_res[i].push(*index);
+    //     }
+    // }
+
+    // println!("#### Found    : {:?}", debug_best_res);
+
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;

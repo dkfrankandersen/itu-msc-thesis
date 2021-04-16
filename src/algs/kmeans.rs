@@ -13,7 +13,7 @@ pub struct Centroid {
 }
 
 impl Centroid {
-    fn new(id: usize, point: Array1::<f64>) -> Self {
+    fn new(point: Array1::<f64>) -> Self {
         Centroid {
             point: point,
             children: Vec::<usize>::new()
@@ -53,7 +53,7 @@ impl KMeans {
             let rand_key = rng.sample(dist_uniform);
             init_k_sampled.push(rand_key);
             let candidate = dataset.slice(s![rand_key,..]);
-            let new_centroid = Centroid::new(i, candidate.to_owned());
+            let new_centroid = Centroid::new(candidate.to_owned());
             self.codebook.insert(i, new_centroid);
         }
     }
@@ -73,9 +73,7 @@ impl KMeans {
                     best_distance = distance;
                 }
             }
-            if best_centroid >= 0 {
-                self.codebook.get_mut(&best_centroid).unwrap().children.push(idx);
-            }            
+            self.codebook.get_mut(&best_centroid).unwrap().children.push(idx);       
         }
     }
 

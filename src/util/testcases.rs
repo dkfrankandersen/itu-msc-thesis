@@ -1,5 +1,6 @@
-use ndarray::{arr1, arr2, Array, Array1, Array2, ArrayView1, s};
+use ndarray::{arr2, Array2};
 
+#[allow(dead_code)]
 pub struct Testcase {
     pub query_norm: Array2<f64>,
     pub dataset_norm: Array2<f64>,
@@ -8,6 +9,7 @@ pub struct Testcase {
 }
 
 
+#[allow(dead_code)]
 pub fn get_small_100_10() -> Testcase {
     Testcase {
         query_norm: arr2(&[
@@ -124,6 +126,7 @@ pub fn get_small_100_10() -> Testcase {
     }
 }
 
+#[allow(dead_code)]
 pub fn get_small_1000_6() -> Testcase {
     Testcase {
         query_norm: arr2(&[
