@@ -29,7 +29,6 @@ impl PQKMeans {
         self.codebook = Vec::with_capacity(self.k);
         self.init(dataset);        
         let mut last_codebook = Vec::with_capacity(self.k);
-        let mut iterations = 1;
         for iterations in 0..self.max_iterations {
             if self.codebook == last_codebook {
                 if self.verbose_print {
