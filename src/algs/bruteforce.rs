@@ -29,7 +29,7 @@ impl AlgorithmImpl for Bruteforce {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
+    fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
