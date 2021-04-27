@@ -22,6 +22,7 @@ pub struct DebugTimer {
     stop: Option<Instant>
 }
 
+#[allow(dead_code)]
 impl DebugTimer {
     pub fn start(msg: &str) -> Self {
         DebugTimer {

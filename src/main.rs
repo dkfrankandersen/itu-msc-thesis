@@ -60,18 +60,14 @@ fn main() {
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
 
-        // Debugging on 5 querys
+        // Debugging on querys
         if i > 0 {
             break; // debug
         }
-        let mut t = DebugTimer::start("MAIN run_individual_query");
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        t.stop();
-        t.print_as_millis();
         results.push(result);
-
-        
     }
+    
     println!("Finised running individual querys");
     // Debug stuff
     let mut debug_best_res = Vec::<Vec::<usize>>::new();
@@ -82,15 +78,16 @@ fn main() {
         }
     }
 
-    println!("#### Found    : {:?}", debug_best_res);
-    return;
-
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
     for (time, candidates) in results.iter() {
         total_time += time;
         total_candidates += candidates.len();
     }
+
+    println!("#### total_query_time    : {:?}", total_time);
+    println!("#### Found               : {:?}", debug_best_res);
+    return;
 
     let search_time = total_time / dataset.nrows() as f64;
     let avg_candidates = total_candidates as f64 / dataset.nrows() as f64;

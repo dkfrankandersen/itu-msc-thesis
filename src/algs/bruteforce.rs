@@ -39,7 +39,7 @@ impl AlgorithmImpl for Bruteforce {
                 best_candidates.push((OrderedFloat(-distance), idx));
                 
             } else {
-                if OrderedFloat(distance) > best_candidates.peek().unwrap().0 {
+                if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
                     best_candidates.push((OrderedFloat(-distance), idx));
                 }

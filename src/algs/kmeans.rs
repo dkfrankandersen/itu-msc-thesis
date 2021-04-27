@@ -135,7 +135,7 @@ impl AlgorithmImpl for KMeans {
 
         for (key, centroid) in self.codebook.iter() {
             let distance = distance::cosine_similarity(&p, &centroid.point.view());
-            if best_centroids.len() < result_count as usize {
+            if best_centroids.len() < self.clusters_to_search as usize {
                 best_centroids.push((OrderedFloat(-distance), *key));
             } else {
                 if OrderedFloat(distance) > -best_centroids.peek().unwrap().0 {
