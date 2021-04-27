@@ -47,9 +47,9 @@ fn main() {
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
-    if verbose_print {
-        ds.print_true_neighbors(0, 5, 10);
-    }
+    // if verbose_print {
+    //     ds.print_true_neighbors(0, 5, 10);
+    // }
     
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
@@ -59,9 +59,9 @@ fn main() {
     for (i, p) in dataset.outer_iter().enumerate() {
 
         // Debugging on querys
-        if i > 0 {
-            break; // debug
-        }
+        // if i > 0 {
+        //     break; // debug
+        // }
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
         results.push(result);
     }
@@ -90,6 +90,8 @@ fn main() {
     let search_time = total_time / dataset.nrows() as f64;
     let avg_candidates = total_candidates as f64 / dataset.nrows() as f64;
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }};
+
+    println!("#### avg_candidates    : {:?}", avg_candidates);
 
     let attrs = hdf5_store_file::Attributes {
         build_time: build_time,
