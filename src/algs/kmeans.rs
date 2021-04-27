@@ -3,7 +3,7 @@ use std::collections::{BinaryHeap, HashMap};
 use rand::{distributions::Uniform, Rng, prelude::*};
 pub use ordered_float::*;
 use crate::algs::*;
-use crate::util::{DebugTimer};
+//use crate::util::{DebugTimer};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {

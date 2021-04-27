@@ -2,7 +2,7 @@ use ndarray::{ArrayView1, ArrayView2};
 use std::collections::BinaryHeap;
 pub use ordered_float::*;
 use crate::algs::*;
-use crate::util::{DebugTimer};
+//use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
 pub struct Bruteforce {
