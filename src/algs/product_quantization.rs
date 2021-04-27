@@ -1,11 +1,9 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 use rand::{distributions::Uniform, Rng, prelude::*};
-use std::collections::BinaryHeap;
+pub use ordered_float::*;
 use crate::algs::{AlgorithmImpl, pq_kmeans::PQKMeans, distance::cosine_similarity};
 use crate::util::{DebugTimer};
-extern crate ordered_float;
-pub use ordered_float::*;
 
 #[derive(Clone, PartialEq, Debug)]
 struct Centroid {
@@ -343,7 +341,7 @@ impl AlgorithmImpl for ProductQuantization {
             if best_candidates.len() < result_count {
                 best_candidates.push((OrderedFloat(-distance), index));
             } else {
-                if OrderedFloat(distance) >= -best_candidates.peek().unwrap().0 {
+                if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
                     best_candidates.push((OrderedFloat(-distance), index));
                 }
@@ -354,11 +352,9 @@ impl AlgorithmImpl for ProductQuantization {
                
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = best_candidates.pop().unwrap().1;
-            best_n_candidates.push(idx);
+            best_n_candidates.push(best_candidates.pop().unwrap().1);
         }
         best_n_candidates.reverse();
-        
         best_n_candidates
     }
 

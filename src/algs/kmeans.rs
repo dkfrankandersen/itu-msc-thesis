@@ -1,11 +1,9 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
-use crate::algs::distance;
-use crate::algs::*;
-use std::collections::BinaryHeap;
-use rand::prelude::*;
-use std::collections::HashMap;
-extern crate ordered_float;
+use std::collections::{BinaryHeap, HashMap};
+use rand::{distributions::Uniform, Rng, prelude::*};
 pub use ordered_float::*;
+use crate::algs::*;
+use crate::util::{DebugTimer};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -48,11 +46,9 @@ impl KMeans {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
-        let mut init_k_sampled: Vec<usize> = vec![];
+        let dist_uniform = Uniform::new_inclusive(0, dataset.nrows());
         for i in 0..self.clusters {
             let rand_key = rng.sample(dist_uniform);
-            init_k_sampled.push(rand_key);
             let candidate = dataset.slice(s![rand_key,..]);
             let new_centroid = Centroid::new(candidate.to_owned());
             self.codebook.insert(i, new_centroid);
@@ -136,10 +132,17 @@ impl AlgorithmImpl for KMeans {
 
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {        
         let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        
+
         for (key, centroid) in self.codebook.iter() {
-            best_centroids.push(
-                (OrderedFloat(distance::cosine_similarity(&p, &centroid.point.view())), *key));
+            let distance = distance::cosine_similarity(&p, &centroid.point.view());
+            if best_centroids.len() < result_count as usize {
+                best_centroids.push((OrderedFloat(-distance), *key));
+            } else {
+                if OrderedFloat(distance) > -best_centroids.peek().unwrap().0 {
+                    best_centroids.pop();
+                    best_centroids.push((OrderedFloat(-distance), *key));
+                }
+            }
         }
         
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();

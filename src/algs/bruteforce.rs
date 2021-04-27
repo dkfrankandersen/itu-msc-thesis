@@ -1,9 +1,8 @@
 use ndarray::{ArrayView1, ArrayView2};
-use crate::algs::distance;
-use crate::algs::*;
 use std::collections::BinaryHeap;
-extern crate ordered_float;
 pub use ordered_float::*;
+use crate::algs::*;
+use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
 pub struct Bruteforce {
@@ -49,8 +48,7 @@ impl AlgorithmImpl for Bruteforce {
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = best_candidates.pop().unwrap().1;
-            best_n_candidates.push(idx);
+            best_n_candidates.push(best_candidates.pop().unwrap().1);
         }
         best_n_candidates.reverse();
         best_n_candidates

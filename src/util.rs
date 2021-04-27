@@ -24,7 +24,6 @@ pub struct DebugTimer {
 
 impl DebugTimer {
     pub fn start(msg: &str) -> Self {
-        println!("TimerDebug start: {}", msg);
         DebugTimer {
             msg: msg.to_string(),
             start: Some(Instant::now()),
