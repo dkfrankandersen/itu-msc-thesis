@@ -11,6 +11,8 @@ hdf5 = "0.7.1"
 ndarray = "0.14.0"
 rand = "0.8.3"
 colored = "2.0.0"
+ordered-float = "2.0"
+assert_float_eq = "1"
 
 [lib]
 name = "hdf5_attribute_fix"

@@ -5,7 +5,7 @@ mod algs;
 use algs::dataset::Dataset;
 mod util;
 use util::{store_results_and_fix_attributes, hdf5_store_file};
-use crate::util::{TimerDebug};
+
 struct RunParameters {
     metric: String,
     dataset: String,
@@ -44,8 +44,6 @@ fn main() {
     let ds = Dataset::new(&filename);
     let ds_train_norm = ds.train_normalize();
     let ds_test_norm = ds.test_normalize();
-    // let ds_train_norm = testcases::get_small_1000_6().dataset_norm;
-    // let ds_test_norm = testcases::get_small_1000_6().query_norm;
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
@@ -60,29 +58,23 @@ fn main() {
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
     for (i, p) in dataset.outer_iter().enumerate() {
 
-        // Debugging on 5 querys
+        // Debugging on querys
         if i > 0 {
             break; // debug
         }
-        let mut t = TimerDebug::start("MAIN run_individual_query");
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        t.stop_and_print_as_millis();
         results.push(result);
-
-        
     }
-    // println!("Finised running individual querys");
-    // // Debug stuff
-    // let mut debug_best_res = Vec::<Vec::<usize>>::new();
-    // for (i, (_, res)) in results.iter().enumerate() {
-    //     debug_best_res.push(Vec::<usize>::new());
-    //     for (index, _) in res.iter() {
-    //         debug_best_res[i].push(*index);
-    //     }
-    // }
-
-    // println!("#### Found    : {:?}", debug_best_res);
-
+    
+    println!("Finised running individual querys");
+    // Debug stuff
+    let mut debug_best_res = Vec::<Vec::<usize>>::new();
+    for (i, (_, res)) in results.iter().enumerate() {
+        debug_best_res.push(Vec::<usize>::new());
+        for (index, _) in res.iter() {
+            debug_best_res[i].push(*index);
+        }
+    }
 
     let mut total_time: f64 = 0.;
     let mut total_candidates: usize = 0;
@@ -90,6 +82,10 @@ fn main() {
         total_time += time;
         total_candidates += candidates.len();
     }
+
+    // println!("#### total_query_time    : {:?}", total_time);
+    // println!("#### Found               : {:?}", debug_best_res);
+    // return;
 
     let search_time = total_time / dataset.nrows() as f64;
     let avg_candidates = total_candidates as f64 / dataset.nrows() as f64;

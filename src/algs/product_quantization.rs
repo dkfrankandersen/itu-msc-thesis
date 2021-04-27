@@ -1,9 +1,9 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 use rand::{distributions::Uniform, Rng, prelude::*};
-use std::collections::BinaryHeap;
-use crate::algs::{AlgorithmImpl, pq_kmeans::PQKMeans, data_entry::DataEntry, distance::cosine_similarity};
-use crate::util::{TimerDebug};
+pub use ordered_float::*;
+use crate::algs::{AlgorithmImpl, pq_kmeans::PQKMeans, distance::cosine_similarity};
+use crate::util::{DebugTimer};
 
 #[derive(Clone, PartialEq, Debug)]
 struct Centroid {
@@ -82,7 +82,7 @@ impl ProductQuantization {
         }
 
         // Repeat
-        let mut t = TimerDebug::start("Fit kmeans Repeat");
+        let mut t = DebugTimer::start("Fit kmeans Repeat");
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         for iterations in 0..max_iterations  {
             if centroids == last_centroids {
@@ -100,7 +100,9 @@ impl ProductQuantization {
                 let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
                 for centroid in centroids.iter() {
                     let distance = cosine_similarity(&centroid.point.view() , &datapoint);
-                    if best_match.0 < distance { best_match = (distance, centroid.id); }
+                    if OrderedFloat(best_match.0) < OrderedFloat(distance) { 
+                        best_match = (distance, centroid.id); 
+                    }
                 }
                 centroids[best_match.1].indexes.push(index);
             }
@@ -128,7 +130,8 @@ impl ProductQuantization {
                 }
             }
         }
-        t.stop_and_print_as_secs();
+        t.stop();
+        t.print_as_millis();
         centroids
     }
 
@@ -139,7 +142,7 @@ impl ProductQuantization {
             for index in centroid.indexes.iter() {
                 let point = dataset.slice(s![*index,..]);
                 for i in 0..point.len() {
-                    residuals[[*index, i]] =  point[i] - centroid.point[i];
+                    residuals[[*index, i]] = point[i] - centroid.point[i];
                 }
             }
         }
@@ -174,9 +177,11 @@ impl ProductQuantization {
 
                 let mut best_match = (f64::NEG_INFINITY, 0);
                 for k in 0..residuals_codebook.ncols() {
-                    let centroid = &residuals_codebook[[m,k]];
-                    let distance = (centroid).view().dot(&partial_dimension);
-                    if best_match.0 < distance { best_match = (distance, k) };
+                    let centroid = &residuals_codebook[[m,k]].view();
+                    let distance = centroid.dot(&partial_dimension);
+                    if OrderedFloat(best_match.0) < OrderedFloat(distance) { 
+                        best_match = (distance, k) 
+                    };
                 }
                 pqcodes[n][m] = best_match.1;
             }
@@ -201,33 +206,33 @@ impl ProductQuantization {
 
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, result_quantizers: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
-        let mut best_coarse_quantizers = BinaryHeap::<DataEntry>::new();
+        let mut best_coarse_quantizers = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid in coarse_quantizer.iter() {
             let distance = cosine_similarity(&centroid.point.view() , &query);
             if best_coarse_quantizers.len() < result_quantizers {
-                best_coarse_quantizers.push(DataEntry {
-                    index: centroid.id,  
-                    distance: -distance
-                });
+                best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
             } else {
-                let min_val = best_coarse_quantizers.peek().unwrap();
-                if distance > -min_val.distance {
+                if OrderedFloat(distance) >= best_coarse_quantizers.peek().unwrap().0 {
                     best_coarse_quantizers.pop();
-                    best_coarse_quantizers.push(DataEntry {
-                        index: centroid.id,  
-                        distance: -distance
-                    });
+                    best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
                 }
             }
         }
 
         let mut result_indexes = Vec::<usize>::new();        
         for _ in 0..best_coarse_quantizers.len() {
-            let data_entry = best_coarse_quantizers.pop().unwrap();
-            result_indexes.push(data_entry.index);
+            result_indexes.push(best_coarse_quantizers.pop().unwrap().1);
         }
         result_indexes
     }
+}
+
+fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<usize>) -> f64 {
+    let mut distance: f64 = 0.;
+    for (m, k) in child_values.iter().enumerate() {
+        distance += distance_table[[m, *k]];
+    }
+    distance
 }
 
 impl AlgorithmImpl for ProductQuantization {
@@ -238,37 +243,51 @@ impl AlgorithmImpl for ProductQuantization {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.sub_dimension = dataset.ncols() / self.m;
-
+        let mut debug_timers =  Vec::<DebugTimer>::new();
         let verbose_print = false;
-        let mut t = TimerDebug::start("Fit kmeans");
+        let mut t = DebugTimer::start("Fit kmeans");
         let centroids = self.kmeans(self.m, self.max_iterations, dataset, verbose_print);
-        t.stop_and_print_as_secs();
-        let mut t = TimerDebug::start("Fit compute_residuals");
+        t.stop();
+        let mut t = DebugTimer::start("Fit compute_residuals");
         let residuals = self.compute_residuals(&centroids, dataset);
-        t.stop_and_print_as_millis();
+        t.stop();
+        debug_timers.push(t);
 
         // Residuals PQ Training data
         
-        let mut t = TimerDebug::start("Fit random_traindata");
+        let mut t = DebugTimer::start("Fit random_traindata");
         let residuals_training_data = self.random_traindata(&residuals.view(), self.training_size);
-        t.stop_and_print_as_millis();
-        let mut t = TimerDebug::start("Fit train_residuals_codebook");
+        t.stop();
+        debug_timers.push(t);
+        let mut t = DebugTimer::start("Fit train_residuals_codebook");
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
-        t.stop_and_print_as_secs();
-        let mut t = TimerDebug::start("Fit residual_encoding");
+        t.stop();
+        debug_timers.push(t);
+        let mut t = DebugTimer::start("Fit residual_encoding");
         let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);
-        t.stop_and_print_as_secs();
-        let mut t = TimerDebug::start("Fit compute_coarse_quantizers");
+        t.stop();
+        debug_timers.push(t);
+        let mut t = DebugTimer::start("Fit compute_coarse_quantizers");
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
-        t.stop_and_print_as_millis();
-    }
+        t.stop();
+        debug_timers.push(t);
 
+
+        println!("PQ FIT TIMING:");
+        for t in debug_timers.iter() {
+            t.print_as_millis();
+        }
+    }
+    
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
-        let mut t = TimerDebug::start("Query best_coarse_quantizers");
+        let mut debug_timers =  Vec::<DebugTimer>::new();
+        let mut t = DebugTimer::start("Query best_coarse_quantizers");
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
-        t.stop_and_print_as_millis();
+        t.stop();
+        debug_timers.push(t);
         // Lets find matches in best coarse_quantizers
-        let mut best_quantizer_candidates = BinaryHeap::<DataEntry>::new();
+        let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let candidates_to_consider = result_count * 1000;
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -277,80 +296,65 @@ impl AlgorithmImpl for ProductQuantization {
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
 
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-            let mut t = TimerDebug::start("Query Create a distance table");
+            let mut t = DebugTimer::start("Query Create a distance table");
             let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
                 let begin = self.sub_dimension * m;
                 let end = begin + self.sub_dimension;
                 let partial_query = rq.slice(s![begin..end]);
                 for k in 0..self.residuals_codebook_k {
-                    let partial_residual_codeword = &self.residuals_codebook[[m, k]];
+                    let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
                 }
             }
-            t.stop_and_print_as_millis();
-
+            t.stop();
+            debug_timers.push(t);
             // Read off the distance using the distance table            
-            let mut t = TimerDebug::start("Query Read off the distance using the distance table");
+            let mut t = DebugTimer::start("Query Read off the distance using the distance table");
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let mut distance: f64 = 0.;
-                for (m, k) in child_values.iter().enumerate() {
-                    let m_dist = distance_table[[m,*k]];
-                    distance += m_dist;
+                if best_quantizer_candidates.len() > candidates_to_consider {
+                    break;
                 }
-
-                if best_quantizer_candidates.len() < (result_count as usize) * 1000 {
-                    best_quantizer_candidates.push(DataEntry {
-                        index: *child_key,  
-                        distance: -distance
-                    });
-                } else {
-                    let peek_val: DataEntry = *best_quantizer_candidates.peek().unwrap();
-                    if distance > -peek_val.distance {
+                let distance = distance_from_indexes(&distance_table.view(), &child_values);
+                best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
+            }
+            
+            for (child_key, child_values) in best_coares_quantizer.children.iter() {
+                let distance = distance_from_indexes(&distance_table.view(), &child_values);
+                if OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
                         best_quantizer_candidates.pop();
-                        best_quantizer_candidates.push(DataEntry {
-                            index: *child_key,  
-                            distance: -distance
-                        });
-                    }
+                        best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
                 }
             }
-            t.stop_and_print_as_millis();
+            t.stop();
+            debug_timers.push(t);
         }
 
-        let mut t = TimerDebug::start("Query Rescore with true distance value");
+        let mut t = DebugTimer::start("Query Rescore with true distance value");
         // Rescore with true distance value of query and candidates
-        let mut best_candidates = BinaryHeap::<DataEntry>::new();
-        for data_entry in best_quantizer_candidates.iter() {
-            let index = data_entry.index;
+        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        for candidate in best_quantizer_candidates.iter() {
+            let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
             let distance = cosine_similarity(&query.view(), &datapoint);
             
             if best_candidates.len() < result_count {
-                best_candidates.push(DataEntry {
-                    index: index,  
-                    distance: -distance
-                });
+                best_candidates.push((OrderedFloat(-distance), index));
             } else {
-                let peek_val: DataEntry = *best_candidates.peek().unwrap();
-                if distance > -peek_val.distance {
+                if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push(DataEntry {
-                        index: index,  
-                        distance: -distance
-                    });
+                    best_candidates.push((OrderedFloat(-distance), index));
                 }
             }
         }
-        t.stop_and_print_as_millis();
+        t.stop();
+        debug_timers.push(t);
                
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-            best_n_candidates.push(idx.index);
+            best_n_candidates.push(best_candidates.pop().unwrap().1);
         }
         best_n_candidates.reverse();
-        
         best_n_candidates
     }
 

@@ -1,8 +1,8 @@
 use ndarray::{ArrayView1, ArrayView2};
-use crate::algs::distance;
-use crate::algs::data_entry::{DataEntry};
-use crate::algs::*;
 use std::collections::BinaryHeap;
+pub use ordered_float::*;
+use crate::algs::*;
+//use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
 pub struct Bruteforce {
@@ -27,36 +27,28 @@ impl AlgorithmImpl for Bruteforce {
         self.name.to_string();
     }
 
-    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
+    fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
-        let mut best_candidates = BinaryHeap::new();
+        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let dist = distance::cosine_similarity(&p, &candidate);
+            let distance = distance::cosine_similarity(&p, &candidate);
             if best_candidates.len() < result_count {
-                best_candidates.push(DataEntry {
-                    index: idx,  
-                    distance: -dist
-                });
+                best_candidates.push((OrderedFloat(-distance), idx));
                 
             } else {
-                let min_val: DataEntry = *best_candidates.peek().unwrap();
-                if dist > -min_val.distance {
+                if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push(DataEntry {
-                        index: idx,  
-                        distance: -dist
-                    });
+                    best_candidates.push((OrderedFloat(-distance), idx));
                 }
             }
         }
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-            best_n_candidates.push(idx.index);
+            best_n_candidates.push(best_candidates.pop().unwrap().1);
         }
         best_n_candidates.reverse();
         best_n_candidates

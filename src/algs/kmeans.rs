@@ -1,10 +1,9 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
-use crate::algs::distance;
-use crate::algs::data_entry::{DataEntry};
+use std::collections::{BinaryHeap, HashMap};
+use rand::{distributions::Uniform, Rng, prelude::*};
+pub use ordered_float::*;
 use crate::algs::*;
-use std::collections::BinaryHeap;
-use rand::prelude::*;
-use std::collections::HashMap;
+//use crate::util::{DebugTimer};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -47,11 +46,9 @@ impl KMeans {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows());
-        let mut init_k_sampled: Vec<usize> = vec![];
+        let dist_uniform = Uniform::new_inclusive(0, dataset.nrows());
         for i in 0..self.clusters {
             let rand_key = rng.sample(dist_uniform);
-            init_k_sampled.push(rand_key);
             let candidate = dataset.slice(s![rand_key,..]);
             let new_centroid = Centroid::new(candidate.to_owned());
             self.codebook.insert(i, new_centroid);
@@ -68,7 +65,7 @@ impl KMeans {
             let mut best_distance = f64::NEG_INFINITY;
             for (&key, centroid) in self.codebook.iter_mut() {
                 let distance = distance::cosine_similarity(&(centroid.point).view(), &candidate);
-                if best_distance < distance {
+                if OrderedFloat(best_distance) < OrderedFloat(distance) {
                     best_centroid = key;
                     best_distance = distance;
                 }
@@ -134,34 +131,32 @@ impl AlgorithmImpl for KMeans {
     }
 
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {        
-        let mut best_centroids = BinaryHeap::new();
-        
+        let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+
         for (key, centroid) in self.codebook.iter() {
-            best_centroids.push(DataEntry {
-                index: *key,  
-                distance: distance::cosine_similarity(&p, &centroid.point.view())
-            });
+            let distance = distance::cosine_similarity(&p, &centroid.point.view());
+            if best_centroids.len() < self.clusters_to_search as usize {
+                best_centroids.push((OrderedFloat(-distance), *key));
+            } else {
+                if OrderedFloat(distance) > -best_centroids.peek().unwrap().0 {
+                    best_centroids.pop();
+                    best_centroids.push((OrderedFloat(-distance), *key));
+                }
+            }
         }
         
-        let mut best_candidates = BinaryHeap::new();
+        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for _ in 0..self.clusters_to_search {
-            let centroid_key = best_centroids.pop().unwrap().index;
+            let centroid_key = best_centroids.pop().unwrap().1;
             for candidate_key in self.codebook.get(&(centroid_key)).unwrap().children.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
-                let dist = distance::cosine_similarity(&p, &candidate);
+                let distance = distance::cosine_similarity(&p, &candidate);
                 if best_candidates.len() < result_count as usize {
-                    best_candidates.push(DataEntry {
-                        index: *candidate_key,  
-                        distance: -dist
-                    });
+                    best_candidates.push((OrderedFloat(-distance), *candidate_key));
                 } else {
-                    let min_val: DataEntry = *best_candidates.peek().unwrap();
-                    if dist > -min_val.distance {
+                    if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
                         best_candidates.pop();
-                        best_candidates.push(DataEntry {
-                            index: *candidate_key,  
-                            distance: -dist
-                        });
+                        best_candidates.push((OrderedFloat(-distance), *candidate_key));
                     }
                 }
             }
@@ -169,8 +164,7 @@ impl AlgorithmImpl for KMeans {
     
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-            best_n_candidates.push(idx.index);
+            best_n_candidates.push(best_candidates.pop().unwrap().1);
         }
         best_n_candidates.reverse();
         best_n_candidates
