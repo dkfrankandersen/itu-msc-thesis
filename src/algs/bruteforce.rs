@@ -1,6 +1,5 @@
 use ndarray::{ArrayView1, ArrayView2};
 use crate::algs::distance;
-use crate::algs::data_entry::{DataEntry};
 use crate::algs::*;
 use std::collections::BinaryHeap;
 extern crate ordered_float;
@@ -33,32 +32,25 @@ impl AlgorithmImpl for Bruteforce {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
-        let mut best_candidates = BinaryHeap::new();
+        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let dist = distance::cosine_similarity(&p, &candidate);
+            let distance = distance::cosine_similarity(&p, &candidate);
             if best_candidates.len() < result_count {
-                best_candidates.push(DataEntry {
-                    index: idx,  
-                    distance: -dist
-                });
+                best_candidates.push((OrderedFloat(-distance), idx));
                 
             } else {
-                let min_val: DataEntry = *best_candidates.peek().unwrap();
-                if OrderedFloat(dist) > OrderedFloat(-min_val.distance) {
+                if OrderedFloat(distance) > best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push(DataEntry {
-                        index: idx,  
-                        distance: -dist
-                    });
+                    best_candidates.push((OrderedFloat(-distance), idx));
                 }
             }
         }
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
         for _ in 0..best_candidates.len() {
-            let idx = (Some(best_candidates.pop()).unwrap()).unwrap();
-            best_n_candidates.push(idx.index);
+            let idx = best_candidates.pop().unwrap().1;
+            best_n_candidates.push(idx);
         }
         best_n_candidates.reverse();
         best_n_candidates

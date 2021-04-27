@@ -4,8 +4,8 @@ use std::env;
 mod algs;
 use algs::dataset::Dataset;
 mod util;
-use util::{store_results_and_fix_attributes, hdf5_store_file};
-use crate::util::{TimerDebug};
+use util::{store_results_and_fix_attributes, hdf5_store_file, DebugTimer};
+
 struct RunParameters {
     metric: String,
     dataset: String,
@@ -64,9 +64,10 @@ fn main() {
         if i > 0 {
             break; // debug
         }
-        let mut t = TimerDebug::start("MAIN run_individual_query");
+        let mut t = DebugTimer::start("MAIN run_individual_query");
         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results);
-        t.stop_and_print_as_millis();
+        t.stop();
+        t.print_as_millis();
         results.push(result);
 
         

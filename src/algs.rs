@@ -5,7 +5,6 @@ pub mod product_quantization;
 pub mod scann;
 pub mod dataset;
 pub mod distance;
-pub mod data_entry;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, Array2};
 use ndarray::{s};
