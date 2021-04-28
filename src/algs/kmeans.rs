@@ -46,7 +46,7 @@ impl KMeans {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
-        let dist_uniform = Uniform::new_inclusive(0, dataset.nrows());
+        let dist_uniform = Uniform::new(0, dataset.nrows());
         for i in 0..self.clusters {
             let rand_key = rng.sample(dist_uniform);
             let candidate = dataset.slice(s![rand_key,..]);
@@ -147,16 +147,18 @@ impl AlgorithmImpl for KMeans {
         
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for _ in 0..self.clusters_to_search {
-            let centroid_key = best_centroids.pop().unwrap().1;
-            for candidate_key in self.codebook.get(&(centroid_key)).unwrap().children.iter() {
-                let candidate = dataset.slice(s![*candidate_key,..]);
-                let distance = distance::cosine_similarity(&p, &candidate);
-                if best_candidates.len() < result_count as usize {
-                    best_candidates.push((OrderedFloat(-distance), *candidate_key));
-                } else {
-                    if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
-                        best_candidates.pop();
+            let centroid = best_centroids.pop();
+            if centroid.is_some() {
+                for candidate_key in self.codebook.get(&(centroid.unwrap().1)).unwrap().children.iter() {
+                    let candidate = dataset.slice(s![*candidate_key,..]);
+                    let distance = distance::cosine_similarity(&p, &candidate);
+                    if best_candidates.len() < result_count as usize {
                         best_candidates.push((OrderedFloat(-distance), *candidate_key));
+                    } else {
+                        if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
+                            best_candidates.pop();
+                            best_candidates.push((OrderedFloat(-distance), *candidate_key));
+                        }
                     }
                 }
             }

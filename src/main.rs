@@ -54,9 +54,9 @@ fn main() {
     let dataset = &ds_test_norm;
     let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &parameters.algorithm, parameters.additional, &ds_train_norm.view());
     
-    println!("Start running individual querys");
+    // println!("Start running individual querys");
     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
-    for (i, p) in dataset.outer_iter().enumerate() {
+    for (_, p) in dataset.outer_iter().enumerate() {
 
         // Debugging on querys
         // if i > 0 {
@@ -66,7 +66,7 @@ fn main() {
         results.push(result);
     }
     
-    println!("Finised running individual querys");
+    // println!("Finised running individual querys");
     // Debug stuff
     // let mut debug_best_res = Vec::<Vec::<usize>>::new();
     // for (i, (_, res)) in results.iter().enumerate() {
@@ -91,7 +91,7 @@ fn main() {
     let avg_candidates = total_candidates as f64 / dataset.nrows() as f64;
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }};
 
-    println!("#### avg_candidates    : {:?}", avg_candidates);
+    // println!("#### query avg search_time    : {:?}", search_time);
 
     let attrs = hdf5_store_file::Attributes {
         build_time: build_time,
