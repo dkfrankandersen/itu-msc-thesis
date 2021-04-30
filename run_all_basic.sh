@@ -1,7 +1,19 @@
 #!/bin/bash
 
 METRIC="angular"
-DATASET="random-xs-20-angular"
+
+# DATASET="random-xs-20-angular"
+# DATASET="nytimes-256-angular"
+# DATASET="deep-image-96-angular"
+# DATASET="lastfm-64-dot"
+DATASET="glove-25-angular"
+# DATASET="glove-50-angular"
+# DATASET="glove-100-angular"
+# DATASET="glove-50-angular"
+# DATASET="glove-200-angular"
+
+
+RESULTS="[10]"
 
 echo "Is conda activate thesis used [y]?"
 read ready
@@ -18,24 +30,23 @@ cargo build --release
 
 if [ $run_type = 's' ]
 then
-    cargo run --release $METRIC $DATASET bruteforce 10
-    cargo run --release $METRIC $DATASET kmeans 10 8 200 3
-    cargo run --release $METRIC $DATASET pq 10 1024 255 1000 10 200 3
+    cargo run --release $METRIC $DATASET bruteforce $RESULTS
+    cargo run --release $METRIC $DATASET kmeans $RESULTS [8 200] [3]
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 1000 10 200] [3]
 fi
 
 if [ $run_type = 'm' ]
 then
-    cargo run --release $METRIC $DATASET bruteforce 10
-    for (( k=4; k<=1024; k=k*2 )) do
-        for (( r=1; r<=10; r++ )) do
-            cargo run --release $METRIC $DATASET kmeans 10 $k 200 $r
-            cargo run --release $METRIC $DATASET pq 10 $k 255 1000 10 200 $r
-            for (( c=10; c<=10; c++ )) do
-                cargo run --release $METRIC $DATASET pq 10 $k 255 1000 $c 200 $r
-            done
-        done
-        
+    cargo run --release $METRIC $DATASET bruteforce $RESULTS
+    for (( k=4; k<=1024; k=k+k )) do
+        cargo run --release $METRIC $DATASET kmeans $RESULTS [$k 200] [1 2 3 4 5 6 7 8 9 10]   
     done
+
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] [1 2 3 4 5 6 7 8 9 10]
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] [1 2 3 4 5 6 7 8 9 10]
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] [1 2 3 4 5 6 7 8 9 10]
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] [1 2 3 4 5 6 7 8 9 10]
+
 fi
 
 exit 0
