@@ -235,8 +235,8 @@ fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<
 
 impl AlgorithmImpl for ProductQuantization {
 
-    fn __str__(&self) {
-        self.name.to_string();
+    fn name(&self) -> String {
+        self.name.to_string()
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {

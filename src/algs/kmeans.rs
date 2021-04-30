@@ -120,8 +120,8 @@ impl KMeans {
 
 impl AlgorithmImpl for KMeans {
 
-    fn __str__(&self) {
-        self.name.to_string();
+    fn name(&self) -> String {
+        self.name.to_string()
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
@@ -131,8 +131,7 @@ impl AlgorithmImpl for KMeans {
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> { 
 
         // Query Arguments
-        let results_to_return = arguments[0];
-        let clusters_to_search = arguments[1];
+        let clusters_to_search = arguments[0];
               
         let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for (key, centroid) in self.codebook.iter() {
@@ -154,7 +153,7 @@ impl AlgorithmImpl for KMeans {
                 for candidate_key in self.codebook.get(&(centroid.unwrap().1)).unwrap().children.iter() {
                     let candidate = dataset.slice(s![*candidate_key,..]);
                     let distance = distance::cosine_similarity(&p, &candidate);
-                    if best_candidates.len() < results_to_return {
+                    if best_candidates.len() < results_per_query {
                         best_candidates.push((OrderedFloat(-distance), *candidate_key));
                     } else {
                         if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {

@@ -48,8 +48,8 @@ impl Scann {
 
 impl AlgorithmImpl for Scann {
 
-    fn __str__(&self) {
-        self.name.to_string();
+    fn name(&self) -> String {
+        self.name.to_string()
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {

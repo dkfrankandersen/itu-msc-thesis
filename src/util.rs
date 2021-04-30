@@ -73,3 +73,88 @@ pub fn unzip_enclosed_text(text: String, start: char, end: char) -> Vec::<String
     }
     results
 }
+
+
+#[derive(Clone, Debug)]
+pub struct RunParameters {
+    pub metric: String,
+    pub dataset: String,
+    pub algorithm: String,
+    pub results_per_query: usize,
+    pub algo_arguments: Vec::<String>,
+    pub query_arguments: Vec<usize>,
+}
+
+impl RunParameters {
+    pub fn algo_definition(&self) -> String {
+        let algo_arg = format!("{:?}", self.algo_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
+        let query_arg = format!("{:?}", self.query_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
+        return format!("{}({}_{}_{})", self.algorithm, self.metric, algo_arg, query_arg);
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct AlgoParameters {
+    pub metric: String,
+    pub dataset: String,
+    pub algorithm: String,
+    pub algo_arguments: Vec::<String>,
+    pub run_parameters: Vec<RunParameters>
+} 
+
+pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
+
+    let mut results_per_query = Vec::<usize>::new();
+    let mut algo_arguments = Vec::<String>::new();
+    let mut query_arguments = Vec::<usize>::new();
+
+    if args.len() >= 4 {
+        let args_additionals = args[4..].join(" ");
+        let parts = unzip_enclosed_text(args_additionals, '[', ']');
+        if parts.len() >= 1 { 
+            results_per_query = parts[0].split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect();
+        };
+        if parts.len() >= 2 { 
+            algo_arguments = parts[1].to_string().split_whitespace().map(|x| x.to_string()).collect()
+        };
+        if parts.len() >= 3 { 
+            query_arguments = parts[2].to_string().split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect()
+        }
+    } else {
+        println!("Arguments missing, should be [metric dataset algorithm results] [algs optionals] [query optionals]");
+    }
+
+    let metric = &args[1].to_string();
+    let dataset = &args[2].to_string();
+    let algorithm = &args[3].to_string();
+
+    let mut run_parameters = Vec::<RunParameters>::new();
+    for results_per_query in results_per_query.iter() {
+        if query_arguments.len() > 0 {
+            for cluster_to_search in query_arguments.iter() {
+                let run_parameter = RunParameters{ 
+                    metric: metric.to_string(), 
+                    dataset: dataset.to_string(),
+                    algorithm: algorithm.to_string(),
+                    algo_arguments: algo_arguments.clone(),
+                    results_per_query: *results_per_query,
+                    query_arguments: vec![*cluster_to_search]
+                };
+                run_parameters.push(run_parameter);
+            }
+        } else {
+            let run_parameter = RunParameters{ 
+                metric: metric.to_string(), 
+                dataset: dataset.to_string(),
+                algorithm: algorithm.to_string(),
+                algo_arguments: algo_arguments.clone(),
+                results_per_query: *results_per_query,
+                query_arguments: Vec::<usize>::new()
+            };
+            run_parameters.push(run_parameter); 
+        }   
+        
+    }
+    return AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), 
+                                algo_arguments: algo_arguments.clone(), run_parameters: run_parameters};
+}

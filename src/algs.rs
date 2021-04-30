@@ -11,6 +11,7 @@ use bruteforce::{Bruteforce};
 use kmeans::{KMeans};
 use product_quantization::{ProductQuantization};
 use scann::{Scann};
+use crate::util::*;
 
 
 #[derive(Debug, Clone)]
@@ -24,7 +25,7 @@ pub enum Algorithm {
 trait AlgorithmImpl {
     fn fit(&mut self, dataset: &ArrayView2::<f64>);
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize>;
-    fn __str__(&self);
+    fn name(&self) -> String;
 }
 
 impl AlgorithmImpl for Algorithm {
@@ -47,12 +48,12 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 
-    fn __str__(&self) {
+    fn name(&self) -> String {
         match *self {
-            Algorithm::Bruteforce(ref x) => x.__str__(),
-            Algorithm::KMeans(ref x) => x.__str__(),
-            Algorithm::ProductQuantization(ref x) => x.__str__(),
-            Algorithm::Scann(ref x) => x.__str__(),
+            Algorithm::Bruteforce(ref x) => return x.name(),
+            Algorithm::KMeans(ref x) => x.name(),
+            Algorithm::ProductQuantization(ref x) => x.name(),
+            Algorithm::Scann(ref x) => x.name(),
         }
     }
 }
@@ -60,7 +61,7 @@ impl AlgorithmImpl for Algorithm {
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
-    pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: Vec<String>) -> Algorithm {
+    pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: &Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
             "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
             "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap())),
@@ -73,17 +74,15 @@ impl AlgorithmFactory {
     }
 }
 
-pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
+pub fn get_fitted_algorithm(verbose_print: bool, algo_parameters: &AlgoParameters, dataset: &ArrayView2<f64>) -> (f64, Algorithm) {
     
-    let mut algo = AlgorithmFactory::get(verbose_print, dataset, algo, args);
-
+    let mut algo = AlgorithmFactory::get(verbose_print, dataset, &algo_parameters.algorithm, &algo_parameters.algo_arguments);   
     println!("Starting dataset fitting for algorithm");
     let time_start = Instant::now();
     algo.fit(&dataset);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
     println!("Timespend in algorithm fitting: {}s", total_time.as_secs());
-    
     (total_time.as_secs_f64(), algo)
 }
 
