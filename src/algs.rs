@@ -6,12 +6,11 @@ pub mod scann;
 pub mod dataset;
 pub mod distance;
 use std::time::{Instant};
-use ndarray::{ArrayView1, ArrayView2, Array2};
-use ndarray::{s};
-use bruteforce::Bruteforce;
-use kmeans::KMeans;
-use product_quantization::ProductQuantization;
-use scann::Scann;
+use ndarray::{ArrayView1, ArrayView2, Array2, s};
+use bruteforce::{Bruteforce};
+use kmeans::{KMeans};
+use product_quantization::{ProductQuantization};
+use scann::{Scann};
 
 
 #[derive(Debug, Clone)]
@@ -24,7 +23,7 @@ pub enum Algorithm {
 
 trait AlgorithmImpl {
     fn fit(&mut self, dataset: &ArrayView2::<f64>);
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize>;
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize>;
     fn __str__(&self);
 }
 
@@ -39,12 +38,12 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
         match *self {
-            Algorithm::Bruteforce(ref x) => x.query(dataset, p, result_count),
-            Algorithm::KMeans(ref x) => x.query(dataset, p, result_count),
-            Algorithm::ProductQuantization(ref x) => x.query(dataset, p, result_count),
-            Algorithm::Scann(ref x) => x.query(dataset, p, result_count),
+            Algorithm::Bruteforce(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::KMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::ProductQuantization(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::Scann(ref x) => x.query(dataset, p, results_per_query, arguments),
         }
     }
 
@@ -64,10 +63,10 @@ impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: Vec<String>) -> Algorithm {
         match algorithm.as_ref() {
             "bruteforce" => Algorithm::Bruteforce(Bruteforce::new(verbose_print)),
-            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap())),
+            "kmeans" => Algorithm::KMeans(KMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap())),
             "pq" => Algorithm::ProductQuantization(ProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
                                                                             args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
-                                                                            args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap(), args[5].parse::<usize>().unwrap())),
+                                                                            args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap())),
             "scann" => Algorithm::Scann(Scann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap())),
             &_ => unimplemented!(),
         }
@@ -88,9 +87,9 @@ pub fn get_fitted_algorithm(verbose_print: bool, algo: &str, args: Vec<String>, 
     (total_time.as_secs_f64(), algo)
 }
 
-pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, result_count: usize) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let candidates = algo.query(dataset, &p, result_count);
+    let candidates = algo.query(dataset, &p, results_per_query, arguments);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
 

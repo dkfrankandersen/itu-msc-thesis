@@ -27,19 +27,17 @@ pub struct KMeans {
     codebook: HashMap::<usize, Centroid>,
     clusters: usize,
     max_iterations: usize,
-    clusters_to_search: usize,
     verbose_print: bool
 }
 
 impl KMeans {
-    pub fn new(verbose_print: bool, clusters: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+    pub fn new(verbose_print: bool, clusters: usize, max_iterations: usize) -> Self {
         KMeans {
             name: "FANN_kmeans()".to_string(),
             metric: "angular".to_string(),
             codebook: HashMap::<usize, Centroid>::new(),
             clusters: clusters,
             max_iterations: max_iterations,
-            clusters_to_search: clusters_to_search,
             verbose_print: verbose_print
         }
     }
@@ -130,12 +128,16 @@ impl AlgorithmImpl for KMeans {
         self.run_kmeans(self.max_iterations, &dataset);
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {        
-        let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> { 
 
+        // Query Arguments
+        let results_to_return = arguments[0];
+        let clusters_to_search = arguments[1];
+              
+        let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for (key, centroid) in self.codebook.iter() {
             let distance = distance::cosine_similarity(&p, &centroid.point.view());
-            if best_centroids.len() < self.clusters_to_search as usize {
+            if best_centroids.len() < clusters_to_search as usize {
                 best_centroids.push((OrderedFloat(-distance), *key));
             } else {
                 if OrderedFloat(distance) > -best_centroids.peek().unwrap().0 {
@@ -146,13 +148,13 @@ impl AlgorithmImpl for KMeans {
         }
         
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        for _ in 0..self.clusters_to_search {
+        for _ in 0..clusters_to_search {
             let centroid = best_centroids.pop();
             if centroid.is_some() {
                 for candidate_key in self.codebook.get(&(centroid.unwrap().1)).unwrap().children.iter() {
                     let candidate = dataset.slice(s![*candidate_key,..]);
                     let distance = distance::cosine_similarity(&p, &candidate);
-                    if best_candidates.len() < result_count as usize {
+                    if best_candidates.len() < results_to_return {
                         best_candidates.push((OrderedFloat(-distance), *candidate_key));
                     } else {
                         if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {

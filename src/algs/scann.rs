@@ -56,7 +56,7 @@ impl AlgorithmImpl for Scann {
         self.dataset = Some(dataset.to_owned());
     }
 
-    fn query(&self, _dataset: &ArrayView2::<f64>, _p: &ArrayView1::<f64>, _result_count: usize) -> Vec<usize> {
+    fn query(&self, _dataset: &ArrayView2::<f64>, _p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
         
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();

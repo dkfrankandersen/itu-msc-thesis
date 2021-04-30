@@ -27,7 +27,6 @@ pub struct ProductQuantization {
     training_size: usize,
     k: usize,
     max_iterations: usize,
-    clusters_to_search: usize,
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
     residuals_codebook: Array2::<Array1::<f64>>,
@@ -37,7 +36,7 @@ pub struct ProductQuantization {
 
 impl ProductQuantization {
     pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, k: usize, training_size: usize, 
-                            residuals_codebook_k: usize, max_iterations: usize, clusters_to_search: usize) -> Self {
+                            residuals_codebook_k: usize, max_iterations: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
@@ -45,7 +44,6 @@ impl ProductQuantization {
             training_size: training_size,
             k: k,         // K
             max_iterations: max_iterations,
-            clusters_to_search: clusters_to_search,
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, k), Array::zeros(dataset.ncols()/m)),
@@ -279,15 +277,19 @@ impl AlgorithmImpl for ProductQuantization {
         // }
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
+
+        // Query Arguments
+        let clusters_to_search = arguments[0];
+        let candidates_to_consider = clusters_to_search*results_per_query;
+        
         // let mut debug_timers =  Vec::<DebugTimer>::new();
         // let mut t = DebugTimer::start("Query best_coarse_quantizers");
-        let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, self.clusters_to_search);
+        let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         // t.stop();
         // debug_timers.push(t);
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        let candidates_to_consider = result_count * result_count;
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -311,6 +313,7 @@ impl AlgorithmImpl for ProductQuantization {
             // debug_timers.push(t);
             // Read off the distance using the distance table            
             // let mut t = DebugTimer::start("Query Read off the distance using the distance table");
+            
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 if best_quantizer_candidates.len() > candidates_to_consider {
                     break;
@@ -338,7 +341,7 @@ impl AlgorithmImpl for ProductQuantization {
             let datapoint = dataset.slice(s![index,..]);
             let distance = cosine_similarity(&query.view(), &datapoint);
             
-            if best_candidates.len() < result_count {
+            if best_candidates.len() < results_per_query {
                 best_candidates.push((OrderedFloat(-distance), index));
             } else {
                 if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {

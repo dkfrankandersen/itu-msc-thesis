@@ -30,12 +30,13 @@ impl AlgorithmImpl for Bruteforce {
     fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
+
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
             let distance = distance::cosine_similarity(&p, &candidate);
-            if best_candidates.len() < result_count {
+            if best_candidates.len() < results_per_query {
                 best_candidates.push((OrderedFloat(-distance), idx));
                 
             } else {

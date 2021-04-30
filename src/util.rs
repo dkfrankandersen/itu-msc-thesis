@@ -48,3 +48,28 @@ impl DebugTimer {
 
 
 }
+
+pub fn unzip_enclosed_text(text: String, start: char, end: char) -> Vec::<String> {
+    let mut pairs = Vec::<(i32, i32)>::new();
+    for (i, c) in text.chars().enumerate() {
+        if c == start { pairs.push((i as i32,-1)); }
+        if c == end {
+            for j in (0..pairs.len()).rev() {
+                if pairs[j].1 == -1 {
+                    pairs[j] = (pairs[j].0, i as i32);
+                    break;
+                }
+            }
+        }
+    }
+    let mut results = Vec::<String>::new();
+    let mut max: i32 = i32::MIN;
+    for (a, b) in pairs.iter() {
+        if a > &max {
+            max = *b;
+            let r = &text[(*a as usize)+1..(*b as usize)];
+            results.push(r.to_string());
+        }
+    }
+    results
+}
