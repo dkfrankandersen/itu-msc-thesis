@@ -25,7 +25,7 @@ pub struct ProductQuantization {
     metric: String,
     m: usize,
     training_size: usize,
-    k: usize,
+    coarse_quantizer_k: usize,
     max_iterations: usize,
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
@@ -35,18 +35,18 @@ pub struct ProductQuantization {
 }
 
 impl ProductQuantization {
-    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, k: usize, training_size: usize, 
+    pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize) -> Self {
         ProductQuantization {
             name: "FANN_product_quantization()".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
-            k: k,         // K
+            coarse_quantizer_k: coarse_quantizer_k,         // K
             max_iterations: max_iterations,
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
-            residuals_codebook: Array::from_elem((m, k), Array::zeros(dataset.ncols()/m)),
+            residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
             residuals_codebook_k: residuals_codebook_k,
             sub_dimension: dataset.ncols() / m,
         }
@@ -80,7 +80,6 @@ impl ProductQuantization {
         }
 
         // Repeat
-        // let mut t = DebugTimer::start("Fit kmeans Repeat");
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         for iterations in 0..max_iterations  {
             if centroids == last_centroids {
@@ -128,8 +127,6 @@ impl ProductQuantization {
                 }
             }
         }
-        // t.stop();
-        // t.print_as_millis();
         centroids
     }
 
@@ -240,9 +237,8 @@ impl AlgorithmImpl for ProductQuantization {
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
-        self.sub_dimension = dataset.ncols() / self.residuals_codebook_k;
         let verbose_print = false;
-        let centroids = self.kmeans(self.m, self.max_iterations, dataset, verbose_print);
+        let centroids = self.kmeans(self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
         let residuals = self.compute_residuals(&centroids, dataset);
         // Residuals PQ Training data
         let residuals_training_data = self.random_traindata(&residuals.view(), self.training_size);
