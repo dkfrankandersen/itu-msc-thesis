@@ -33,16 +33,16 @@ pub struct Scann {
 
 
 impl Scann {
-    pub fn new(verbose_print: bool, _dataset: &ArrayView2::<f64>, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Self {
-        Scann {
-            name: "FANN_scann()".to_string(),
+    pub fn new(verbose_print: bool, _dataset: &ArrayView2::<f64>, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Result<Self, String> {
+        return Ok(Scann {
+            name: "fa_scann".to_string(),
             metric: "angular".to_string(),
             dataset: None,
             clusters: clusters,
             max_iterations: max_iterations,
             clusters_to_search: clusters_to_search,
             verbose_print: verbose_print
-        }
+        });
     }
 }
 

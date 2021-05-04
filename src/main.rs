@@ -11,7 +11,7 @@ fn main() {
     println!("Running algorithm with");
     println!("args: {:?}\n", args);
 
-    let algo_parameters: AlgoParameters = create_run_parameters(args);
+    let mut algo_parameters: AlgoParameters = create_run_parameters(args);
 
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5", algo_parameters.dataset);
@@ -26,14 +26,21 @@ fn main() {
     // }
     
     let dataset = &ds_test_norm;
-    let (build_time, algo) = algs::get_fitted_algorithm(verbose_print, &algo_parameters, &ds_train_norm.view());
-    // println!("Start running individual querys");
-    for parameters in algo_parameters.run_parameters.iter() {
-        let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
-        for (_, p) in dataset.outer_iter().enumerate() {
-            let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
-            results.push(result);
-        }
-        running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
+    let algo_fit = algs::get_fitted_algorithm(verbose_print, algo_parameters, &ds_train_norm.view());
+    match algo_fit {
+        Ok(af) => {
+            let (build_time, algo, algo_parameters) = af;
+            // println!("Start running individual querys");
+            for parameters in algo_parameters.run_parameters.iter() {
+                let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
+                for (_, p) in dataset.outer_iter().enumerate() {
+                    let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
+                    results.push(result);
+                }
+                running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
+            }
+        },
+        Err(e) => eprintln!("{}", e)
     }
+    
 }

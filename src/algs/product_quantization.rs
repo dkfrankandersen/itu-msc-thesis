@@ -36,9 +36,30 @@ pub struct ProductQuantization {
 
 impl ProductQuantization {
     pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
-                            residuals_codebook_k: usize, max_iterations: usize) -> Self {
-        ProductQuantization {
-            name: "FANN_product_quantization()".to_string(),
+                            residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
+
+        println!("{}{} {}", &dataset.ncols(), &m, dataset.ncols()/&m);
+        if dataset.ncols() % m != 0 {
+            return Err("M is not divisable with dataset dimension!".to_string());
+        }
+        else if m <= 0 {
+            return Err("m must be greater than 0".to_string());
+        }
+        else if coarse_quantizer_k <= 0 {
+            return Err("coarse_quantizer_k must be greater than 0".to_string());
+        }
+        else if training_size <= 0 {
+            return Err("training_size must be greater than 0".to_string());
+        }
+        else if residuals_codebook_k <= 0 {
+            return Err("residuals_codebook_k must be greater than 0".to_string());
+        }
+        else if max_iterations <= 0 {
+            return Err("max_iterations must be greater than 0".to_string());
+        }
+
+        return Ok(ProductQuantization {
+            name: "fa_product_quantization".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -49,7 +70,7 @@ impl ProductQuantization {
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
             residuals_codebook_k: residuals_codebook_k,
             sub_dimension: dataset.ncols() / m,
-        }
+        });
     }
 
     pub fn random_traindata(&self, dataset: &ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
