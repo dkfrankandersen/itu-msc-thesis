@@ -11,8 +11,8 @@ DATASET="random-xs-20-angular"
 # DATASET="glove-50-angular"
 # DATASET="glove-200-angular"
 RESULTS="[10]"
-CLUSTERS_To_SEARCH_KM = [1 2 3 5 10 20];
-CLUSTERS_To_SEARCH_PQ = [1 2 3 5 10 20];
+CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]";
+CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";
 
 
 echo "Is conda activate thesis used [y]?"
