@@ -34,49 +34,49 @@ case $ds in
     '0' )
         DATASET="random-xs-20-angular"
         ARGS_KM="[128 200]"
-        ARGS_PQ="[128 255 2000 10 200]"
+        ARGS_PQ="[10 255 2000 128 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '1' )
         DATASET="glove-25-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 5 200]"
+        ARGS_PQ="[5 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '2' )
         DATASET="glove-50-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]"
+        ARGS_PQ="[10 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '3' )
         DATASET="glove-100-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]"
+        ARGS_PQ="[10 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '4' )
         DATASET="glove-200-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]"
+        ARGS_PQ="[20 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '5' )
         DATASET="nytimes-256-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]"
+        ARGS_PQ="[32 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '6' )
         DATASET="deep-image-96-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]";
+        ARGS_PQ="[16 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     '7' )
         DATASET="lastfm-64-dot"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[1024 255 20000 10 200]"
+        ARGS_PQ="[16 255 20000 1024 200]"
         CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     *) printf "Error: Invalid option"
@@ -90,6 +90,12 @@ cargo build --release
 
 if [ $run_type = 's' ]
 then
+    '''
+    cargo run --release angular random-xs-20-angular bruteforce [10]
+    cargo run --release angular random-xs-20-angular kmeans [10] [1024 200] [1 2 3 5 10 20]
+    cargo run --release angular random-xs-20-angular pq [10] [D    Ck  Ts    Rk MaxIterations] [1 2 3 5 10 20]
+    cargo run --release angular random-xs-20-angular pq [10] [1024 255 20000 10 200] [1 2 3 5 10 20]
+    '''
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
     cargo run --release $METRIC $DATASET kmeans $RESULTS $ARGS_KM $CLUSTERS_To_SEARCH_KM
     cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ

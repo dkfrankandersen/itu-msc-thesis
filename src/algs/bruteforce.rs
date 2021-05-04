@@ -12,12 +12,12 @@ pub struct Bruteforce {
 }
 
 impl Bruteforce {
-    pub fn new(verbose_print: bool) -> Self {
-        Bruteforce {
-            name: "FANN_bruteforce()".to_string(),
+    pub fn new(verbose_print: bool) -> Result<Self, String> {
+        return Ok(Bruteforce {
+            name: "fa_bruteforce".to_string(),
             metric: "angular".to_string(),
             verbose_print: verbose_print
-        }
+        });
     }
 }
 

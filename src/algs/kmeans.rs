@@ -31,15 +31,23 @@ pub struct KMeans {
 }
 
 impl KMeans {
-    pub fn new(verbose_print: bool, clusters: usize, max_iterations: usize) -> Self {
-        KMeans {
-            name: "FANN_kmeans()".to_string(),
-            metric: "angular".to_string(),
-            codebook: HashMap::<usize, Centroid>::new(),
-            clusters: clusters,
-            max_iterations: max_iterations,
-            verbose_print: verbose_print
+    pub fn new(verbose_print: bool, clusters: usize, max_iterations: usize) -> Result<Self, String> {
+        if clusters <= 0 {
+            return Err("Clusters must be greater than 0".to_string());
         }
+        else if max_iterations <= 0 {
+            return Err("max_iterations must be greater than 0".to_string());
+        }
+        
+        return Ok(
+                    KMeans {
+                        name: "fa_kmeans".to_string(),
+                        metric: "angular".to_string(),
+                        codebook: HashMap::<usize, Centroid>::new(),
+                        clusters: clusters,
+                        max_iterations: max_iterations,
+                        verbose_print: verbose_print
+                    });
     }
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
