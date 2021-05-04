@@ -6,10 +6,9 @@ METRIC="angular"
 # DATASET="nytimes-256-angular"
 # DATASET="deep-image-96-angular"
 # DATASET="lastfm-64-dot"
-DATASET="glove-25-angular"
+# DATASET="glove-25-angular"
 # DATASET="glove-50-angular"
-# DATASET="glove-100-angular"
-# DATASET="glove-50-angular"
+DATASET="glove-100-angular"
 # DATASET="glove-200-angular"
 
 
@@ -31,8 +30,8 @@ cargo build --release
 if [ $run_type = 's' ]
 then
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
-    cargo run --release $METRIC $DATASET kmeans $RESULTS [8 200] [3]
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 1000 10 200] [3]
+    cargo run --release $METRIC $DATASET kmeans $RESULTS [1024 200] [1 5 10 20]
+    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] [1 5 10 20]
 fi
 
 if [ $run_type = 'm' ]
