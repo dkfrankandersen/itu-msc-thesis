@@ -48,7 +48,7 @@ impl PQKMeans {
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
         let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new_inclusive(0, dataset.nrows()-1);
+        let dist_uniform = rand::distributions::Uniform::new(0, dataset.nrows());
         for _ in 0..self.k {
             let rand_key = rng.sample(dist_uniform);
             let candidate = dataset.slice(s![rand_key,..]);

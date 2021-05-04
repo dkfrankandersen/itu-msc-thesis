@@ -63,6 +63,3 @@ pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
     return cos_sim.acos() / std::f64::consts::PI;
 }
-
-
-

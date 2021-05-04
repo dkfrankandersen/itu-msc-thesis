@@ -23,19 +23,20 @@ impl Bruteforce {
 
 impl AlgorithmImpl for Bruteforce {
 
-    fn __str__(&self) {
-        self.name.to_string();
+    fn name(&self) -> String {
+        self.name.to_string()
     }
-
+    
     fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, result_count: usize) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, _arguments: &Vec::<usize>) -> Vec<usize> {
+
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
 
         for (idx, candidate) in dataset.outer_iter().enumerate() {
             let distance = distance::cosine_similarity(&p, &candidate);
-            if best_candidates.len() < result_count {
+            if best_candidates.len() < results_per_query {
                 best_candidates.push((OrderedFloat(-distance), idx));
                 
             } else {
