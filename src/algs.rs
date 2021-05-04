@@ -3,7 +3,6 @@ pub mod kmeans;
 pub mod pq_kmeans;
 pub mod product_quantization;
 pub mod scann;
-pub mod dataset;
 pub mod distance;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, Array2, s};

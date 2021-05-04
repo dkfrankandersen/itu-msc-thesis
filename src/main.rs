@@ -1,6 +1,5 @@
 use std::env;
 mod algs;
-use algs::{dataset::Dataset};
 mod util;
 use util::*;
 mod running;
@@ -16,7 +15,7 @@ fn main() {
 
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5", algo_parameters.dataset);
-    let ds = Dataset::new(&filename);
+    let ds = dataset::Dataset::new(&filename);
     let ds_train_norm = ds.train_normalize();
     let ds_test_norm = ds.test_normalize();
     // let ds_distances_norm = ds.distances_normalize();
