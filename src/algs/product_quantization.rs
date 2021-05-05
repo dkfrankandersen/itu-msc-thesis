@@ -38,7 +38,6 @@ impl ProductQuantization {
     pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
 
-        println!("{}{} {}", &dataset.ncols(), &m, dataset.ncols()/&m);
         if dataset.ncols() % m != 0 {
             return Err("M is not divisable with dataset dimension!".to_string());
         }
@@ -50,6 +49,9 @@ impl ProductQuantization {
         }
         else if training_size <= 0 {
             return Err("training_size must be greater than 0".to_string());
+        }
+        else if training_size < dataset.nrows() {
+            return Err("training_size must be greater dataset size".to_string());
         }
         else if residuals_codebook_k <= 0 {
             return Err("residuals_codebook_k must be greater than 0".to_string());
@@ -272,7 +274,7 @@ impl AlgorithmImpl for ProductQuantization {
 
         // Query Arguments
         let clusters_to_search = arguments[0];
-        let candidates_to_consider = clusters_to_search*results_per_query;
+        let candidates_to_consider = dataset.nrows();
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
@@ -338,4 +340,58 @@ impl AlgorithmImpl for ProductQuantization {
         best_n_candidates
     }
 
+}
+
+#[cfg(test)]
+mod product_quantization_tests {
+    use ndarray::{Array2, arr2};
+    use assert_float_eq::*;
+    use crate::algs::product_quantization::ProductQuantization;
+
+    fn dataset1() -> Array2<f64> {
+        let dataset = arr2(&[
+            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+            [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
+            [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
+            [4.0, 4.1, 4.2, 4.3, 4.4, 4.5],
+            [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
+            [6.0, 6.1, 6.2, 6.3, 6.4, 6.5],
+            [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
+            [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
+            [9.0, 9.1, 9.2, 9.3, 9.4, 9.5]
+        ]);
+
+        dataset
+    }
+
+    #[test]
+    fn DdivM_result_ok() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        assert!(pq.is_ok());
+    }
+    #[test]
+    fn DdivM_result_err() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 5, 1, 10, 20, 200);
+        assert!(pq.is_err());
+    }
+
+    fn m_par_0_result_err() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 0, 1, 10, 20, 200);
+        assert!(pq.is_err());
+    }
+
+    fn clusters_par_is_0_result_err() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 0, 10, 20, 200);
+        assert!(pq.is_err());
+    }
+
+    fn residual_train_size_is_0_result_err() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
+        assert!(pq.is_err());
+    }
+    fn residual_train_size_is_gt_dataset_result_err() {
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
+        assert!(pq.is_err());
+    }
 }

@@ -34,16 +34,16 @@ case $ds in
     '0' )
         DATASET="random-xs-20-angular"
         ARGS_KM="[128 200]"
-        ARGS_PQ="[10 255 2000 128 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        ARGS_PQ="[4 128 2000 255 200]"
+        CLUSTERS_To_SEARCH_KM="[1]"
+        CLUSTERS_To_SEARCH_PQ="[1]";;
     '1' )
         DATASET="glove-25-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[5 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
-    '2' )
+        ARGS_PQ="[5 1024 20000 255 200]"
+        CLUSTERS_To_SEARCH_KM="[32 64 128 256]"
+        CLUSTERS_To_SEARCH_PQ="[32 64 128 256]";;
+    '2' )n
         DATASET="glove-50-angular"
         ARGS_KM="[1024 200]"
         ARGS_PQ="[10 255 20000 1024 200]"
@@ -83,7 +83,7 @@ case $ds in
         exit 1;;
 esac
 
-echo "Run on $DATASET use [s]ingle or [m]ultiple?"
+echo "Run on $DATASET use [s]ingle or [m]ultiple or [t]est?"
 read run_type
 
 cargo build --release
@@ -93,15 +93,13 @@ then
     '''
     cargo run --release angular random-xs-20-angular bruteforce [10]
     cargo run --release angular random-xs-20-angular kmeans [10] [1024 200] [1 2 3 5 10 20]
-    cargo run --release angular random-xs-20-angular pq [10] [D    Ck  Ts    Rk MaxIterations] [1 2 3 5 10 20]
-    cargo run --release angular random-xs-20-angular pq [10] [1024 255 20000 10 200] [1 2 3 5 10 20]
+    cargo run --release angular random-xs-20-angular pq [10] [10 255 20000 1024 200] [1 2 3 5 10 20]
     '''
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
     cargo run --release $METRIC $DATASET kmeans $RESULTS $ARGS_KM $CLUSTERS_To_SEARCH_KM
     cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ
-fi
 
-if [ $run_type = 'm' ]
+elif [ $run_type = 'm' ]
 then
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
     for (( k=4; k<=1024; k=k+k )) do
@@ -112,8 +110,17 @@ then
     cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
     cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
     cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
+elif [ $run_type = 't' ]
+then
+    cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [5 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [10 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [20 128 9000 1 200] [1]
+else
+    xit 0
 fi
-
 sh ./copy_results_to_ann.sh
 
 exit 0
