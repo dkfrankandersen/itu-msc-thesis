@@ -150,17 +150,9 @@ impl FAProductQuantization {
 
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, result_quantizers: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
-        let mut best_coarse_quantizers = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid in coarse_quantizer.iter() {
-            let distance = cosine_similarity(&centroid.point.view() , &query);
-            if best_coarse_quantizers.len() < result_quantizers {
-                best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
-            } else {
-                if OrderedFloat(distance) >= best_coarse_quantizers.peek().unwrap().0 {
-                    best_coarse_quantizers.pop();
-                    best_coarse_quantizers.push((OrderedFloat(-distance), centroid.id));
-                }
-            }
+            push_to_max_cosine_heap(best_coarse_quantizers, query, &centroid.point.view(), &centroid.id, result_quantizers);
         }
 
         let mut result_indexes = Vec::<usize>::new();        

@@ -28,9 +28,9 @@ pub struct PQCentroid {
     pub children: HashMap::<usize, Vec::<usize>>
 }
 
-pub fn push_to_max_cosine_heap(heap: &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>, p: &ArrayView1::<f64>, 
+pub fn push_to_max_cosine_heap(heap: &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>, query: &ArrayView1::<f64>, 
                                 centroid_point: &ArrayView1::<f64>, centroid_index: &usize, minimum_clusters: usize) {
-    let distance = distance::cosine_similarity(p, centroid_point);
+    let distance = distance::cosine_similarity(query, centroid_point);
     if heap.len() < minimum_clusters {
         heap.push((OrderedFloat(-distance), *centroid_index));
     } else {
