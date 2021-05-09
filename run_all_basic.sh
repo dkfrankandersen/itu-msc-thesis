@@ -121,18 +121,22 @@ then
 elif [ $run_type = 't' ]
 then
 
-    cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1]
-    cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1]
-    cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1]
+    # cargo run --release $METRIC $DATASET bruteforce [10]
+    cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1 2 3 4 5 10 20 40 50 64]
+    cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1 2 3 4 5 10 20 40 50 100 128]
+    cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1 2 3 4 5 10 20 40 50 100 200 256]
+    cargo run --release $METRIC $DATASET kmeans [10] [512 200] [1 2 3 4 5 10 20 40 50 100 200 400 512]
+    cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
     
-    cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
-    cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
-    cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]
-    cargo run --release $METRIC $DATASET pq [10] [5 128 9000 1 200] [1]
-    cargo run --release $METRIC $DATASET pq [10] [10 128 9000 1 200] [1]
-    cargo run --release $METRIC $DATASET pq [10] [20 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [5 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [10 128 9000 1 200] [1]
+    # cargo run --release $METRIC $DATASET pq [10] [20 128 9000 1 200] [1]
 else
-    xit 0
+    exit 0
 fi
 sh ./copy_results_to_ann.sh
 

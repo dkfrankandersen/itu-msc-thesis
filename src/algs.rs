@@ -1,26 +1,26 @@
-pub mod bruteforce;
-pub mod kmeans;
+pub mod fa_bruteforce;
+pub mod fa_kmeans;
 pub mod pq_residuals_kmeans;
-pub mod pq_kmeans;
-pub mod pq_common;
-pub mod product_quantization;
+pub mod kmeans;
+pub mod common;
+pub mod fa_product_quantization;
 pub mod scann;
 pub mod distance;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, Array2, s};
-use bruteforce::{Bruteforce};
-use kmeans::{KMeans};
-use product_quantization::{ProductQuantization};
-use scann::{Scann};
+use fa_bruteforce::{FABruteforce};
+use fa_kmeans::{FAKMeans};
+use fa_product_quantization::{FAProductQuantization};
+use scann::{FAScann};
 use crate::util::*;
 
 
 #[derive(Debug, Clone)]
 pub enum Algorithm {
-    Bruteforce(Bruteforce),
-    KMeans(KMeans),
-    ProductQuantization(ProductQuantization),
-    Scann(Scann),
+    FABruteforce(FABruteforce),
+    FAKMeans(FAKMeans),
+    FAProductQuantization(FAProductQuantization),
+    FAScann(FAScann),
 }
 
 trait AlgorithmImpl {
@@ -33,28 +33,28 @@ impl AlgorithmImpl for Algorithm {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         match *self {
-            Algorithm::Bruteforce(ref mut x) => x.fit(dataset),
-            Algorithm::KMeans(ref mut x) => x.fit(dataset),
-            Algorithm::ProductQuantization(ref mut x) => x.fit(dataset),
-            Algorithm::Scann(ref mut x) => x.fit(dataset),
+            Algorithm::FABruteforce(ref mut x) => x.fit(dataset),
+            Algorithm::FAKMeans(ref mut x) => x.fit(dataset),
+            Algorithm::FAProductQuantization(ref mut x) => x.fit(dataset),
+            Algorithm::FAScann(ref mut x) => x.fit(dataset),
         }
     }
 
     fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
         match *self {
-            Algorithm::Bruteforce(ref x) => x.query(dataset, p, results_per_query, arguments),
-            Algorithm::KMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
-            Algorithm::ProductQuantization(ref x) => x.query(dataset, p, results_per_query, arguments),
-            Algorithm::Scann(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::FABruteforce(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::FAKMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::FAProductQuantization(ref x) => x.query(dataset, p, results_per_query, arguments),
+            Algorithm::FAScann(ref x) => x.query(dataset, p, results_per_query, arguments),
         }
     }
 
     fn name(&self) -> String {
         match *self {
-            Algorithm::Bruteforce(ref x) => x.name(),
-            Algorithm::KMeans(ref x) => x.name(),
-            Algorithm::ProductQuantization(ref x) => x.name(),
-            Algorithm::Scann(ref x) => x.name(),
+            Algorithm::FABruteforce(ref x) => x.name(),
+            Algorithm::FAKMeans(ref x) => x.name(),
+            Algorithm::FAProductQuantization(ref x) => x.name(),
+            Algorithm::FAScann(ref x) => x.name(),
         }
     }
 }
@@ -65,33 +65,33 @@ impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: &Vec<String>) -> Result<Algorithm, String> {
         println!("args {:?}", args);
         match algorithm.as_ref() {
-            "bruteforce" => {   let alg = Bruteforce::new(verbose_print);
+            "bruteforce" => {   let alg = FABruteforce::new(verbose_print);
                                 match alg {
-                                    Ok(a) => Ok(Algorithm::Bruteforce(a)),
+                                    Ok(a) => Ok(Algorithm::FABruteforce(a)),
                                     Err(e) => Err(e)
                                 }
                             },
             "kmeans" => {
-                                let alg = KMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap());
+                                let alg = FAKMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap());
                                 match alg {
-                                    Ok(a) => Ok(Algorithm::KMeans(a)),
+                                    Ok(a) => Ok(Algorithm::FAKMeans(a)),
                                     Err(e) => Err(e)
                                 }
                         },
             "pq" => {
-                        let alg = ProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
+                        let alg = FAProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
                                                                             args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
                                                                             args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap());
                         match alg {
-                            Ok(a) => Ok(Algorithm::ProductQuantization(a)),
+                            Ok(a) => Ok(Algorithm::FAProductQuantization(a)),
                             Err(e) => Err(e)
                         }
                         },
             "scann" => {
-                        let alg = Scann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), 
+                        let alg = FAScann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), 
                                                     args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap());
                         match alg {
-                            Ok(a) => Ok(Algorithm::Scann(a)),
+                            Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)
                         }
             },

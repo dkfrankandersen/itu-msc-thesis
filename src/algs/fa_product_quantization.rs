@@ -4,11 +4,10 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
-use crate::algs::{pq_kmeans::{pq_kmeans}, pq_residuals_kmeans::PQResKMeans, pq_common::{PQCentroid, Centroid}};
-use crate::util::{DebugTimer};
+use crate::algs::{kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans, common::{PQCentroid, Centroid}};
 
 #[derive(Debug, Clone)]
-pub struct ProductQuantization {
+pub struct FAProductQuantization {
     name: String,
     metric: String,
     m: usize,
@@ -22,7 +21,7 @@ pub struct ProductQuantization {
     sub_dimension: usize,
 }
 
-impl ProductQuantization {
+impl FAProductQuantization {
 
     pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
@@ -49,7 +48,7 @@ impl ProductQuantization {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
-        return Ok(ProductQuantization {
+        return Ok(FAProductQuantization {
             name: "fa_product_quantization".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
@@ -176,7 +175,7 @@ fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<
     distance
 }
 
-impl AlgorithmImpl for ProductQuantization {
+impl AlgorithmImpl for FAProductQuantization {
 
     fn name(&self) -> String {
         self.name.to_string()
@@ -185,7 +184,7 @@ impl AlgorithmImpl for ProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
         let rng = thread_rng();
-        let centroids = pq_kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+        let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
 
         let residuals = self.compute_residuals(&centroids, dataset);
         // Residuals PQ Training data
@@ -271,7 +270,7 @@ impl AlgorithmImpl for ProductQuantization {
 #[cfg(test)]
 mod product_quantization_tests {
     use ndarray::{Array2, arr2};
-    use crate::algs::product_quantization::ProductQuantization;
+    use crate::algs::fa_product_quantization::FAProductQuantization;
 
     fn dataset1() -> Array2<f64> {
         arr2(&[
@@ -290,38 +289,38 @@ mod product_quantization_tests {
 
     #[test]
     fn new_d_div_m_result_ok() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         assert!(pq.is_ok());
     }
     #[test]
     fn new_d_div_m_result_err() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 5, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 5, 1, 10, 20, 200);
         assert!(pq.is_err());
     }
     #[test]
     fn new_m_par_0_result_err() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 0, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 0, 1, 10, 20, 200);
         assert!(pq.is_err());
     }
     #[test]
     fn new_clusters_par_is_0_result_err() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 0, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 0, 10, 20, 200);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_0_result_err() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_gt_dataset_result_err() {
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
         assert!(pq.is_err());
     }
     #[test]
     fn random_traindata_2_of_10_rows() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         println!("{}", partial_dataset);
@@ -330,7 +329,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_6_of_6_columns() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         assert!(partial_dataset.ncols() == 6);
@@ -338,7 +337,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_output_of_seed() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
         assert!(partial_dataset == arr2(&[[0.0, 0.1, 0.2, 0.3, 0.4, 0.5],

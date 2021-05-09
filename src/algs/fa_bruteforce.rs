@@ -5,15 +5,15 @@ use crate::algs::*;
 //use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
-pub struct Bruteforce {
+pub struct FABruteforce {
     name: String,
     metric: String,
     verbose_print: bool
 }
 
-impl Bruteforce {
+impl FABruteforce {
     pub fn new(verbose_print: bool) -> Result<Self, String> {
-        return Ok(Bruteforce {
+        return Ok(FABruteforce {
             name: "fa_bruteforce".to_string(),
             metric: "angular".to_string(),
             verbose_print: verbose_print
@@ -21,7 +21,7 @@ impl Bruteforce {
     }
 }
 
-impl AlgorithmImpl for Bruteforce {
+impl AlgorithmImpl for FABruteforce {
 
     fn name(&self) -> String {
         self.name.to_string()
