@@ -4,7 +4,8 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
-use crate::algs::{kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans, common::{PQCentroid, Centroid}};
+use crate::algs::{kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans};
+use crate::algs::common::{PQCentroid, Centroid, push_to_max_cosine_heap};
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {

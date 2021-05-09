@@ -86,13 +86,13 @@ esac
 echo "Run on $DATASET use [s]ingle or [m]ultiple or [t]est?"
 read run_type
 
-echo "Remove results folder before generating new? [y]?"
-read cmd_remove
+# echo "Remove results folder before generating new? [y]?"
+# read cmd_remove
 
-if [ $cmd_remove = 'y' ]
-then
-rm -r results
-fi
+# if [ $cmd_remove = 'y' ]
+# then
+# rm -r results
+# fi
 
 cargo build --release
 
@@ -121,20 +121,20 @@ then
 elif [ $run_type = 't' ]
 then
 
-    # cargo run --release $METRIC $DATASET bruteforce [10]
-    cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1 2 3 4 5 10 20 40 50 64]
-    cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1 2 3 4 5 10 20 40 50 100 128]
-    cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1 2 3 4 5 10 20 40 50 100 200 256]
-    cargo run --release $METRIC $DATASET kmeans [10] [512 200] [1 2 3 4 5 10 20 40 50 100 200 400 512]
-    cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
-    cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
+    # # cargo run --release $METRIC $DATASET bruteforce [10]
+    # cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1 2 3 4 5 10 20 40 64]
+    # cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1 2 3 4 5 10 20 40 100 128]
+    # cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1 2 3 4 5 10 20 40 100 200 256]
+    # cargo run --release $METRIC $DATASET kmeans [10] [512 200] [1 2 3 4 5 10 20 40 100 200 400 512]
+    # # cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    # # cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
     
-    # cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
-    # cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
-    # cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]
-    # cargo run --release $METRIC $DATASET pq [10] [5 128 9000 1 200] [1]
-    # cargo run --release $METRIC $DATASET pq [10] [10 128 9000 1 200] [1]
-    # cargo run --release $METRIC $DATASET pq [10] [20 128 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [4 64 9000 1 200] [1 2 3 4 5 10 20 40 64]
+    cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1 2 3 4 5 10 20 40 100 128]
+    cargo run --release $METRIC $DATASET pq [10] [4 256 9000 1 200] [1 2 3 4 5 10 20 40 100 200 256]
+    cargo run --release $METRIC $DATASET pq [10] [4 512 9000 1 200] [1 2 3 4 5 10 20 40 100 200 400 512]
+    cargo run --release $METRIC $DATASET pq [10] [4 1024 9000 1 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    cargo run --release $METRIC $DATASET pq [10] [4 2048 9000 1 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
 else
     exit 0
 fi

@@ -12,8 +12,8 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
-    for k in 0..k_centroids {
-        let datapoint = dataset.slice(s![unique_indexes[k],..]);
+    for (k, index) in unique_indexes.iter().enumerate() {
+        let datapoint = dataset.slice(s![*index,..]);
         centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
     }
 
@@ -35,7 +35,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
             for centroid in centroids.iter() {
                 let distance = cosine_similarity(&centroid.point.view() , &datapoint);
-                if OrderedFloat(best_match.0) < OrderedFloat(distance) { 
+                if OrderedFloat(distance) > OrderedFloat(best_match.0) { 
                     best_match = (distance, centroid.id); 
                 }
             }

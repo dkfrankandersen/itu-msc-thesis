@@ -1,9 +1,9 @@
 use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
-pub use ordered_float::*;
+use ordered_float::*;
 use crate::algs::*;
-use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
+use crate::algs::{kmeans::{kmeans}, common::{Centroid, push_to_max_cosine_heap}};
 //use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_C".to_string(),
+                        name: "fa_kmeans".to_string(),
                         metric: "angular".to_string(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
@@ -52,35 +52,20 @@ impl AlgorithmImpl for FAKMeans {
 
         // Query Arguments
         let clusters_to_search = arguments[0];      
-        let mut best_centroids = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let best_centroids = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+
         for centroid in self.codebook.iter() {
-            let distance = distance::cosine_similarity(&p, &centroid.point.view());
-            if best_centroids.len() < clusters_to_search {
-                best_centroids.push((OrderedFloat(-distance), centroid.id));
-            } else {
-                if OrderedFloat(distance) > -best_centroids.peek().unwrap().0 {
-                    best_centroids.pop();
-                    best_centroids.push((OrderedFloat(-distance), centroid.id));
-                }
-            }
+            push_to_max_cosine_heap(best_centroids, p, &centroid.point.view(), &centroid.id, clusters_to_search);
         }
 
-        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        for _ in 0..clusters_to_search {
+        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let maximum_clusters_to_search = std::cmp::min(clusters_to_search, best_centroids.len());
+        for _ in 0..maximum_clusters_to_search {
             let centroid = best_centroids.pop();
-            if centroid.is_some() {
-                for candidate_key in self.codebook[centroid.unwrap().1].indexes.iter() {
-                    let candidate = dataset.slice(s![*candidate_key,..]);
-                    let distance = distance::cosine_similarity(&p, &candidate);
-                    if best_candidates.len() < results_per_query {
-                        best_candidates.push((OrderedFloat(-distance), *candidate_key));
-                    } else {
-                        if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
-                            best_candidates.pop();
-                            best_candidates.push((OrderedFloat(-distance), *candidate_key));
-                        }
-                    }
-                }
+
+            for candidate_key in self.codebook[centroid.unwrap().1].indexes.iter() {
+                let candidate = dataset.slice(s![*candidate_key,..]);
+                push_to_max_cosine_heap(best_candidates, p, &candidate.view(), candidate_key, results_per_query);
             }
         }
     

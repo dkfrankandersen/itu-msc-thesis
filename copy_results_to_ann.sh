@@ -1,11 +1,11 @@
 #!/bin/bash
-echo "Remove results in ann benchmark folder [y]?"
-read cmd_remove
+# echo "Remove results in ann benchmark folder [y]?"
+# read cmd_remove
 
-if [ $cmd_remove = 'y' ]
-then
-rm -r /d/repository/itu/thesis/ann-benchmarks/results
-fi
+# if [ $cmd_remove = 'y' ]
+# then
+# rm -r /d/repository/itu/thesis/ann-benchmarks/results
+# fi
 
 echo "Copy results in ann benchmark folder [y]?"
 read cmd_copy
