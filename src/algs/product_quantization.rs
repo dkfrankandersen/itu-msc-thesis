@@ -1,7 +1,8 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap, HashMap};
-use rand::{distributions::Uniform, Rng, prelude::*};
+use rand::{prelude::*};
 pub use ordered_float::*;
+use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, pq_kmeans::PQKMeans, distance::cosine_similarity};
 // use crate::util::{DebugTimer};
 
@@ -32,17 +33,6 @@ pub struct ProductQuantization {
     residuals_codebook: Array2::<Array1::<f64>>,
     residuals_codebook_k: usize,
     sub_dimension: usize,
-}
-
-fn sampling_without_replacement<T: RngCore>(mut rng: T, max: usize, n: usize) -> Vec<usize> {
-    let sample: Vec<usize> = (0..max).collect();
-    let mut choosen_indexes:Vec<&usize> = sample.iter().choose_multiple(&mut rng, n);
-    choosen_indexes.shuffle(&mut rng);
-    let mut unique_indexes = Vec::<usize>::new();
-    for e in choosen_indexes {
-        unique_indexes.push(*e);
-    }
-    unique_indexes
 }
 
 impl ProductQuantization {
@@ -105,7 +95,6 @@ impl ProductQuantization {
 
         // Init
         let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
-
         let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
         // let dist_uniform = Uniform::new(0, dataset.nrows());
@@ -360,11 +349,10 @@ impl AlgorithmImpl for ProductQuantization {
 #[cfg(test)]
 mod product_quantization_tests {
     use ndarray::{Array2, arr2};
-    use assert_float_eq::*;
     use crate::algs::product_quantization::ProductQuantization;
 
     fn dataset1() -> Array2<f64> {
-        let dataset = arr2(&[
+        arr2(&[
             [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
             [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
             [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
@@ -375,25 +363,7 @@ mod product_quantization_tests {
             [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
             [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
             [9.0, 9.1, 9.2, 9.3, 9.4, 9.5],
-        ]);
-
-        dataset
-    }
-    fn dataset2() -> Array2<f64> {
-        let dataset = arr2(&[
-            [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
-            [9.0, 9.1, 9.2, 9.3, 9.4, 9.5],
-            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
-            [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
-            [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
-            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-            [4.0, 4.1, 4.2, 4.3, 4.4, 4.5],
-            [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
-            [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
-            [6.0, 6.1, 6.2, 6.3, 6.4, 6.5],
-        ]);
-
-        dataset
+        ])
     }
 
     #[test]

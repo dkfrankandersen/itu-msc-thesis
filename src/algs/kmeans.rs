@@ -1,8 +1,9 @@
 use ndarray::{Array1, ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap, HashMap};
-use rand::{distributions::Uniform, Rng, prelude::*};
+use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::algs::*;
+use crate::util::{sampling::sampling_without_replacement};
 //use crate::util::{DebugTimer};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -51,11 +52,11 @@ impl KMeans {
     }
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
-        let mut rng = thread_rng();
-        let dist_uniform = Uniform::new(0, dataset.nrows());
-        for i in 0..self.clusters {
-            let rand_key = rng.sample(dist_uniform);
-            let candidate = dataset.slice(s![rand_key,..]);
+        let rng = thread_rng();
+        let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), self.clusters );
+        
+        for (i,rand_key) in unique_indexes.iter().enumerate() {
+            let candidate = dataset.slice(s![*rand_key,..]);
             let new_centroid = Centroid::new(candidate.to_owned());
             self.codebook.insert(i, new_centroid);
         }

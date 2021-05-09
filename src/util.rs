@@ -2,8 +2,7 @@ pub mod hdf5_attributes_fix;
 pub mod hdf5_store_file;
 pub mod testcases;
 pub mod dataset;
-use rand::{distributions::Uniform, Rng, prelude::*};
-use std::collections::{HashSet};
+pub mod sampling;
 
 pub fn store_results_and_fix_attributes(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: hdf5_store_file::Attributes) {
     let store_result = hdf5_store_file::store_results(results, attrs);
@@ -76,7 +75,6 @@ pub fn unzip_enclosed_text(text: String, start: char, end: char) -> Vec::<String
     }
     results
 }
-
 
 #[derive(Clone, Debug)]
 pub struct RunParameters {
