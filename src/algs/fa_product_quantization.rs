@@ -196,7 +196,6 @@ impl AlgorithmImpl for FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         
-        // let candidates_to_consider = (dataset.nrows() / self.coarse_quantizer_k * self.residuals_codebook_k);
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         
         // Lets find matches in best coarse_quantizers
@@ -220,16 +219,13 @@ impl AlgorithmImpl for FAProductQuantization {
                 }
             }
 
-            // Read off the distance using the distance table            
+            // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let distance = distance_from_indexes(&distance_table.view(), &child_values);
-                best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
-            }
-            
-            for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let distance = distance_from_indexes(&distance_table.view(), &child_values);
-                if OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
+                if best_quantizer_candidates.peek().is_some() && OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
                     best_quantizer_candidates.pop();
+                    best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
+                } else {
                     best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
                 }
             }
