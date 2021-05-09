@@ -129,12 +129,12 @@ then
     # # cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
     # # cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
     
-    cargo run --release $METRIC $DATASET pq [10] [4 64 9000 1 200] [1 2 3 4 5 10 20 40 64]
-    cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1 2 3 4 5 10 20 40 100 128]
-    cargo run --release $METRIC $DATASET pq [10] [4 256 9000 1 200] [1 2 3 4 5 10 20 40 100 200 256]
-    cargo run --release $METRIC $DATASET pq [10] [4 512 9000 1 200] [1 2 3 4 5 10 20 40 100 200 400 512]
-    cargo run --release $METRIC $DATASET pq [10] [4 1024 9000 1 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
-    cargo run --release $METRIC $DATASET pq [10] [4 2048 9000 1 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
+    cargo run --release $METRIC $DATASET pq [10] [4 64 1000 255 200] [1 2 3 4 5 10 20 40 64]
+    cargo run --release $METRIC $DATASET pq [10] [4 128 1000 255 200] [1 2 3 4 5 10 20 40 100 128]
+    cargo run --release $METRIC $DATASET pq [10] [4 256 1000 255 200] [1 2 3 4 5 10 20 40 100 200 256]
+    cargo run --release $METRIC $DATASET pq [10] [4 512 1000 255 200] [1 2 3 4 5 10 20 40 100 200 400 512]
+    cargo run --release $METRIC $DATASET pq [10] [4 1024 1000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    cargo run --release $METRIC $DATASET pq [10] [4 2048 1000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
 else
     exit 0
 fi

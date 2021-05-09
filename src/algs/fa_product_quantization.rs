@@ -4,7 +4,7 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
-use crate::algs::{kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans};
+use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid, push_to_max_cosine_heap};
 
 #[derive(Debug, Clone)]
@@ -98,10 +98,13 @@ impl FAProductQuantization {
             let begin = sub_dimension * m;
             let end = begin + sub_dimension;
             let partial_data = residuals_training_data.slice(s![.., begin..end]);
-            let mut pq_kmeans = PQResKMeans::new(k_centroids, 200);
-            let codewords = pq_kmeans.run(&partial_data.view());
-            for (k, (centroid,_)) in codewords.iter().enumerate() {
-                residuals_codebook[[m,k]] = centroid.to_owned();
+
+            let rng = thread_rng();
+            let centroids = kmeans(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
+
+            
+            for (k, centroid) in centroids.iter().enumerate() {
+                residuals_codebook[[m,k]] = centroid.point.clone();
             }
         }
         residuals_codebook
@@ -200,8 +203,10 @@ impl AlgorithmImpl for FAProductQuantization {
 
         // Query Arguments
         let clusters_to_search = arguments[0];
-        let candidates_to_consider = dataset.nrows();
+        
+        // let candidates_to_consider = (dataset.nrows() / self.coarse_quantizer_k * self.residuals_codebook_k);
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
@@ -225,9 +230,9 @@ impl AlgorithmImpl for FAProductQuantization {
 
             // Read off the distance using the distance table            
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                if best_quantizer_candidates.len() > candidates_to_consider {
-                    break;
-                }
+                // if best_quantizer_candidates.len() > candidates_to_consider {
+                //     break;
+                // }
                 let distance = distance_from_indexes(&distance_table.view(), &child_values);
                 best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
             }
@@ -235,8 +240,8 @@ impl AlgorithmImpl for FAProductQuantization {
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let distance = distance_from_indexes(&distance_table.view(), &child_values);
                 if OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
-                        best_quantizer_candidates.pop();
-                        best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
+                    best_quantizer_candidates.pop();
+                    best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
                 }
             }
         }

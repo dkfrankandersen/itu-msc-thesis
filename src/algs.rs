@@ -1,6 +1,5 @@
 pub mod fa_bruteforce;
 pub mod fa_kmeans;
-pub mod pq_residuals_kmeans;
 pub mod kmeans;
 pub mod common;
 pub mod fa_product_quantization;

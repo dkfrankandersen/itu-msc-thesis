@@ -1,6 +1,6 @@
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
-use crate::algs::{kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans, common::{PQCentroid, Centroid}};
+use crate::algs::{kmeans::{kmeans}, common::{PQCentroid, Centroid}};
 
 #[derive(Debug, Clone)]
 pub struct FAScann {
