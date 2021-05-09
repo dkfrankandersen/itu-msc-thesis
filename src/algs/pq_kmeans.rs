@@ -1,99 +1,108 @@
-
-use ndarray::{Array1, ArrayView2, s};
-use rand::prelude::*;
-use rand::{Rng};
-extern crate ordered_float;
+use ndarray::{Array,ArrayView2, s};
+use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
+use crate::algs::{distance::cosine_similarity, pq_common::{Centroid}};
 
-#[derive(Debug, Clone)]
-pub struct PQKMeans {
-    k: usize,
-    max_iterations: usize,
-    codebook: Vec::<(Array1::<f64>, Vec::<usize>)>,
-    verbose_print: bool
-}
+pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+        
+    let datapoint_dimension = dataset.ncols();
 
-impl PQKMeans {
+    // Init
+    let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
+    let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
-    pub fn new(k: usize, max_iterations: usize) -> Self {
-        PQKMeans{
-            k: k,
-            max_iterations: max_iterations,
-            codebook: Vec::with_capacity(k),
-            verbose_print: false
-        }
+    // let dist_uniform = Uniform::new(0, dataset.nrows());
+    for k in 0..k_centroids {
+        // let rand_index = rng.sample(dist_uniform);
+        let datapoint = dataset.slice(s![unique_indexes[k],..]);
+        centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
     }
 
-    pub fn run(&mut self, dataset: &ArrayView2::<f64> ) -> &Vec::<(Array1::<f64>, Vec::<usize>)> {
+    // Repeat
+    let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
+    for iterations in 0..max_iterations  {
+        if centroids == last_centroids {
+            if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
+            break;
+        }
 
-        self.codebook = Vec::with_capacity(self.k);
-        self.init(dataset);        
-        let mut last_codebook = Vec::with_capacity(self.k);
-        for iterations in 0..self.max_iterations {
-            if self.codebook == last_codebook {
-                if self.verbose_print {
-                    println!("Computation has converged, iterations: {}", iterations);
+        last_centroids = centroids.clone();
+
+        // Remove centroid children
+        centroids.iter_mut().for_each(|c| c.indexes.clear());
+        
+        // Assign
+        for (index, datapoint) in dataset.outer_iter().enumerate() {
+            let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
+            for centroid in centroids.iter() {
+                let distance = cosine_similarity(&centroid.point.view() , &datapoint);
+                if OrderedFloat(best_match.0) < OrderedFloat(distance) { 
+                    best_match = (distance, centroid.id); 
                 }
-                break;
             }
-    
-            last_codebook = self.codebook.clone();
-
-            self.assign(dataset);
-            self.update(dataset);
+            centroids[best_match.1].indexes.push(index);
         }
         
-        return &self.codebook;
-    }
+        // Update
+        for centroid in centroids.iter_mut() {
+            if centroid.indexes.len() > 0 {
 
-    fn init(&mut self, dataset: &ArrayView2::<f64>) {
-        let rng = thread_rng();
-        let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), self.k);
-        for rand_key in unique_indexes.iter() {
-           
-            let candidate = dataset.slice(s![*rand_key,..]);
-            self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));
-        }    
-    }
-
-    fn assign(&mut self, dataset: &ArrayView2::<f64>) {
-        for (_,children) in self.codebook.iter_mut() {
-            children.clear();
-        }
-
-        for (idx, candidate) in dataset.outer_iter().enumerate() {
-            let mut best_centroid = 0;
-            let mut best_distance = f64::NEG_INFINITY;
-            for (k, centroid) in self.codebook.iter().enumerate() {
-                let distance = (centroid.0).view().dot(&candidate);
-                if OrderedFloat(best_distance) < OrderedFloat(distance) {
-                    best_centroid = k;
-                    best_distance = distance;
-                }
-            }
-            self.codebook[best_centroid].1.push(idx);
-        }
-    }
-
-    fn update(&mut self, dataset: &ArrayView2::<f64>) {
-        for (centroid, children) in self.codebook.iter_mut() {
-            if children.len() > 0 {
-                for i in 0..centroid.len() {
-                    centroid[i]= 0.;
-                }
+                // Clear centroid point
+                centroid.point = Array::from_elem(datapoint_dimension, 0.);
                 
-                for child_key in children.iter() {
-                    let child_point = dataset.slice(s![*child_key,..]);
-                    for (i, x) in child_point.iter().enumerate() {
-                        centroid[i] += x;
+                // Add dimension value of each
+                for index in centroid.indexes.iter() {
+                    let point = dataset.slice(s![*index,..]);
+                    for (i, x) in point.iter().enumerate() {
+                        centroid.point[i] += x;
                     }
                 }
-    
-                centroid.mapv_inplace(|a| a/children.len() as f64);
+
+                // Divide by indexes to get mean
+                let centroid_indexes_count = centroid.indexes.len() as f64;
+                for i in 0..datapoint_dimension {  
+                    centroid.point[i] = centroid.point[i]/centroid_indexes_count;
+                }
             }
         }
     }
+    centroids
+}
 
 
+#[cfg(test)]
+mod pq_kmeans_tests {
+    use ndarray::{Array2, arr2};
+    use crate::algs::pq_kmeans::{kmeans};
+
+    fn dataset1() -> Array2<f64> {
+        arr2(&[
+            [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
+            [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
+            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
+            [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
+            [4.0, 4.1, 4.2, 4.3, 4.4, 4.5],
+            [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
+            [6.0, 6.1, 6.2, 6.3, 6.4, 6.5],
+            [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
+            [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
+            [9.0, 9.1, 9.2, 9.3, 9.4, 9.5],
+        ])
+    }
+    #[test]
+    fn kmeans_with_k_7_clusters_7() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let rng = StdRng::seed_from_u64(11);
+        let centroids = kmeans(rng, 7, 200, &dataset1().view(), false);
+        assert!(centroids.len() == 7);
+    }
+
+    #[test]
+    fn kmeans_with_k_3_seed_111_centroid0_is() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let rng = StdRng::seed_from_u64(111);
+        let centroids = kmeans(rng, 4, 200, &dataset1().view(), false);
+        assert!(centroids[0].indexes == vec![3, 4, 5]);
+    }
 }

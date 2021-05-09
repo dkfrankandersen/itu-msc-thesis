@@ -1,6 +1,8 @@
 pub mod bruteforce;
 pub mod kmeans;
+pub mod pq_residuals_kmeans;
 pub mod pq_kmeans;
+pub mod pq_common;
 pub mod product_quantization;
 pub mod scann;
 pub mod distance;
