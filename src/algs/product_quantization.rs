@@ -4,8 +4,8 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
-use crate::algs::{pq_kmeans::{kmeans}, pq_residuals_kmeans::PQResKMeans, pq_common::{PQCentroid, Centroid}};
-// use crate::util::{DebugTimer};
+use crate::algs::{pq_kmeans::{pq_kmeans}, pq_residuals_kmeans::PQResKMeans, pq_common::{PQCentroid, Centroid}};
+use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
 pub struct ProductQuantization {
@@ -185,7 +185,8 @@ impl AlgorithmImpl for ProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
         let rng = thread_rng();
-        let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+        let centroids = pq_kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+
         let residuals = self.compute_residuals(&centroids, dataset);
         // Residuals PQ Training data
         let rng = thread_rng();

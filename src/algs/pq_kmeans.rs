@@ -4,7 +4,7 @@ pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, pq_common::{Centroid}};
 
-pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+pub fn pq_kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
     let datapoint_dimension = dataset.ncols();
 
@@ -74,7 +74,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
 #[cfg(test)]
 mod pq_kmeans_tests {
     use ndarray::{Array2, arr2};
-    use crate::algs::pq_kmeans::{kmeans};
+    use crate::algs::pq_kmeans::{pq_kmeans};
 
     fn dataset1() -> Array2<f64> {
         arr2(&[
@@ -94,7 +94,8 @@ mod pq_kmeans_tests {
     fn kmeans_with_k_7_clusters_7() {
         use rand::{SeedableRng, rngs::StdRng};
         let rng = StdRng::seed_from_u64(11);
-        let centroids = kmeans(rng, 7, 200, &dataset1().view(), false);
+        let centroids = pq_kmeans(rng, 7, 200, &dataset1().view(), false);
+        println!("{:?}", centroids);
         assert!(centroids.len() == 7);
     }
 
@@ -102,7 +103,7 @@ mod pq_kmeans_tests {
     fn kmeans_with_k_3_seed_111_centroid0_is() {
         use rand::{SeedableRng, rngs::StdRng};
         let rng = StdRng::seed_from_u64(111);
-        let centroids = kmeans(rng, 4, 200, &dataset1().view(), false);
+        let centroids = pq_kmeans(rng, 4, 200, &dataset1().view(), false);
         assert!(centroids[0].indexes == vec![3, 4, 5]);
     }
 }

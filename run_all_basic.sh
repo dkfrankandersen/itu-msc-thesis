@@ -114,16 +114,17 @@ then
         cargo run --release $METRIC $DATASET kmeans $RESULTS [$k 200] $CLUSTERS_To_SEARCH_KM
     done
 
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
 elif [ $run_type = 't' ]
 then
 
     cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1]
     cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1]
     cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1]
+    
     cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
     cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
     cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]

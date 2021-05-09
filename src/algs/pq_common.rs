@@ -8,6 +8,16 @@ pub struct Centroid {
     pub indexes: Vec::<usize>
 }
 
+impl Centroid {
+    pub fn new(id: usize, point: Array1::<f64>) -> Self {
+        Centroid {
+            id: id,
+            point: point,
+            indexes: Vec::<usize>::new()
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct PQCentroid {
     pub id: usize,
