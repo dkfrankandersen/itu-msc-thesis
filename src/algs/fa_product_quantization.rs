@@ -222,9 +222,6 @@ impl AlgorithmImpl for FAProductQuantization {
 
             // Read off the distance using the distance table            
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                // if best_quantizer_candidates.len() > candidates_to_consider {
-                //     break;
-                // }
                 let distance = distance_from_indexes(&distance_table.view(), &child_values);
                 best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
             }
@@ -239,20 +236,11 @@ impl AlgorithmImpl for FAProductQuantization {
         }
 
         // Rescore with true distance value of query and candidates
-        let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
-            let distance = cosine_similarity(&query.view(), &datapoint);
-            
-            if best_candidates.len() < results_per_query {
-                best_candidates.push((OrderedFloat(-distance), index));
-            } else {
-                if OrderedFloat(distance) > -best_candidates.peek().unwrap().0 {
-                    best_candidates.pop();
-                    best_candidates.push((OrderedFloat(-distance), index));
-                }
-            }
+            push_to_max_cosine_heap(best_candidates, query, &datapoint, &index, results_per_query);
         }
 
         let mut best_n_candidates: Vec<usize> = Vec::new();
