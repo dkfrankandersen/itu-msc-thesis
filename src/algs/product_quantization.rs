@@ -263,11 +263,13 @@ impl AlgorithmImpl for ProductQuantization {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
-        let rng = thread_rng();
+        // let rng = thread_rng();
+        let rng = StdRng::seed_from_u64(111);
         let centroids = self.kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
         let residuals = self.compute_residuals(&centroids, dataset);
         // Residuals PQ Training data
-        let rng = thread_rng();
+        // let rng = thread_rng();
+        let rng = StdRng::seed_from_u64(112);
         let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
         let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);

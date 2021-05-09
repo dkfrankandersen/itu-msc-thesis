@@ -116,7 +116,12 @@ then
     cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1]
     cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1]
     cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1]
-
+    cargo run --release $METRIC $DATASET pq [10] [1 64 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [2 64 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [4 64 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [5 64 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [10 64 9000 1 200] [1]
+    cargo run --release $METRIC $DATASET pq [10] [20 64 9000 1 200] [1]
     cargo run --release $METRIC $DATASET pq [10] [1 128 9000 1 200] [1]
     cargo run --release $METRIC $DATASET pq [10] [2 128 9000 1 200] [1]
     cargo run --release $METRIC $DATASET pq [10] [4 128 9000 1 200] [1]

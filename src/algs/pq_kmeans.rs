@@ -4,6 +4,7 @@ use rand::prelude::*;
 use rand::{Rng};
 extern crate ordered_float;
 pub use ordered_float::*;
+use crate::util::{sampling::sampling_without_replacement};
 
 #[derive(Debug, Clone)]
 pub struct PQKMeans {
@@ -47,11 +48,12 @@ impl PQKMeans {
     }
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
-        let mut rng = thread_rng();
-        let dist_uniform = rand::distributions::Uniform::new(0, dataset.nrows());
-        for _ in 0..self.k {
-            let rand_key = rng.sample(dist_uniform);
-            let candidate = dataset.slice(s![rand_key,..]);
+        // let rng = thread_rng();
+        let rng = StdRng::seed_from_u64(113);
+        let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), self.k);
+        for rand_key in unique_indexes.iter() {
+           
+            let candidate = dataset.slice(s![*rand_key,..]);
             self.codebook.push((candidate.to_owned(), Vec::<usize>::new()));
         }    
     }
