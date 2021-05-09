@@ -38,11 +38,11 @@ impl ProductQuantization {
     pub fn new(verbose_print: bool, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
 
-        if dataset.ncols() % m != 0 {
-            return Err("M is not divisable with dataset dimension!".to_string());
-        }
-        else if m <= 0 {
+        if m <= 0 {
             return Err("m must be greater than 0".to_string());
+        }
+        else if dataset.ncols() % m != 0 {
+            return Err("M is not divisable with dataset dimension!".to_string());
         }
         else if coarse_quantizer_k <= 0 {
             return Err("coarse_quantizer_k must be greater than 0".to_string());
@@ -75,9 +75,8 @@ impl ProductQuantization {
         });
     }
 
-    pub fn random_traindata(&self, dataset: &ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
-        let mut rng = rand::thread_rng();
-        let range = Uniform::new(0 as usize, dataset.nrows() as usize);
+    pub fn random_traindata<T: RngCore>(&self, mut rng: T, dataset: &ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
+        let range = Uniform::new(0, dataset.nrows());
         let random_datapoints: Vec<usize> = (0..train_dataset_size).map(|_| rng.sample(&range)).collect();
         
         let mut train_data = Array2::zeros((random_datapoints.len(), dataset.ncols()));
@@ -88,13 +87,12 @@ impl ProductQuantization {
         train_data
     }
 
-    fn kmeans(&self, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+    fn kmeans<T: RngCore>(&self, mut rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
         let datapoint_dimension = dataset.ncols();
 
         // Init
         let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
-        let mut rng = thread_rng();
         let dist_uniform = Uniform::new(0, dataset.nrows());
         for k in 0..k_centroids {
             let rand_index = rng.sample(dist_uniform);
@@ -261,10 +259,12 @@ impl AlgorithmImpl for ProductQuantization {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
-        let centroids = self.kmeans(self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+        let rng = thread_rng();
+        let centroids = self.kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
         let residuals = self.compute_residuals(&centroids, dataset);
         // Residuals PQ Training data
-        let residuals_training_data = self.random_traindata(&residuals.view(), self.training_size);
+        let rng = thread_rng();
+        let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
         let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
@@ -366,32 +366,71 @@ mod product_quantization_tests {
     }
 
     #[test]
-    fn DdivM_result_ok() {
+    fn new_d_div_m_result_ok() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         assert!(pq.is_ok());
     }
     #[test]
-    fn DdivM_result_err() {
+    fn new_d_div_m_result_err() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 5, 1, 10, 20, 200);
         assert!(pq.is_err());
     }
-
-    fn m_par_0_result_err() {
+    #[test]
+    fn new_m_par_0_result_err() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 0, 1, 10, 20, 200);
         assert!(pq.is_err());
     }
-
-    fn clusters_par_is_0_result_err() {
+    #[test]
+    fn new_clusters_par_is_0_result_err() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 0, 10, 20, 200);
         assert!(pq.is_err());
     }
-
-    fn residual_train_size_is_0_result_err() {
+    #[test]
+    fn new_residual_train_size_is_0_result_err() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
         assert!(pq.is_err());
     }
-    fn residual_train_size_is_gt_dataset_result_err() {
+    #[test]
+    fn new_residual_train_size_is_gt_dataset_result_err() {
         let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 0, 20, 200);
         assert!(pq.is_err());
+    }
+    #[test]
+    fn random_traindata_2_of_10_rows() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let rng = StdRng::seed_from_u64(11);
+        let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
+        println!("{}", partial_dataset);
+        assert!(partial_dataset.nrows() == 2);
+    }
+    #[test]
+    fn random_traindata_6_of_6_columns() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let rng = StdRng::seed_from_u64(11);
+        let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
+        println!("{}", partial_dataset);
+        assert!(partial_dataset.ncols() == 6);
+    }
+    #[test]
+    fn random_traindata_output_of_seed() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let rng = StdRng::seed_from_u64(11);
+        let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
+        println!("{}", partial_dataset);
+        assert!(partial_dataset == arr2(&[[2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
+                                            [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
+                                            [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
+                                            [1.0, 1.1, 1.2, 1.3, 1.4, 1.5]]));
+    }
+    #[test]
+    fn kmeans_with_k_10_clusters() {
+        use rand::{SeedableRng, rngs::StdRng};
+        let pq = ProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
+        let rng = StdRng::seed_from_u64(11);
+        let centroids = pq.unwrap().kmeans(rng, 10, 200, &dataset1().view(), false);
+        assert!(centroids.len() == 10);
     }
 }
