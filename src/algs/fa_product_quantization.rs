@@ -6,6 +6,7 @@ use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
 use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid, push_to_max_cosine_heap};
+use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {
@@ -196,7 +197,10 @@ impl AlgorithmImpl for FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         
+        let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        t.stop();
+        t.print_as_nanos();
         
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
@@ -204,9 +208,13 @@ impl AlgorithmImpl for FAProductQuantization {
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
+            // let mut t = DebugTimer::start("Compute residuals between query and coarse_quantizer");
             // Compute residuals between query and coarse_quantizer
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
+            // t.stop();
+            // t.print_as_nanos();
 
+            // let mut t = DebugTimer::start("Create a distance table");
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
             let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
@@ -218,7 +226,9 @@ impl AlgorithmImpl for FAProductQuantization {
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
                 }
             }
-
+            // t.stop();
+            // t.print_as_nanos();
+            // let mut t = DebugTimer::start("Read off the distance using the distance table");
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let distance = distance_from_indexes(&distance_table.view(), &child_values);
@@ -229,6 +239,9 @@ impl AlgorithmImpl for FAProductQuantization {
                     best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
                 }
             }
+            // t.stop();
+            // t.print_as_nanos();
+            // panic!("OHHH");
         }
 
         // Rescore with true distance value of query and candidates
