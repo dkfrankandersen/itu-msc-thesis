@@ -48,8 +48,7 @@ impl PQKMeans {
     }
 
     fn init(&mut self, dataset: &ArrayView2::<f64>) {
-        // let rng = thread_rng();
-        let rng = StdRng::seed_from_u64(113);
+        let rng = thread_rng();
         let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), self.k);
         for rand_key in unique_indexes.iter() {
            
