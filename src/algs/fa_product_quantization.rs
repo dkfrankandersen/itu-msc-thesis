@@ -197,10 +197,10 @@ impl AlgorithmImpl for FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         
-        let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
+        // let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
-        t.stop();
-        t.print_as_nanos();
+        // t.stop();
+        // t.print_as_nanos();
         
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
