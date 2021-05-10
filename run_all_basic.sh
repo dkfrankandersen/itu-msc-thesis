@@ -34,16 +34,16 @@ case $ds in
     '0' )
         DATASET="random-xs-20-angular"
         ARGS_KM="[128 200]"
-        ARGS_PQ="[10 255 2000 128 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        ARGS_PQ="[4 128 2000 255 200]"
+        CLUSTERS_To_SEARCH_KM="[1]"
+        CLUSTERS_To_SEARCH_PQ="[1]";;
     '1' )
         DATASET="glove-25-angular"
         ARGS_KM="[1024 200]"
-        ARGS_PQ="[5 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
-    '2' )
+        ARGS_PQ="[5 1024 20000 255 200]"
+        CLUSTERS_To_SEARCH_KM="[32 64 128 256]"
+        CLUSTERS_To_SEARCH_PQ="[32 64 128 256]";;
+    '2' )n
         DATASET="glove-50-angular"
         ARGS_KM="[1024 200]"
         ARGS_PQ="[10 255 20000 1024 200]"
@@ -83,8 +83,16 @@ case $ds in
         exit 1;;
 esac
 
-echo "Run on $DATASET use [s]ingle or [m]ultiple?"
+echo "Run on $DATASET use [s]ingle or [m]ultiple or [t]est?"
 read run_type
+
+# echo "Remove results folder before generating new? [y]?"
+# read cmd_remove
+
+# if [ $cmd_remove = 'y' ]
+# then
+# rm -r results
+# fi
 
 cargo build --release
 
@@ -93,27 +101,43 @@ then
     '''
     cargo run --release angular random-xs-20-angular bruteforce [10]
     cargo run --release angular random-xs-20-angular kmeans [10] [1024 200] [1 2 3 5 10 20]
-    cargo run --release angular random-xs-20-angular pq [10] [D    Ck  Ts    Rk MaxIterations] [1 2 3 5 10 20]
-    cargo run --release angular random-xs-20-angular pq [10] [1024 255 20000 10 200] [1 2 3 5 10 20]
+    cargo run --release angular random-xs-20-angular pq [10] [10 255 20000 1024 200] [1 2 3 5 10 20]
     '''
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
     cargo run --release $METRIC $DATASET kmeans $RESULTS $ARGS_KM $CLUSTERS_To_SEARCH_KM
     cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ
-fi
 
-if [ $run_type = 'm' ]
+elif [ $run_type = 'm' ]
 then
     cargo run --release $METRIC $DATASET bruteforce $RESULTS
     for (( k=4; k<=1024; k=k+k )) do
         cargo run --release $METRIC $DATASET kmeans $RESULTS [$k 200] $CLUSTERS_To_SEARCH_KM
     done
 
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
-    cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
-fi
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
+elif [ $run_type = 't' ]
+then
 
+    # # cargo run --release $METRIC $DATASET bruteforce [10]
+    # cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1 2 3 4 5 10 20 40 64]
+    # cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1 2 3 4 5 10 20 40 100 128]
+    # cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1 2 3 4 5 10 20 40 100 200 256]
+    # cargo run --release $METRIC $DATASET kmeans [10] [512 200] [1 2 3 4 5 10 20 40 100 200 400 512]
+    # # cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    # # cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
+    
+    cargo run --release $METRIC $DATASET pq [10] [10 64 2000 255 200] [1 2 3 4 5 10 20 40 64]
+    cargo run --release $METRIC $DATASET pq [10] [10 128 2000 255 200] [1 2 3 4 5 10 20 40 100 128]
+    cargo run --release $METRIC $DATASET pq [10] [10 256 2000 255 200] [1 2 3 4 5 10 20 40 100 200 256]
+    cargo run --release $METRIC $DATASET pq [10] [10 512 2000 255 200] [1 2 3 4 5 10 20 40 100 200 400 512]
+    cargo run --release $METRIC $DATASET pq [10] [10 1024 2000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
+    cargo run --release $METRIC $DATASET pq [10] [10 2048 2000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
+else
+    exit 0
+fi
 sh ./copy_results_to_ann.sh
 
 exit 0

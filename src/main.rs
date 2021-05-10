@@ -11,7 +11,7 @@ fn main() {
     println!("Running algorithm with");
     println!("args: {:?}\n", args);
 
-    let mut algo_parameters: AlgoParameters = create_run_parameters(args);
+    let algo_parameters: AlgoParameters = create_run_parameters(args);
 
     let best_search_time = f64::INFINITY;
     let filename = format!("datasets/{}.hdf5", algo_parameters.dataset);

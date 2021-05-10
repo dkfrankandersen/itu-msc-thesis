@@ -15,6 +15,31 @@ pub fn euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     return sum_val.sqrt();
 }
 
+#[allow(dead_code)]
+pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+    let dot_prod = p.dot(q);
+    let magnitude_p = p.dot(p).sqrt();
+    let magnitude_q = q.dot(q).sqrt();
+    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
+    return cos_sim.acos() / std::f64::consts::PI;
+}
+
+
+// pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+//     let dot_prod = p.dot(q);
+//     let magnitude_p = p.dot(p).sqrt();
+//     let magnitude_q = q.dot(q).sqrt();
+//     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
+//     return cos_sim;
+// }
+
+pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+    // cosine_similarity = dot_prod / (magnitude_p*magnitude_q)
+    p.dot(q) / (p.dot(p).sqrt()*q.dot(q).sqrt())
+}
+
+
+
 #[cfg(test)]
 mod euclidian_tests {
     use ndarray::{Array1, arr1};
@@ -45,21 +70,4 @@ mod euclidian_tests {
 
         let _assert = expect_float_relative_eq!(distance, 2.2360, 0.0001);
     }
-}
-
-pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-    let dot_prod = p.dot(q);
-    let magnitude_p = p.dot(p).sqrt();
-    let magnitude_q = q.dot(q).sqrt();
-    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
-    return cos_sim;
-}
-
-#[allow(dead_code)]
-pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-    let dot_prod = p.dot(q);
-    let magnitude_p = p.dot(p).sqrt();
-    let magnitude_q = q.dot(q).sqrt();
-    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
-    return cos_sim.acos() / std::f64::consts::PI;
 }

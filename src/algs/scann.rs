@@ -1,27 +1,9 @@
-use ndarray::{Array1, ArrayView1, ArrayView2};
-use crate::algs::*;
-
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Centroid {
-    id: i32,
-    pub point: Array1::<f64>,
-    pub children: Vec::<usize>
-}
-
-#[allow(dead_code)]
-impl Centroid {
-    fn new(id: i32, point: Array1::<f64>) -> Self {
-        Centroid {
-            id: id,
-            point: point,
-            children: Vec::<usize>::new()
-        }
-    }
-}
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2};
+use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
+use crate::algs::{kmeans::{kmeans}, common::{PQCentroid, Centroid}};
 
 #[derive(Debug, Clone)]
-pub struct Scann {
+pub struct FAScann {
     name: String,
     metric: String,
     dataset: Option<Array2::<f64>>,
@@ -32,9 +14,9 @@ pub struct Scann {
 }
 
 
-impl Scann {
+impl FAScann {
     pub fn new(verbose_print: bool, _dataset: &ArrayView2::<f64>, clusters: i32, max_iterations: i32, clusters_to_search: i32) -> Result<Self, String> {
-        return Ok(Scann {
+        return Ok(FAScann {
             name: "fa_scann".to_string(),
             metric: "angular".to_string(),
             dataset: None,
@@ -46,7 +28,7 @@ impl Scann {
     }
 }
 
-impl AlgorithmImpl for Scann {
+impl AlgorithmImpl for FAScann {
 
     fn name(&self) -> String {
         self.name.to_string()
@@ -57,7 +39,8 @@ impl AlgorithmImpl for Scann {
     }
 
     fn query(&self, _dataset: &ArrayView2::<f64>, _p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
-        
+        let _balh = results_per_query;
+        let _blah2 = arguments;
         let mut best_n_candidates: Vec<usize> = Vec::new();
         best_n_candidates.reverse();
         if self.verbose_print {
