@@ -152,11 +152,12 @@ impl FAProductQuantization {
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, clusters_to_search: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
         let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        // Add all coarse_quantizer as (dist, index) tuples into heap
-        coarse_quantizer.into_iter().for_each(|centroid|
-                                                    best_coarse_quantizers.push((OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id))
-                                            );
-        // Pop the best n clusters to search
+    
+        for centroid in coarse_quantizer.iter() {
+            let distance = OrderedFloat(cosine_similarity(query, &centroid.point.view()));
+            best_coarse_quantizers.push((distance, centroid.id));
+        }
+
         let result_indexes: Vec::<usize> = (0..clusters_to_search).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
         result_indexes
     }
@@ -218,12 +219,12 @@ impl AlgorithmImpl for FAProductQuantization {
             }
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let distance = distance_from_indexes(&distance_table.view(), &child_values);
-                if best_quantizer_candidates.peek().is_some() && OrderedFloat(distance) > -best_quantizer_candidates.peek().unwrap().0 {
+                let distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
+                if best_quantizer_candidates.peek().is_some() && distance < best_quantizer_candidates.peek().unwrap().0 {
                     best_quantizer_candidates.pop();
-                    best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
+                    best_quantizer_candidates.push((distance,*child_key));
                 } else {
-                    best_quantizer_candidates.push((OrderedFloat(-distance),*child_key));
+                    best_quantizer_candidates.push((distance,*child_key));
                 }
             }
         }
