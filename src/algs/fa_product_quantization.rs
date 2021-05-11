@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_WIP".to_string(),
+            name: "fa_pq_WIP4".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -205,11 +205,13 @@ impl AlgorithmImpl for FAProductQuantization {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
-
+        
         // Query Arguments
         let clusters_to_search = arguments[0];
-        let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        let heap_size = (results_per_query+clusters_to_search)*2;
         
+        let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        // println!("best_coarse_quantizers.len() {}", best_coarse_quantizers.len());
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
@@ -231,55 +233,63 @@ impl AlgorithmImpl for FAProductQuantization {
             }
 
             // Read off the distance using the distance table
-            if best_quantizer_candidates.len() < clusters_to_search {
+            if best_quantizer_candidates.len() < heap_size {
                 for (child_key, child_values) in best_coares_quantizer.children.iter() {
                     let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
                     best_quantizer_candidates.push((neg_distance,*child_key));
-                    if best_quantizer_candidates.len() >= clusters_to_search { break; };
+                    if best_quantizer_candidates.len() >= heap_size { break; };
                 }
             }
-            
+            // println!("best_quantizer_candidates.len() {}", best_quantizer_candidates.len());
 
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
                 if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
+                    // println!("best_quantizer_candidates Lets pop and push 1");
                     best_quantizer_candidates.pop();
                     best_quantizer_candidates.push((neg_distance,*child_key));
                 }
             }
+            // println!("best_quantizer_candidates.len() {}", best_quantizer_candidates.len());
         }
+
+        // println!("best_quantizer_candidates.len() {}", best_quantizer_candidates.len());
 
         // Rescore with true distance value of query and candidates
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-
-        if best_candidates.len() < results_per_query {
+        if best_candidates.len() < heap_size {
             for candidate in best_quantizer_candidates.iter() {
+                // println!("best_candidates Lets pop and push 1 {}, {}", (results_per_query*clusters_to_search), candidate.1);
                 let index = candidate.1;
                 let datapoint = dataset.slice(s![index,..]);
                 let distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
                 best_candidates.push((distance, index));
-                if best_candidates.len() >= results_per_query {
+                if best_candidates.len() >= heap_size {
                     break;
                 }
             }
         }
-        
+        // println!("best_candidates.len() {}", best_candidates.len());
 
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
             let distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
-            if distance > best_candidates.peek().unwrap().0 {
+            if distance < best_candidates.peek().unwrap().0 {
+                // println!("best_candidates Lets pop and push 2");
                 best_candidates.pop();
                 best_candidates.push((distance, index));
             }
         }
+        
+        // println!("best_candidates.len() {}", best_candidates.len());
 
         // Pop all candidate indexes from heap and reverse list.
-        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
+        let mut best_n_candidates: Vec<usize> =  (0..std::cmp::min(best_candidates.len(), results_per_query)).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
-
+        // println!("best_n_candidates.len() {}", best_n_candidates.len());
+        // panic!("OHHHHH");
         best_n_candidates
     }
 
