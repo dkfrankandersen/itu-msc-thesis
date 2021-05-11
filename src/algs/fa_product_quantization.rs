@@ -21,6 +21,7 @@ pub struct FAProductQuantization {
     residuals_codebook: Array2::<Array1::<f64>>,
     residuals_codebook_k: usize,
     sub_dimension: usize,
+    partial_query_begin_end: HashMap::<usize, (usize, usize)>
 }
 
 impl FAProductQuantization {
@@ -61,7 +62,8 @@ impl FAProductQuantization {
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
             residuals_codebook_k: residuals_codebook_k,
-            sub_dimension: dataset.ncols() / m,
+            sub_dimension: dataset.ncols()/m,
+            partial_query_begin_end: compute_dimension_begin_end(m, dataset.ncols()/m)
         });
     }
 
@@ -96,9 +98,10 @@ impl FAProductQuantization {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
         for m in 0..m_subspaces {
-            let begin = sub_dimension * m;
-            let end = begin + sub_dimension;
-            let partial_data = residuals_training_data.slice(s![.., begin..end]);
+            // let begin = sub_dimension * m;
+            // let end = begin + sub_dimension;
+            let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
+            let partial_data = residuals_training_data.slice(s![.., partial_dim.0..partial_dim.1]);
 
             let rng = thread_rng();
             let centroids = kmeans(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
@@ -116,9 +119,10 @@ impl FAProductQuantization {
         let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
         for n in 0..residuals.nrows() {
             for m in 0..residuals_codebook.nrows() {
-                let begin = sub_dimension * m;
-                let end = begin + sub_dimension;
-                let partial_dimension = residuals.slice(s![n, begin..end]);
+                // let begin = sub_dimension * m;
+                // let end = begin + sub_dimension;
+                let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
+                let partial_dimension = residuals.slice(s![n, partial_dim.0..partial_dim.1]);
 
                 let mut best_match = (f64::NEG_INFINITY, 0);
                 for k in 0..residuals_codebook.ncols() {
@@ -171,6 +175,17 @@ fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<
     distance
 }
 
+fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> HashMap::<usize, (usize, usize)> {
+    let mut result = HashMap::new();
+    for m in 0..m_clusters {
+        let begin = dimension_size * m;
+        let end = begin + dimension_size;
+        result.insert(m, (begin, end));
+    } 
+    result
+    
+}
+
 impl AlgorithmImpl for FAProductQuantization {
 
     fn name(&self) -> String {
@@ -196,7 +211,7 @@ impl AlgorithmImpl for FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
-
+        
         // Lets find matches in best coarse_quantizers
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
@@ -209,9 +224,8 @@ impl AlgorithmImpl for FAProductQuantization {
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
             let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
-                let begin = self.sub_dimension * m;
-                let end = begin + self.sub_dimension;
-                let partial_query = rq.slice(s![begin..end]);
+                let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
+                let partial_query = rq.slice(s![partial_dim.0..partial_dim.1]);
                 for k in 0..self.residuals_codebook_k {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
