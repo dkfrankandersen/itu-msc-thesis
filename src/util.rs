@@ -50,7 +50,7 @@ impl DebugTimer {
 
     pub fn print_as_nanos(&self) {
         let duration =  self.stop.unwrap().duration_since(self.start.unwrap()).as_nanos();
-        println!("TimerDebug:  {} in {} ms", self.msg, duration);
+        println!("TimerDebug:  {} in {} ns", self.msg, duration);
     }
 
 }
