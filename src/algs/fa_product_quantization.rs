@@ -51,7 +51,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_product_quantization".to_string(),
+            name: "fa_pq_WIP".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -149,17 +149,15 @@ impl FAProductQuantization {
         coarse_quantizer
     }
 
-    fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, result_quantizers: usize) -> Vec::<usize> {
+    fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, clusters_to_search: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
         let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        for centroid in coarse_quantizer.iter() {
-            push_to_max_cosine_heap(best_coarse_quantizers, query, &centroid.point.view(), &centroid.id, result_quantizers);
-        }
-
-        let mut result_indexes = Vec::<usize>::new();        
-        for _ in 0..best_coarse_quantizers.len() {
-            result_indexes.push(best_coarse_quantizers.pop().unwrap().1);
-        }
+        // Add all coarse_quantizer as (dist, index) tuples into heap
+        coarse_quantizer.into_iter().for_each(|centroid|
+                                                    best_coarse_quantizers.push((OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id))
+                                            );
+        // Pop the best n clusters to search
+        let result_indexes: Vec::<usize> = (0..clusters_to_search).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
         result_indexes
     }
 }
@@ -196,7 +194,6 @@ impl AlgorithmImpl for FAProductQuantization {
 
         // Query Arguments
         let clusters_to_search = arguments[0];
-        
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
 
         // Lets find matches in best coarse_quantizers
@@ -239,10 +236,8 @@ impl AlgorithmImpl for FAProductQuantization {
             push_to_max_cosine_heap(best_candidates, query, &datapoint, &index, results_per_query);
         }
 
-        let mut best_n_candidates: Vec<usize> = Vec::new();
-        for _ in 0..best_candidates.len() {
-            best_n_candidates.push(best_candidates.pop().unwrap().1);
-        }
+        // Pop all candidate indexes from heap and reverse list.
+        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
 
         best_n_candidates
