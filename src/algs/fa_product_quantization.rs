@@ -5,7 +5,7 @@ pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
 use crate::algs::{kmeans::{kmeans}};
-use crate::algs::common::{PQCentroid, Centroid, push_to_max_cosine_heap};
+use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{DebugTimer};
 
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0511_1634".to_string(),
+            name: "fa_pq_WIP2".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -231,24 +231,52 @@ impl AlgorithmImpl for FAProductQuantization {
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
                 }
             }
+
+            // Read off the distance using the distance table
+            if best_quantizer_candidates.len() < clusters_to_search {
+                for (child_key, child_values) in best_coares_quantizer.children.iter() {
+                    let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
+                    best_quantizer_candidates.push((neg_distance,*child_key));
+                    if best_quantizer_candidates.len() >= clusters_to_search { break; };
+                }
+            }
+            
+
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
-                if best_quantizer_candidates.peek().is_some() && distance < best_quantizer_candidates.peek().unwrap().0 {
+                let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
+                if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
                     best_quantizer_candidates.pop();
-                    best_quantizer_candidates.push((distance,*child_key));
-                } else {
-                    best_quantizer_candidates.push((distance,*child_key));
+                    best_quantizer_candidates.push((neg_distance,*child_key));
                 }
             }
         }
 
         // Rescore with true distance value of query and candidates
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+
+        if best_candidates.len() < results_per_query {
+            for candidate in best_quantizer_candidates.iter() {
+                let index = candidate.1;
+                let datapoint = dataset.slice(s![index,..]);
+                // push_to_max_cosine_heap(best_candidates, query, &datapoint, &index, results_per_query);
+                let distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+                best_candidates.push((distance, index));
+                if best_candidates.len() >= results_per_query {
+                    break;
+                }
+            }
+        }
+        
+
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
-            push_to_max_cosine_heap(best_candidates, query, &datapoint, &index, results_per_query);
+            let distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            if distance > best_candidates.peek().unwrap().0 {
+                best_candidates.pop();
+                best_candidates.push((distance, index));
+            }
         }
 
         // Pop all candidate indexes from heap and reverse list.
