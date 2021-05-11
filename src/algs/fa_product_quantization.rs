@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_WIP2".to_string(),
+            name: "fa_pq_WIP".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -98,8 +98,6 @@ impl FAProductQuantization {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
         for m in 0..m_subspaces {
-            // let begin = sub_dimension * m;
-            // let end = begin + sub_dimension;
             let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
             let partial_data = residuals_training_data.slice(s![.., partial_dim.0..partial_dim.1]);
 
@@ -114,25 +112,25 @@ impl FAProductQuantization {
         residuals_codebook
     }
 
-    fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>, sub_dimension: usize) -> Array1<Array1<usize>> {
+    fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>) -> Array1<Array1<usize>> {
         // Residuals Encoding
         let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
         for n in 0..residuals.nrows() {
             for m in 0..residuals_codebook.nrows() {
-                // let begin = sub_dimension * m;
-                // let end = begin + sub_dimension;
                 let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
                 let partial_dimension = residuals.slice(s![n, partial_dim.0..partial_dim.1]);
 
-                let mut best_match = (f64::NEG_INFINITY, 0);
+                let mut best_distance = OrderedFloat(f64::NEG_INFINITY);
+                let mut best_index = 0;
                 for k in 0..residuals_codebook.ncols() {
                     let centroid = &residuals_codebook[[m,k]].view();
-                    let distance = centroid.dot(&partial_dimension);
-                    if OrderedFloat(best_match.0) < OrderedFloat(distance) { 
-                        best_match = (distance, k) 
+                    let distance = OrderedFloat(centroid.dot(&partial_dimension));
+                    if best_distance < distance { 
+                        best_distance = distance;
+                        best_index = k; 
                     };
                 }
-                pqcodes[n][m] = best_match.1;
+                pqcodes[n][m] = best_index;
             }
         }
         pqcodes
@@ -202,7 +200,7 @@ impl AlgorithmImpl for FAProductQuantization {
         let rng = thread_rng();
         let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
-        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook, self.sub_dimension);
+        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
     }
     
@@ -259,7 +257,6 @@ impl AlgorithmImpl for FAProductQuantization {
             for candidate in best_quantizer_candidates.iter() {
                 let index = candidate.1;
                 let datapoint = dataset.slice(s![index,..]);
-                // push_to_max_cosine_heap(best_candidates, query, &datapoint, &index, results_per_query);
                 let distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
                 best_candidates.push((distance, index));
                 if best_candidates.len() >= results_per_query {

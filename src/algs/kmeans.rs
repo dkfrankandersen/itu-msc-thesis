@@ -32,14 +32,16 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         
         // Assign
         for (index, datapoint) in dataset.outer_iter().enumerate() {
-            let mut best_match: (OrderedFloat::<f64>, usize) = (OrderedFloat(f64::NEG_INFINITY), 0);
+            let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
+            let mut best_index: usize = 0;
             for centroid in centroids.iter() {
                 let distance = OrderedFloat(cosine_similarity(&centroid.point.view() , &datapoint));
-                if distance > best_match.0 { 
-                    best_match = (distance, centroid.id); 
+                if distance > best_distance { 
+                    best_distance = distance;
+                    best_index = centroid.id; 
                 }
             }
-            centroids[best_match.1].indexes.push(index);
+            centroids[best_index].indexes.push(index);
         }
         
         // Update
