@@ -27,7 +27,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_WIP".to_string(),
+                        name: "fa_kmeans_REF_0511_1217".to_string(),
                         metric: "angular".to_string(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
@@ -58,19 +58,29 @@ impl AlgorithmImpl for FAKMeans {
             best_centroids.push((OrderedFloat(distance), *&centroid.id));
         }
 
+        // 
         let clusters_of_interests: Vec<usize> = (0..std::cmp::min(clusters_to_search, best_centroids.len())).map(|_| best_centroids.pop().unwrap().1).collect();
 
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid_index in clusters_of_interests.iter() {
+
+            // If candidates list is shorter than min results requestes push to heap
+            if best_candidates.len() < results_per_query {
+                for candidate_key in self.codebook[*centroid_index].indexes.iter() {
+                    let candidate = dataset.slice(s![*candidate_key,..]);
+                    let neg_distance = OrderedFloat(-distance::cosine_similarity(query, &candidate.view()));
+                    best_candidates.push((neg_distance, *candidate_key));
+                    if best_candidates.len() >= results_per_query {
+                        break;
+                    }
+                }
+            }
+
             for candidate_key in self.codebook[*centroid_index].indexes.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
                 let neg_distance = OrderedFloat(-distance::cosine_similarity(query, &candidate.view()));
-                // If candidates list is shorter than min results requestes push to heap
-                if best_candidates.len() < results_per_query {
-                    best_candidates.push((neg_distance, *candidate_key));
-                }
                 // If distance is better, remove top (worst) and push candidate to heap
-                else if neg_distance < best_candidates.peek().unwrap().0 {
+                if neg_distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
                     best_candidates.push((neg_distance, *candidate_key));
                 }
