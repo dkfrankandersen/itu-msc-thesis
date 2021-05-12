@@ -27,7 +27,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_WIP".to_string(),
+                        name: "fa_kmeans_REF_0512_1258".to_string(),
                         metric: "angular".to_string(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
@@ -64,21 +64,13 @@ impl AlgorithmImpl for FAKMeans {
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid_index in clusters_of_interests.iter() {
 
-            // If candidates list is shorter than min results requestes push to heap
-            if best_candidates.len() < results_per_query {
-                for candidate_key in self.codebook[*centroid_index].indexes.iter() {
-                    let candidate = dataset.slice(s![*candidate_key,..]);
-                    let neg_distance = OrderedFloat(-distance::cosine_similarity(query, &candidate.view()));
-                    best_candidates.push((neg_distance, *candidate_key));
-                    if best_candidates.len() >= results_per_query {
-                        break;
-                    }
-                }
-            }
-
             for candidate_key in self.codebook[*centroid_index].indexes.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
                 let neg_distance = OrderedFloat(-distance::cosine_similarity(query, &candidate.view()));
+                // If candidates list is shorter than min results requestes push to heap
+                if best_candidates.len() < results_per_query {
+                    best_candidates.push((neg_distance, *candidate_key));
+                }
                 // If distance is better, remove top (worst) and push candidate to heap
                 if neg_distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
