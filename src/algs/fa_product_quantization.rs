@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0512_1258".to_string(),
+            name: "fa_pq_WIP".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
