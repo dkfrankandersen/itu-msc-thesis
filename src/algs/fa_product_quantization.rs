@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0512_1704_heap_size_N".to_string(),
+            name: "fa_pq_REF_0512_1739_heap_size_Ndiv10".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -208,8 +208,7 @@ impl AlgorithmImpl for FAProductQuantization {
         
         // Query Arguments
         let clusters_to_search = arguments[0];
-        // let heap_size = clusters_to_search*(results_per_query*4);
-        let heap_size = dataset.nrows();
+        let heap_size = arguments[1];
         
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         // Lets find matches in best coarse_quantizers
@@ -236,16 +235,11 @@ impl AlgorithmImpl for FAProductQuantization {
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
                 if best_quantizer_candidates.len() < heap_size {
-                    // println!("best_quantizer_candidates.len() < heap_size | {} < {}", best_quantizer_candidates.len(), heap_size);
                     best_quantizer_candidates.push((neg_distance,*child_key));
                 } else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
-                    // println!("pop/push to heap neg_distance {} < {}", neg_distance, best_quantizer_candidates.peek().unwrap().0);
-                    let peek = best_quantizer_candidates.peek().unwrap().0;
-                    let pop = best_quantizer_candidates.pop();
-                    // println!("{} {:?} replace with neg_distance {} {}", peek, pop, neg_distance, child_key);
+                    best_quantizer_candidates.pop();
                     best_quantizer_candidates.push((neg_distance,*child_key));
                 } else {
-                    // println!("dont push to heap neg_distance {} >= {}", neg_distance, best_quantizer_candidates.peek().unwrap().0);
                 }
             }
         }
@@ -260,11 +254,9 @@ impl AlgorithmImpl for FAProductQuantization {
             if best_candidates.len() < results_per_query {
                 best_candidates.push((neg_distance, index));
             } else if neg_distance < best_candidates.peek().unwrap().0 {
-                // println!("pop/push to heap neg_distance {} < {}", neg_distance, best_quantizer_candidates.peek().unwrap().0);
                 best_candidates.pop();
                 best_candidates.push((neg_distance, index));
             } else {
-                // println!("dont push to heap neg_distance {} >= {}", neg_distance, best_quantizer_candidates.peek().unwrap().0);
             }
         }
         
@@ -272,8 +264,6 @@ impl AlgorithmImpl for FAProductQuantization {
         // Pop all candidate indexes from heap and reverse list.
         let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
-        // println!("best_n_candidates {:?}", best_n_candidates);
-        // panic!("OHHHHH");
         best_n_candidates
     }
 }

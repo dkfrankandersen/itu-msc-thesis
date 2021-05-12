@@ -111,7 +111,7 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
 
     let mut results_per_query = Vec::<usize>::new();
     let mut algo_arguments = Vec::<String>::new();
-    let mut query_arguments = Vec::<usize>::new();
+    let mut query_arguments = Vec::<String>::new();
 
     if args.len() >= 4 {
         let args_additionals = args[4..].join(" ");
@@ -123,7 +123,8 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
             algo_arguments = parts[1].to_string().split_whitespace().map(|x| x.to_string()).collect()
         };
         if parts.len() >= 3 { 
-            query_arguments = parts[2].to_string().split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect()
+            let leaves_reorder_to_search = unzip_enclosed_text(parts[2].to_string(), '[', ']');
+            query_arguments = leaves_reorder_to_search; // .to_string().split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect()
         }
     } else {
         println!("Arguments missing, should be [metric dataset algorithm results] [algs optionals] [query optionals]");
@@ -143,7 +144,7 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
                     algorithm: algorithm.to_string(),
                     algo_arguments: algo_arguments.clone(),
                     results_per_query: *results_per_query,
-                    query_arguments: vec![*cluster_to_search]
+                    query_arguments: cluster_to_search.to_string().split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect()
                 };
                 run_parameters.push(run_parameter);
             }
