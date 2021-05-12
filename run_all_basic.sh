@@ -77,7 +77,7 @@ case $ds in
         DATASET="lastfm-64-dot"
         ARGS_KM="[1024 200]"
         ARGS_PQ="[16 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
+        CLUSTERS_To_SEARCH_KM="[[1 1] [2 2] [3 3] [5 5] [10 10] [20 20]]"
         CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
     *) printf "Error: Invalid option"
         exit 1;;
@@ -103,9 +103,9 @@ then
     cargo run --release angular random-xs-20-angular kmeans [10] [1024 200] [1 2 3 5 10 20]
     cargo run --release angular random-xs-20-angular pq [10] [10 255 20000 1024 200] [1 2 3 5 10 20]
     '''
-    cargo run --release $METRIC $DATASET bruteforce $RESULTS
+    # cargo run --release $METRIC $DATASET bruteforce $RESULTS
     cargo run --release $METRIC $DATASET kmeans $RESULTS $ARGS_KM $CLUSTERS_To_SEARCH_KM
-    cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ
 
 elif [ $run_type = 'm' ]
 then
@@ -129,18 +129,16 @@ then
     # cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
     # cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
     
-    cargo run --release $METRIC $DATASET pq [10] [10 64 1000 255 200] [1 2 3 4 5 10 20 40 64]
-    cargo run --release $METRIC $DATASET pq [10] [10 128 1000 255 200] [1 2 3 4 5 10 20 40 100 128]
-    cargo run --release $METRIC $DATASET pq [10] [10 256 1000 255 200] [1 2 3 4 5 10 20 40 100 200 256]
-    cargo run --release $METRIC $DATASET pq [10] [10 512 1000 255 200] [1 2 3 4 5 10 20 40 100 200 400 512]
-    cargo run --release $METRIC $DATASET pq [10] [10 1024 1000 255 200] [1 2 3 4 5 10 20 40 100 200 400 512 1024]
+    cargo run --release $METRIC $DATASET pq [10] [10 64 1000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80]]
+    cargo run --release $METRIC $DATASET pq [10] [10 128 1000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80]]
+    cargo run --release $METRIC $DATASET pq [10] [10 256 1000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80]]
+    cargo run --release $METRIC $DATASET pq [10] [10 512 1000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80]]
+    cargo run --release $METRIC $DATASET pq [10] [10 1024 1000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80]]
     # cargo run --release $METRIC $DATASET pq [10] [10 1024 2000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
     # cargo run --release $METRIC $DATASET pq [10] [10 2048 2000 255 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
-elif [ $run_type = 'big' ]
+elif [ $run_type = 'full' ]
 then
-
-    # [50 2000 250000 255 200]
-  
+    # cargo run --release $METRIC $DATASET kmeans [10] [2000 200] [[1] [2] [4] [8] [30] [35] [40] [45] [50] [55] [60] [65] [75] [90] [110] [130] [150] [170] [200] [220] [250] [310] [400] [500] [800]]
     cargo run --release $METRIC $DATASET pq [10] [50 2000 250000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
 else
     exit 0

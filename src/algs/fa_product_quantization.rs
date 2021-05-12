@@ -52,7 +52,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0512_1739_heap_size_Ndiv10".to_string(),
+            name: "fa_pq_REF_0512_1934".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -234,13 +234,14 @@ impl AlgorithmImpl for FAProductQuantization {
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
-                if best_quantizer_candidates.len() < heap_size {
-                    best_quantizer_candidates.push((neg_distance,*child_key));
-                } else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
-                    best_quantizer_candidates.pop();
-                    best_quantizer_candidates.push((neg_distance,*child_key));
-                } else {
-                }
+                // if best_quantizer_candidates.len() < heap_size {
+                //     best_quantizer_candidates.push((neg_distance,*child_key));
+                // } else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
+                //     best_quantizer_candidates.pop();
+                //     best_quantizer_candidates.push((neg_distance,*child_key));
+                // }
+            // }
+                best_quantizer_candidates.push((neg_distance,*child_key));
             }
         }
         
@@ -251,7 +252,7 @@ impl AlgorithmImpl for FAProductQuantization {
             let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
             let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
-            if best_candidates.len() < results_per_query {
+            if best_candidates.len() < heap_size {
                 best_candidates.push((neg_distance, index));
             } else if neg_distance < best_candidates.peek().unwrap().0 {
                 best_candidates.pop();
