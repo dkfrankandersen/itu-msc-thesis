@@ -7,6 +7,7 @@ use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
 use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{DebugTimer};
+use indicatif::ProgressBar;
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {
@@ -52,7 +53,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0512_1938".to_string(),
+            name: "fa_pq_REF_0513_1703".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -97,6 +98,8 @@ impl FAProductQuantization {
     fn train_residuals_codebook(&self, residuals_training_data: &ArrayView2<f64>, m_subspaces: usize, k_centroids: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
+        println!("Start Train residuals codebook");
+        let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
         for m in 0..m_subspaces {
             let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
             let partial_data = residuals_training_data.slice(s![.., partial_dim.0..partial_dim.1]);
@@ -104,17 +107,20 @@ impl FAProductQuantization {
             let rng = thread_rng();
             let centroids = kmeans(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
 
-            
             for (k, centroid) in centroids.iter().enumerate() {
                 residuals_codebook[[m,k]] = centroid.point.clone();
             }
+            bar_m_subspaces.inc(1);
         }
+        bar_m_subspaces.finish();
         residuals_codebook
     }
 
     fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>) -> Array1<Array1<usize>> {
         // Residuals Encoding
+        println!("Started residual_encoding");
         let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
+        let bar_residuals = ProgressBar::new(residuals.nrows() as u64);
         for n in 0..residuals.nrows() {
             for m in 0..residuals_codebook.nrows() {
                 let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
@@ -132,13 +138,17 @@ impl FAProductQuantization {
                 }
                 pqcodes[n][m] = best_index;
             }
+            bar_residuals.inc(1);
         }
+        bar_residuals.finish();
         pqcodes
     }
 
     fn compute_coarse_quantizers(&self, centroids: &Vec::<Centroid>, residual_pq_codes: &Array1<Array1<usize>>, m_centroids: usize) -> Vec::<PQCentroid> {
         // Compute coarse quantizer for centroids with pq codes
         let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
+        println!("Stared compute_coarse_quantizers");
+        let bar_centroids = ProgressBar::new(centroids.len() as u64);
         for centroid in centroids.iter() {
             let mut pqchilderen =  HashMap::<usize, Vec::<usize>>::new();
             for index in centroid.indexes.iter() {
@@ -147,7 +157,9 @@ impl FAProductQuantization {
             }
             let pqc = PQCentroid{id: centroid.id, point: centroid.point.to_owned(), children: pqchilderen};
             coarse_quantizer.push(pqc);
+            bar_centroids.inc(1);
         }
+        bar_centroids.finish();
         coarse_quantizer
     }
 
@@ -193,15 +205,37 @@ impl AlgorithmImpl for FAProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
         let rng = thread_rng();
+        let mut t = DebugTimer::start("fit run kmeans");
         let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+        t.stop();
+        t.print_as_secs();
 
+        let mut t = DebugTimer::start("fit compute_residuals");
         let residuals = self.compute_residuals(&centroids, dataset);
+        t.stop();
+        t.print_as_secs();
+
         // Residuals PQ Training data
         let rng = thread_rng();
+        let mut t = DebugTimer::start("fit random_traindata");
         let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
+        t.stop();
+        t.print_as_secs();
+        
+        let mut t = DebugTimer::start("fit train_residuals_codebook");
         self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
+        t.stop();
+        t.print_as_secs();
+        
+        let mut t = DebugTimer::start("fit residual_encoding");
         let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
+        t.stop();
+        t.print_as_secs();
+        
+        let mut t = DebugTimer::start("fit compute_coarse_quantizers");
         self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
+        t.stop();
+        t.print_as_secs();
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
@@ -234,13 +268,6 @@ impl AlgorithmImpl for FAProductQuantization {
             // Read off the distance using the distance table           
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
-                // if best_quantizer_candidates.len() < heap_size {
-                //     best_quantizer_candidates.push((neg_distance,*child_key));
-                // } else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
-                //     best_quantizer_candidates.pop();
-                //     best_quantizer_candidates.push((neg_distance,*child_key));
-                // }
-            // }
                 best_quantizer_candidates.push((neg_distance,*child_key));
             }
         }
@@ -257,13 +284,13 @@ impl AlgorithmImpl for FAProductQuantization {
             } else if neg_distance < best_candidates.peek().unwrap().0 {
                 best_candidates.pop();
                 best_candidates.push((neg_distance, index));
-            } else {
             }
         }
         
         
         // Pop all candidate indexes from heap and reverse list.
-        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
+        let min_val = std::cmp::min(results_per_query, best_candidates.len());
+        let mut best_n_candidates: Vec<usize> =  (0..min_val).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
         best_n_candidates
     }
