@@ -53,7 +53,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0513_1703".to_string(),
+            name: "fa_pq_REF_0514_1849".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -171,8 +171,8 @@ impl FAProductQuantization {
             let distance = OrderedFloat(cosine_similarity(query, &centroid.point.view()));
             best_coarse_quantizers.push((distance, centroid.id));
         }
-
-        let result_indexes: Vec::<usize> = (0..clusters_to_search).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
+        let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
+        let result_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
         result_indexes
     }
 }
@@ -246,7 +246,7 @@ impl AlgorithmImpl for FAProductQuantization {
         
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         // Lets find matches in best coarse_quantizers
-        let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -274,7 +274,7 @@ impl AlgorithmImpl for FAProductQuantization {
         
 
         // Rescore with true distance value of query and candidates
-        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
             let datapoint = dataset.slice(s![index,..]);
@@ -286,11 +286,18 @@ impl AlgorithmImpl for FAProductQuantization {
                 best_candidates.push((neg_distance, index));
             }
         }
+
+        // Remove worst elements from heap, and extract best index worst to best.
+        let pop_off = best_candidates.len()-results_per_query;
+        let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
+        for i in 0..best_candidates.len() {
+            let c = best_candidates.pop();
+            if i >= pop_off {
+                best_n_candidates.push(c.unwrap().1);
+            }
+        }
         
-        
-        // Pop all candidate indexes from heap and reverse list.
-        let min_val = std::cmp::min(results_per_query, best_candidates.len());
-        let mut best_n_candidates: Vec<usize> =  (0..min_val).map(|_| best_candidates.pop().unwrap().1).collect();
+        // Invert best indexes to get best to worst
         best_n_candidates.reverse();
         best_n_candidates
     }
@@ -369,9 +376,10 @@ mod product_quantization_tests {
         let pq = FAProductQuantization::new(false,  &dataset1().view(), 3, 1, 10, 20, 200);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
-        assert!(partial_dataset == arr2(&[[0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-                                            [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
-                                            [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
-                                            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5]]));
+        println!("{}",partial_dataset);
+        assert!(partial_dataset == arr2(&[[5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
+                                            [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
+                                            [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
+                                            [4.0, 4.1, 4.2, 4.3, 4.4, 4.5]]));
     }
 }

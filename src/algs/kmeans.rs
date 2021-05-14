@@ -3,6 +3,7 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
+use indicatif::ProgressBar;
 
 pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
@@ -12,12 +13,18 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
+    println!("Started kmeans Init");
+    let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
     for (k, index) in unique_indexes.iter().enumerate() {
         let datapoint = dataset.slice(s![*index,..]);
         centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
+        bar_unique_indexes.inc(1);
     }
+    bar_unique_indexes.finish();
 
     // Repeat
+    println!("Started running run_parameters");
+    let bar_max_iterations = ProgressBar::new(max_iterations as u64);
     let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
     for iterations in 0..max_iterations  {
         if centroids == last_centroids {
@@ -66,7 +73,9 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 }
             }
         }
+        bar_max_iterations.inc(1);
     }
+    bar_max_iterations.finish();
     centroids
 }
 
