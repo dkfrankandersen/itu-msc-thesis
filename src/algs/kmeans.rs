@@ -1,4 +1,4 @@
-use ndarray::{Array,ArrayView2, s};
+use ndarray::{Array,ArrayView2, s, parallel::prelude::*};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
@@ -65,6 +65,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                         centroid.point[i] += x;
                     }
                 }
+
 
                 // Divide by indexes to get mean
                 let centroid_indexes_count = centroid.indexes.len() as f64;
