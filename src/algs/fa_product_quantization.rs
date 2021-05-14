@@ -53,7 +53,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0514_1849".to_string(),
+            name: "fa_pq_REF_0514_1903".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -98,7 +98,7 @@ impl FAProductQuantization {
     fn train_residuals_codebook(&self, residuals_training_data: &ArrayView2<f64>, m_subspaces: usize, k_centroids: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
-        println!("Start Train residuals codebook");
+        println!("Started Train residuals codebook");
         let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
         for m in 0..m_subspaces {
             let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
