@@ -1,9 +1,12 @@
-use ndarray::{Array,ArrayView2, s, parallel::prelude::*};
+use ndarray::{Array,ArrayView2, s, parallel::prelude::*, Axis};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
 use indicatif::ProgressBar;
+use crate::util::{DebugTimer};
+use std::collections::{BinaryHeap, HashMap};
+use std::thread;
 
 pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
@@ -14,6 +17,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
     println!("Started kmeans Init");
+    let mut t = DebugTimer::start("kmeans init");
     let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
     for (k, index) in unique_indexes.iter().enumerate() {
         let datapoint = dataset.slice(s![*index,..]);
@@ -21,6 +25,8 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         bar_unique_indexes.inc(1);
     }
     bar_unique_indexes.finish();
+    t.stop();
+    t.print_as_millis();
 
     // Repeat
     println!("Started running run_parameters");
@@ -32,17 +38,24 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             break;
         }
 
+        let mut t = DebugTimer::start("kmeans clone");
         last_centroids = centroids.clone();
+        t.stop();
+        t.print_as_millis();
 
         // Remove centroid children
+        let mut t = DebugTimer::start("kmeans indexes clear");
         centroids.iter_mut().for_each(|c| c.indexes.clear());
-        
+        t.stop();
+        t.print_as_nanos();
+
         // Assign
+        let mut t = DebugTimer::start("kmeans assign");
         for (index, datapoint) in dataset.outer_iter().enumerate() {
             let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
             let mut best_index: usize = 0;
             for centroid in centroids.iter() {
-                let distance = OrderedFloat(cosine_similarity(&centroid.point.view() , &datapoint));
+                let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &datapoint));
                 if distance > best_distance { 
                     best_distance = distance;
                     best_index = centroid.id; 
@@ -50,8 +63,72 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             }
             centroids[best_index].indexes.push(index);
         }
+
+        // let mut cen_points = Vec::new();
+        // for centroid in centroids.iter() {
+        //     cen_points.push(centroid.point.clone());
+        // }
+
+        // let mut handles = Vec::new();
+        // const NTHREADS: usize = 1;
+        // let max_val = dataset.nrows();
+        // let chunk = max_val/NTHREADS;
+
+        // let mut chunks = Vec::<(usize,usize)>::new();
+        // for i in 0..NTHREADS {
+        //     let from = chunk*i;
+        //     let mut to = from+chunk;
+        //     if max_val-to < chunk {
+        //         to = max_val;
+        //     }
+        //     chunks.push((from, to));
+        // }
+        // for (f, t) in chunks.into_iter() {
+        //     // Spin up another thread
+        //     let points = cen_points.clone();
+        //     let data = dataset.to_owned();
+        //     handles.push(thread::spawn(move || {
+        //         let mut hmap = HashMap::<usize, Vec::<usize>>::new();
+        //         for index in f..t {
+        //             let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
+        //             let mut best_index: usize = 0;
+        //             for (centroid_index, point) in points.iter().enumerate() {
+        //                 let distance = OrderedFloat(cosine_similarity(&point.view(), &data.slice(s![index,..])));
+        //                 if distance > best_distance { 
+        //                     best_distance = distance;
+        //                     best_index = centroid_index; 
+        //                 }
+        //             }
+        //             if hmap.get(&best_index).is_some() {
+        //                 hmap.get_mut(&best_index).unwrap().push(index);
+        //             } else {
+        //                 hmap.insert(best_index, Vec::new());
+        //             }
+        //         }
+        //         hmap
+        //     }));
+        // }
+
+        // for handle in handles {
+        //     // Wait for the thread to finish. Returns a result.
+        //     let hmap = handle.join();
+        //     match hmap {
+        //         Ok(hm) => {
+        //             for (key, val) in hm.iter() {
+        //                 for v in val.iter() {
+        //                     centroids[*key].indexes.push(*v);
+        //                 }
+        //             }
+        //         }
+        //         Err(e) => {panic!("kmeans threading failed {:?}", e)}
+        //     }
+            
+        // }
+        t.stop();
+        t.print_as_millis();
         
         // Update
+        let mut t = DebugTimer::start("kmeans update");
         for centroid in centroids.iter_mut() {
             if centroid.indexes.len() > 0 {
 
@@ -66,7 +143,6 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                     }
                 }
 
-
                 // Divide by indexes to get mean
                 let centroid_indexes_count = centroid.indexes.len() as f64;
                 for i in 0..datapoint_dimension {  
@@ -74,6 +150,9 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 }
             }
         }
+        t.stop();
+        t.print_as_millis();
+        println!("");
         bar_max_iterations.inc(1);
     }
     bar_max_iterations.finish();

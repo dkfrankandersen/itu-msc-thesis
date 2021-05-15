@@ -121,14 +121,15 @@ then
 elif [ $run_type = 't' ]
 then
 
-    cargo run --release $METRIC $DATASET bruteforce [10]
+    # cargo run --release $METRIC $DATASET bruteforce [10]
     # cargo run --release $METRIC $DATASET kmeans [10] [64 200] [1 2 3 4 5 10 20 40 64]
     # cargo run --release $METRIC $DATASET kmeans [10] [128 200] [1 2 3 4 5 10 20 40 100 128]
     # cargo run --release $METRIC $DATASET kmeans [10] [256 200] [1 2 3 4 5 10 20 40 100 200 256]
     # cargo run --release $METRIC $DATASET kmeans [10] [512 200] [1 2 3 4 5 10 20 40 100 200 400 512]
     # cargo run --release $METRIC $DATASET kmeans [10] [1024 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1024]
     # cargo run --release $METRIC $DATASET kmeans [10] [2048 200] [1 2 3 4 5 10 20 40 50 100 200 400 800 1600 2048]
-    cargo run --release $METRIC $DATASET kmeans [10] [100 200] [1 2 4 8 30 40 45 50 55 60 65 75 90 110]
+    cargo run --release $METRIC $DATASET kmeans [10] [100 200] [[1] [2] [4] [8] [30] [40] [45] [50] [55] [60] [65] [75] [90] [110]]
+    # cargo run --release $METRIC $DATASET kmeans [10] [100 200] [[1]]
     cargo run --release $METRIC $DATASET pq [10] [10 100 2000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120]]
     # cargo run --release $METRIC $DATASET pq [10] [100 128 2000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
     # cargo run --release $METRIC $DATASET pq [10] [100 256 2000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
