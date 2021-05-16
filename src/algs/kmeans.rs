@@ -7,6 +7,7 @@ use indicatif::ProgressBar;
 use crate::util::{DebugTimer};
 use std::collections::{BinaryHeap, HashMap};
 use std::thread;
+use std::sync::Arc;
 
 pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
@@ -29,28 +30,30 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     t.print_as_millis();
 
     // Repeat
-    println!("Started running run_parameters");
+    println!("Started kmeans Repeat");
+    let mut t = DebugTimer::start("kmeans Repeat");
     let bar_max_iterations = ProgressBar::new(max_iterations as u64);
     let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
+    let dataset_arc = Arc::new(dataset.to_owned());
     for iterations in 0..max_iterations  {
         if centroids == last_centroids {
             if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
             break;
         }
 
-        let mut t = DebugTimer::start("kmeans clone");
+        // let mut t = DebugTimer::start("kmeans clone");
         last_centroids = centroids.clone();
-        t.stop();
-        t.print_as_millis();
+        // t.stop();
+        // t.print_as_millis();
 
         // Remove centroid children
-        let mut t = DebugTimer::start("kmeans indexes clear");
+        // let mut t = DebugTimer::start("kmeans indexes clear");
         centroids.iter_mut().for_each(|c| c.indexes.clear());
-        t.stop();
-        t.print_as_nanos();
+        // t.stop();
+        // t.print_as_nanos();
 
         // Assign
-        let mut t = DebugTimer::start("kmeans assign");
+        // let mut t = DebugTimer::start("kmeans assign");
         // for (index, datapoint) in dataset.outer_iter().enumerate() {
         //     let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
         //     let mut best_index: usize = 0;
@@ -65,10 +68,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         // }
 
         let mut cen_points = Vec::new();
-        for (i,centroid) in centroids.iter().enumerate() {
-            if i != centroid.id {
-                panic!("centroid.id NOT MATCHING");
-            }
+        for centroid in centroids.iter() {
             cen_points.push(centroid.point.to_owned());
         }
 
@@ -86,20 +86,17 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             }
             chunks.push((from, to));
         }
-        // println!("cen_points {:?}", cen_points.len());
-        // println!("chunks: {:?}", chunks);
-        // panic!("OHHHH");
+        let cen_points_arc = Arc::new(cen_points);
         for (f, t) in chunks.into_iter() {
-            // Spin up another thread
-            let points = cen_points.to_owned();
-            let data = dataset.to_owned();
+            let points = Arc::clone(&cen_points_arc);
+            let dataset_arc = Arc::clone(&dataset_arc);
             handles.push(thread::spawn(move || {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                 for index in f..t {
                     let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
                     let mut best_index: usize = 0;
                     for (centroid_index, point) in points.iter().enumerate() {
-                        let distance = OrderedFloat(cosine_similarity(&point.view(), &data.slice(s![index,..])));
+                        let distance = OrderedFloat(cosine_similarity(&point.view(), &dataset_arc.slice(s![index,..])));
                         if distance > best_distance { 
                             best_distance = distance;
                             best_index = centroid_index; 
@@ -119,11 +116,9 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             // Wait for the thread to finish. Returns a result.
             let hmap = handle.join();
             match hmap {
-                Ok(hm) => {
-                    for (key, val) in hm.iter() {
-                        for v in val.iter() {
-                            centroids[*key].indexes.push(*v);
-                        }
+                Ok(mut hm) => {
+                    for (key, val) in hm.iter_mut() {
+                        centroids[*key].indexes.append(val);
                     }
                 }
                 Err(e) => {panic!("kmeans threading failed {:?}", e)}
