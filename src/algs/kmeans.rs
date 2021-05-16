@@ -1,11 +1,11 @@
-use ndarray::{Array,ArrayView2, s, parallel::prelude::*, Axis};
+use ndarray::{Array,ArrayView2, s};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
 use indicatif::ProgressBar;
 use crate::util::{DebugTimer};
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{HashMap};
 use std::thread;
 use std::sync::Arc;
 
@@ -67,11 +67,8 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         //     centroids[best_index].indexes.push(index);
         // }
 
-        let mut cen_points = Vec::new();
-        for centroid in centroids.iter() {
-            cen_points.push(centroid.point.to_owned());
-        }
-
+        
+        let centroids_arc = Arc::new(centroids.clone());
         let mut handles = Vec::new();
         const NTHREADS: usize = 4;
         let max_val = dataset.nrows();
@@ -86,17 +83,16 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             }
             chunks.push((from, to));
         }
-        let cen_points_arc = Arc::new(cen_points);
         for (f, t) in chunks.into_iter() {
-            let points = Arc::clone(&cen_points_arc);
+            let centroids_arc = Arc::clone(&centroids_arc);
             let dataset_arc = Arc::clone(&dataset_arc);
             handles.push(thread::spawn(move || {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                 for index in f..t {
                     let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
                     let mut best_index: usize = 0;
-                    for (centroid_index, point) in points.iter().enumerate() {
-                        let distance = OrderedFloat(cosine_similarity(&point.view(), &dataset_arc.slice(s![index,..])));
+                    for (centroid_index, centroid) in centroids_arc.iter().enumerate() {
+                        let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &dataset_arc.slice(s![index,..])));
                         if distance > best_distance { 
                             best_distance = distance;
                             best_index = centroid_index; 
