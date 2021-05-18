@@ -35,6 +35,21 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let bar_max_iterations = ProgressBar::new(max_iterations as u64);
     let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let dataset_arc = Arc::new(dataset.to_owned());
+
+    const NTHREADS: usize = 4;
+    let max_val = dataset.nrows();
+    let chunk = max_val/NTHREADS;
+
+    let mut chunks = Vec::<(usize,usize)>::new();
+    for i in 0..NTHREADS {
+        let from = chunk*i;
+        let mut to = from+chunk;
+        if max_val-to < chunk {
+            to = max_val;
+        }
+        chunks.push((from, to));
+    }
+
     for iterations in 0..max_iterations  {
         if centroids == last_centroids {
             if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
@@ -70,20 +85,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         
         let centroids_arc = Arc::new(centroids.clone());
         let mut handles = Vec::new();
-        const NTHREADS: usize = 4;
-        let max_val = dataset.nrows();
-        let chunk = max_val/NTHREADS;
-
-        let mut chunks = Vec::<(usize,usize)>::new();
-        for i in 0..NTHREADS {
-            let from = chunk*i;
-            let mut to = from+chunk;
-            if max_val-to < chunk {
-                to = max_val;
-            }
-            chunks.push((from, to));
-        }
-        for (f, t) in chunks.into_iter() {
+        for (f, t) in chunks.clone().into_iter() {
             let centroids_arc = Arc::clone(&centroids_arc);
             let dataset_arc = Arc::clone(&dataset_arc);
             handles.push(thread::spawn(move || {

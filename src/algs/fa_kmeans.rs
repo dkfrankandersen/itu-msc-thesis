@@ -27,7 +27,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_REF_0516_2130".to_string(),
+                        name: "fa_kmeans_REF_0518_0856".to_string(),
                         metric: "angular".to_string(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
