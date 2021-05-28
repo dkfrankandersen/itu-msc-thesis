@@ -3,6 +3,11 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
+use indicatif::ProgressBar;
+use crate::util::{DebugTimer};
+use std::collections::{HashMap};
+use std::thread;
+use std::sync::Arc;
 
 pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
@@ -12,37 +17,116 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
+    println!("Started kmeans Init");
+    let mut t = DebugTimer::start("kmeans init");
+    let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
     for (k, index) in unique_indexes.iter().enumerate() {
         let datapoint = dataset.slice(s![*index,..]);
         centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
+        bar_unique_indexes.inc(1);
     }
+    bar_unique_indexes.finish();
+    t.stop();
+    t.print_as_millis();
 
     // Repeat
+    println!("Started kmeans Repeat");
+    let mut t = DebugTimer::start("kmeans Repeat");
+    let bar_max_iterations = ProgressBar::new(max_iterations as u64);
     let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
+    let dataset_arc = Arc::new(dataset.to_owned());
+
+    const NTHREADS: usize = 4;
+    let max_val = dataset.nrows();
+    let chunk = max_val/NTHREADS;
+
+    let mut chunks = Vec::<(usize,usize)>::new();
+    for i in 0..NTHREADS {
+        let from = chunk*i;
+        let mut to = from+chunk;
+        if max_val-to < chunk {
+            to = max_val;
+        }
+        chunks.push((from, to));
+    }
+
     for iterations in 0..max_iterations  {
         if centroids == last_centroids {
             if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
             break;
         }
 
+        // let mut t = DebugTimer::start("kmeans clone");
         last_centroids = centroids.clone();
+        // t.stop();
+        // t.print_as_millis();
 
         // Remove centroid children
+        // let mut t = DebugTimer::start("kmeans indexes clear");
         centroids.iter_mut().for_each(|c| c.indexes.clear());
-        
+        // t.stop();
+        // t.print_as_nanos();
+
         // Assign
-        for (index, datapoint) in dataset.outer_iter().enumerate() {
-            let mut best_match: (f64, usize) = (f64::NEG_INFINITY, 0);
-            for centroid in centroids.iter() {
-                let distance = cosine_similarity(&centroid.point.view() , &datapoint);
-                if OrderedFloat(distance) > OrderedFloat(best_match.0) { 
-                    best_match = (distance, centroid.id); 
+        // let mut t = DebugTimer::start("kmeans assign");
+        // for (index, datapoint) in dataset.outer_iter().enumerate() {
+        //     let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
+        //     let mut best_index: usize = 0;
+        //     for centroid in centroids.iter() {
+        //         let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &datapoint));
+        //         if distance > best_distance { 
+        //             best_distance = distance;
+        //             best_index = centroid.id; 
+        //         }
+        //     }
+        //     centroids[best_index].indexes.push(index);
+        // }
+
+        
+        let centroids_arc = Arc::new(centroids.clone());
+        let mut handles = Vec::new();
+        for (f, t) in chunks.clone().into_iter() {
+            let centroids_arc = Arc::clone(&centroids_arc);
+            let dataset_arc = Arc::clone(&dataset_arc);
+            handles.push(thread::spawn(move || {
+                let mut hmap = HashMap::<usize, Vec::<usize>>::new();
+                for index in f..t {
+                    let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
+                    let mut best_index: usize = 0;
+                    for (centroid_index, centroid) in centroids_arc.iter().enumerate() {
+                        let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &dataset_arc.slice(s![index,..])));
+                        if distance > best_distance { 
+                            best_distance = distance;
+                            best_index = centroid_index; 
+                        }
+                    }
+                    if hmap.get(&best_index).is_some() {
+                        hmap.get_mut(&best_index).unwrap().push(index);
+                    } else {
+                        hmap.insert(best_index, vec!(index));
+                    }
                 }
-            }
-            centroids[best_match.1].indexes.push(index);
+                hmap
+            }));
         }
+
+        for handle in handles {
+            // Wait for the thread to finish. Returns a result.
+            let hmap = handle.join();
+            match hmap {
+                Ok(mut hm) => {
+                    for (key, val) in hm.iter_mut() {
+                        centroids[*key].indexes.append(val);
+                    }
+                }
+                Err(e) => {panic!("kmeans threading failed {:?}", e)}
+            }
+        }
+        t.stop();
+        t.print_as_millis();
         
         // Update
+        let mut t = DebugTimer::start("kmeans update");
         for centroid in centroids.iter_mut() {
             if centroid.indexes.len() > 0 {
 
@@ -64,7 +148,12 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 }
             }
         }
+        t.stop();
+        t.print_as_millis();
+        println!("");
+        bar_max_iterations.inc(1);
     }
+    bar_max_iterations.finish();
     centroids
 }
 
