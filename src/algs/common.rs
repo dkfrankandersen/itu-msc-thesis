@@ -1,5 +1,6 @@
 use ndarray::{Array1};
 use std::collections::{HashMap};
+use serde::{Serialize, Deserialize};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -8,7 +9,7 @@ pub struct Centroid {
     pub indexes: Vec::<usize>
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct PQCentroid {
     pub id: usize,
     pub point: Array1<f64>,

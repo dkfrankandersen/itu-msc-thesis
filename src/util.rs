@@ -40,17 +40,17 @@ impl DebugTimer {
 
     pub fn print_as_secs(&self) {
         let duration =  self.stop.unwrap().duration_since(self.start.unwrap()).as_secs();
-        println!("TimerDebug:  {} in {} s", self.msg, duration);
+        println!("DebugTimer:  {} in {} s", self.msg, duration);
     }
 
     pub fn print_as_millis(&self) {
         let duration =  self.stop.unwrap().duration_since(self.start.unwrap()).as_millis();
-        println!("TimerDebug:  {} in {} ms", self.msg, duration);
+        println!("DebugTimer:  {} in {} ms", self.msg, duration);
     }
 
     pub fn print_as_nanos(&self) {
         let duration =  self.stop.unwrap().duration_since(self.start.unwrap()).as_nanos();
-        println!("TimerDebug:  {} in {} ns", self.msg, duration);
+        println!("DebugTimer:  {} in {} ns", self.msg, duration);
     }
 
 }
