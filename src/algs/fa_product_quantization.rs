@@ -58,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0601_2107_bin".to_string(),
+            name: "fa_pq_REF_0601_2107_using_bin_limit".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -210,32 +210,43 @@ impl AlgorithmImpl for FAProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
         let fit_from_file = true;
-        let rng = thread_rng();
-        let mut t = DebugTimer::start("fit run kmeans");
-        let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
-        t.stop();
-        t.print_as_secs();
-
-        let mut t = DebugTimer::start("fit compute_residuals");
-        let residuals = self.compute_residuals(&centroids, dataset);
-        t.stop();
-        t.print_as_secs();
-
-        // Residuals PQ Training data
-        let rng = thread_rng();
-        let mut t = DebugTimer::start("fit random_traindata");
-        let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
-        t.stop();
-        t.print_as_secs();
-        
         let file_residuals_codebook = "saved_objects/residuals_codebook.bin";
-        if fit_from_file && Path::new(file_residuals_codebook).exists() {
+        let file_compute_coarse_quantizers = "saved_objects/compute_coarse_quantizers.bin";
+
+        // Load existing pre-computede data if exists
+        if fit_from_file && Path::new(file_compute_coarse_quantizers).exists() 
+                                && Path::new(file_residuals_codebook).exists() {
             let mut t = DebugTimer::start("fit train_residuals_codebook from file");
             let mut read_file = File::open(file_residuals_codebook).unwrap();
             self.residuals_codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
             t.print_as_secs();
+
+            let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
+            let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
+            self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
+            t.stop();
+            t.print_as_secs();
         } else {
+            let rng = thread_rng();
+            let mut t = DebugTimer::start("fit run kmeans");
+            let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+            t.stop();
+            t.print_as_secs();
+
+            let mut t = DebugTimer::start("fit compute_residuals");
+            let residuals = self.compute_residuals(&centroids, dataset);
+            t.stop();
+            t.print_as_secs();
+
+            // Residuals PQ Training data
+            let rng = thread_rng();
+            let mut t = DebugTimer::start("fit random_traindata");
+            let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
+            t.stop();
+            t.print_as_secs();
+            
+
             let mut t = DebugTimer::start("fit train_residuals_codebook");
             self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
             t.stop();
@@ -247,23 +258,14 @@ impl AlgorithmImpl for FAProductQuantization {
             serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
             t.stop();
             t.print_as_secs();
-        }
-        
-        
-        let mut t = DebugTimer::start("fit residual_encoding");
-        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
-        t.stop();
-        t.print_as_secs();
-        
-        let file_compute_coarse_quantizers = "saved_objects/compute_coarse_quantizers.bin";
 
-        if fit_from_file && Path::new(file_compute_coarse_quantizers).exists() {
-            let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
-            let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
-            self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
+            
+            
+            let mut t = DebugTimer::start("fit residual_encoding");
+            let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
             t.stop();
             t.print_as_secs();
-        } else {
+            
             let mut t = DebugTimer::start("fit compute_coarse_quantizers");
             self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
             t.stop();
@@ -313,7 +315,6 @@ impl AlgorithmImpl for FAProductQuantization {
                 } else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
                     best_quantizer_candidates.pop();
                     best_quantizer_candidates.push((neg_distance,*child_key));
-
                 }
             }
         }
