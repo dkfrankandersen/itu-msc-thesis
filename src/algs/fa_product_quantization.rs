@@ -58,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0601_2107_using_bin_limit".to_string(),
+            name: "fa_pq_REF_0602_1656".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -286,17 +286,29 @@ impl AlgorithmImpl for FAProductQuantization {
         let clusters_to_search = arguments[0];
         let heap_size = arguments[1];
         
+        let mut t = DebugTimer::start("Query: best_coarse_quantizers_indexes");
         let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        t.stop();
+        println!("");
+        t.print_as_nanos();
         // Lets find matches in best coarse_quantizers
+        let mut t_distance_table = DebugTimer::start("Query: Create a distance table");
+        let mut t_compute_residuals = DebugTimer::start("Query: Compute residuals");
+        let mut t_read_off = DebugTimer::start("Query: Read off the distance");
+
+        let mut t = DebugTimer::start("Query: best_quantizer_candidates");
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         for coarse_quantizer_index in best_coarse_quantizers.iter() {
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
             // Compute residuals between query and coarse_quantizer
+            t_compute_residuals.stopwatch_start();
             let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
+            t_compute_residuals.stopwatch_stop();
 
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
+            t_distance_table.stopwatch_start();
             let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
             for m in 0..self.m {
                 let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
@@ -306,8 +318,10 @@ impl AlgorithmImpl for FAProductQuantization {
                     distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
                 }
             }
+            t_distance_table.stopwatch_stop();
 
-            // Read off the distance using the distance table           
+            // Read off the distance using the distance table
+            t_read_off.stopwatch_start();
             for (child_key, child_values) in best_coares_quantizer.children.iter() {
                 let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
                 if best_quantizer_candidates.len() < heap_size {
@@ -317,10 +331,16 @@ impl AlgorithmImpl for FAProductQuantization {
                     best_quantizer_candidates.push((neg_distance,*child_key));
                 }
             }
+            t_read_off.stopwatch_stop();
         }
-        
+        t.stop();
+        t.print_as_nanos();
+        t_compute_residuals.print_stopwatch_as_nanos();
+        t_distance_table.print_stopwatch_as_nanos();
+        t_read_off.print_stopwatch_as_nanos();
 
         // Rescore with true distance value of query and candidates
+        let mut t = DebugTimer::start("Query: Rescore with true distance");
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
@@ -333,8 +353,11 @@ impl AlgorithmImpl for FAProductQuantization {
                 best_candidates.push((neg_distance, index));
             }
         }
+        t.stop();
+        t.print_as_nanos();
 
         // Remove worst elements from heap, and extract best index worst to best.
+        let mut t = DebugTimer::start("Query: Remove worst elements");
         let pop_off = best_candidates.len()-results_per_query;
         let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
         for i in 0..best_candidates.len() {
@@ -343,6 +366,8 @@ impl AlgorithmImpl for FAProductQuantization {
                 best_n_candidates.push(c.unwrap().1);
             }
         }
+        t.stop();
+        t.print_as_nanos();
         
         // Invert best indexes to get best to worst
         best_n_candidates.reverse();
