@@ -1,17 +1,17 @@
-use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap, HashMap};
-use rand::{prelude::*};
-pub use ordered_float::*;
+use std::fs::File;
+use std::path::Path;
+use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
 use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{DebugTimer};
+use rand::{prelude::*};
+pub use ordered_float::*;
 use indicatif::ProgressBar;
-use serde::{Serialize, Deserialize};
-use std::fs::File;
 use bincode::serialize_into;
-use std::path::Path;
+use rayon::prelude::*;
 
 
 #[derive(Debug, Clone)]
@@ -58,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0602_1656".to_string(),
+            name: "fa_pq_REF_0603_0949".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -170,12 +170,17 @@ impl FAProductQuantization {
 
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, clusters_to_search: usize) -> Vec::<usize> {
         // Find best coarse_quantizer
-        let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        // let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
     
-        for centroid in coarse_quantizer.iter() {
-            let distance = OrderedFloat(cosine_similarity(query, &centroid.point.view()));
-            best_coarse_quantizers.push((distance, centroid.id));
-        }
+        // for centroid in coarse_quantizer.iter() {
+        //     let distance = OrderedFloat(cosine_similarity(query, &centroid.point.view()));
+        //     best_coarse_quantizers.push((distance, centroid.id));
+        // }
+        
+        let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> = coarse_quantizer.par_iter().map(|centroid| 
+            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)
+        ).collect();
+
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let result_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
         result_indexes
