@@ -31,8 +31,10 @@ impl PQCentroid {
         query-self.point.clone()
     }
 
-    pub fn compute_distance_table(&self, m_dim: usize, k_dim: usize, residual_point: Array1::<f64>, residuals_codebook: &Array2::<Array1::<f64>>) -> Array2::<f64> {
+    pub fn compute_distance_table(&self, residual_point: &Array1::<f64>, residuals_codebook: &Array2::<Array1::<f64>>) -> Array2::<f64> {
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
+        let m_dim = residuals_codebook.nrows();
+        let k_dim = residuals_codebook.ncols();
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
         let dim = residual_point.len()/m_dim;
         for m in 0..m_dim {
