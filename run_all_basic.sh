@@ -123,7 +123,10 @@ then
 
     # cargo run --release $METRIC $DATASET bruteforce [10]
     # cargo run --release $METRIC $DATASET kmeans [10] [100 200] [[1] [2] [4] [8] [30] [40] [45] [50] [55] [60] [65] [75] [90] [110]]
-    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 255 200] [[30 120]]
+    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 256 200] [[30 120] [30 340] [30 680]]
+    # cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 256 200] [[30 120]]
+    # cargo run --release $METRIC $DATASET pq [10] [50 2000 125000 256 200] [[30 120]]
+    # cargo run --release $METRIC $DATASET pq [10] [50 2000 250000 256 200] [[30 120]]
     # cargo run --release $METRIC $DATASET pq [10] [100 1024 2000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
 
 elif [ $run_type = 'full' ]

@@ -66,7 +66,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0605_1545_ref".to_string(),
+            name: "fa_pq_REF_0607_0853_ref".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -386,16 +386,16 @@ impl AlgorithmImpl for FAProductQuantization {
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
         
-        let mut t1 = DebugTimer::start("query_type1");
-        let query_type1 = self.query_type1(dataset, query, results_per_query, arguments);
-        t1.stop();
-        let mut t2 = DebugTimer::start("query_type2");
-        let query_type2 = self.query_type2(dataset, query, results_per_query, arguments);
-        t2.stop();
-        t1.print_as_nanos();
-        t2.print_as_nanos();
-        println!("Equal {}", query_type1==query_type2);
-        query_type1
+        // let mut t1 = DebugTimer::start("query_type1");
+        // let query_type1 = self.query_type1(dataset, query, results_per_query, arguments);
+        // t1.stop();
+        // let mut t2 = DebugTimer::start("query_type2");
+        let query_type = self.query_type2(dataset, query, results_per_query, arguments);
+        // t2.stop();
+        // t1.print_as_nanos();
+        // t2.print_as_nanos();
+        // println!("Equal {}", query_type1==query_type2);
+        query_type
     }
 }
 
