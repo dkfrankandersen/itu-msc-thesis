@@ -51,10 +51,10 @@ impl PQCentroid {
         distance_table
     }
 
-    pub fn distance_from_indexes(&self, distance_table: &Array2<f64>, child_values: &Vec::<usize>) -> f64 {
+    pub fn distance_from_indexes(&self, distance_table: &Array2::<f64>, child_values: &Vec::<usize>) -> f64 {
         let mut distance: f64 = 0.;
         for (m, k) in child_values.iter().enumerate() {
-            distance += distance_table[[m, *k]];
+            distance += &distance_table[[m, *k]];
         }
         distance
     }
