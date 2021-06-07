@@ -66,7 +66,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0607_1743_ref".to_string(),
+            name: "fa_pq_REF_0607_1831_ref".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -224,8 +224,7 @@ impl FAProductQuantization {
         // Rescore with true distance value of query and candidates
         let mut t = DebugTimer::start("best_candidates");
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
-        for candidate in candidates_to_rescore.iter() {
-            let index = candidate.1;
+        for (_,index) in candidates_to_rescore.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
             let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
             if best_candidates.len() < results_per_query {
@@ -238,15 +237,11 @@ impl FAProductQuantization {
         t.stop();
         t.print_as_nanos();
 
-        // Remove worst elements from heap, and extract best index worst to best.
-        let mut t = DebugTimer::start("best_n_candidates");
+        // Remove elements from heap, and extract index worst to best.
         let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
-        for _ in 0..best_candidates.len() {
-            let c = best_candidates.pop();
-            best_n_candidates.push(c.unwrap().1);
+        while let Some((_,index)) = best_candidates.pop() {
+            best_n_candidates.push(index);
         }
-        t.stop();
-        t.print_as_nanos();
       
         // Invert best indexes to get best to worst
         best_n_candidates.reverse();
