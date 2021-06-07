@@ -66,7 +66,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0607_0853_ref".to_string(),
+            name: "fa_pq_REF_0607_1053_ref".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -202,7 +202,7 @@ impl FAProductQuantization {
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
             
             // Compute residuals between query and coarse_quantizer
-            let residual_point = best_coares_quantizer.compute_residual(query.to_owned());
+            let residual_point = best_coares_quantizer.compute_residual(query);
 
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
             let distance_table = best_coares_quantizer.compute_distance_table(&residual_point, &self.residuals_codebook);
@@ -246,31 +246,38 @@ impl FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         let heap_size = arguments[1];
-        
+        let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
         let best_coarse_quantizers_indexes = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+        t.stop();
+        t.print_as_nanos();
 
-        // Lets find matches in best coarse_quantizers
-        let collect_best_quantizers: Vec::<PQCentroid> = best_coarse_quantizers_indexes.into_par_iter().map(|index| {
-            let best_coares_quantizer = self.coarse_quantizer[index].clone();
-            best_coares_quantizer
-        }).collect();
-
-        let candidates_per_quantizers: Vec::<_> = collect_best_quantizers.par_iter().map(|quantizer| {
-            let residual_point = quantizer.compute_residual(query.to_owned());
-            let distance_table = quantizer.compute_distance_table(&residual_point, &self.residuals_codebook);
-            let dist_and_keys = quantizer.approximated_distances_with_keys(&distance_table);
-            let candidates = quantizer.approximated_candidates(dist_and_keys, heap_size);
+        // Lets find matches in best candidates for coarse_quantizers
+        let mut t = DebugTimer::start("collect_best_quantizers_new");
+        let candidates_per_quantizers: Vec::<_> = best_coarse_quantizers_indexes.into_par_iter().map(|index| {
+            let residual_point = self.coarse_quantizer[index].compute_residual(query);
+            let distance_table = self.coarse_quantizer[index].compute_distance_table(&residual_point, &self.residuals_codebook);
+            let dist_and_keys = self.coarse_quantizer[index].approximated_distances_with_keys(&distance_table);
+            let candidates = self.coarse_quantizer[index].approximated_candidates(dist_and_keys, heap_size);
             candidates
         }).collect();
+        t.stop();
+        t.print_as_nanos();
 
+        let mut t = DebugTimer::start("best_quantizer_candidates");
         let mut best_quantizer_candidates: BinaryHeap::<_> = candidates_per_quantizers.into_par_iter().flatten().collect();
+        t.stop();
+        t.print_as_nanos();
 
         // Remove worst candidates
+        let mut t = DebugTimer::start("Remove worst candidates");
         while best_quantizer_candidates.len() > heap_size {
                 best_quantizer_candidates.pop();
         }
+        t.stop();
+        t.print_as_nanos();
 
         // Rescore with true distance value of query and candidates
+        let mut t = DebugTimer::start("best_candidates");
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for candidate in best_quantizer_candidates.iter() {
             let index = candidate.1;
@@ -283,13 +290,18 @@ impl FAProductQuantization {
                 best_candidates.push((neg_distance, index));
             }
         }
+        t.stop();
+        t.print_as_nanos();
 
         // Remove worst elements from heap, and extract best index worst to best.
+        let mut t = DebugTimer::start("best_n_candidates");
         let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
         for _ in 0..best_candidates.len() {
             let c = best_candidates.pop();
             best_n_candidates.push(c.unwrap().1);
         }
+        t.stop();
+        t.print_as_nanos();
         
         // Invert best indexes to get best to worst
         best_n_candidates.reverse();

@@ -1,4 +1,4 @@
-use ndarray::{Array, Array1, Array2, s};
+use ndarray::{Array, Array1, Array2, s, ArrayView1};
 use std::collections::{BinaryHeap, HashMap};
 use serde::{Serialize, Deserialize};
 use rayon::prelude::*;
@@ -26,9 +26,9 @@ unsafe impl Sync for PQCentroid {}
 
 
 impl PQCentroid {
-    pub fn compute_residual(&self, query: Array1<f64>) -> Array1<f64> {
+    pub fn compute_residual(&self, query: &ArrayView1<f64>) -> Array1<f64> {
         // Compute residuals between query and coarse_quantizer
-        query-self.point.clone()
+        query-&self.point
     }
 
     pub fn compute_distance_table(&self, residual_point: &Array1::<f64>, residuals_codebook: &Array2::<Array1::<f64>>) -> Array2::<f64> {
