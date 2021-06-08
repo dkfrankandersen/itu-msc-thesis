@@ -8,23 +8,23 @@ use crate::util::{DebugTimer};
 use std::collections::{HashMap};
 use std::thread;
 use std::sync::Arc;
+use rayon::prelude::*;
 
 pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
     let datapoint_dimension = dataset.ncols();
 
     // Init
-    let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
+    // let mut centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
     println!("Started kmeans Init");
     let mut t = DebugTimer::start("kmeans init");
     let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
-    for (k, index) in unique_indexes.iter().enumerate() {
-        let datapoint = dataset.slice(s![*index,..]);
-        centroids.push(Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()});
-        bar_unique_indexes.inc(1);
-    }
+    let mut centroids: Vec::<Centroid> = unique_indexes.into_par_iter().enumerate().map(|(k, index)| {
+        let datapoint = dataset.slice(s![index,..]);
+        Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()}
+    }).collect();
     bar_unique_indexes.finish();
     t.stop();
     t.print_as_millis();
@@ -56,16 +56,10 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
             break;
         }
 
-        // let mut t = DebugTimer::start("kmeans clone");
         last_centroids = centroids.clone();
-        // t.stop();
-        // t.print_as_millis();
 
         // Remove centroid children
-        // let mut t = DebugTimer::start("kmeans indexes clear");
-        centroids.iter_mut().for_each(|c| c.indexes.clear());
-        // t.stop();
-        // t.print_as_nanos();
+        centroids.par_iter_mut().for_each(|c| c.indexes.clear());
 
         // Assign
         // let mut t = DebugTimer::start("kmeans assign");

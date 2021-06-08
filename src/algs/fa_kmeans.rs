@@ -28,7 +28,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_REF_0601_0916".to_string(),
+                        name: "fa_kmeans_REF_0608_0950".to_string(),
                         metric: "angular".to_string(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
@@ -64,7 +64,6 @@ impl AlgorithmImpl for FAKMeans {
             (OrderedFloat(distance), *&centroid.id)
         }).collect();
 
-        // 
         let clusters_of_interests: Vec<usize> = (0..std::cmp::min(clusters_to_search, best_centroids.len())).map(|_| best_centroids.pop().unwrap().1).collect();
 
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();

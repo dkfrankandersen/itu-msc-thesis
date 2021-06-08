@@ -1,9 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::File;
 use std::path::Path;
-use std::thread;
-use std::sync::{Mutex, Arc};
-use std::ptr::NonNull;
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
@@ -30,7 +27,6 @@ pub struct FAProductQuantization {
     residuals_codebook: Array2::<Array1::<f64>>,
     residuals_codebook_k: usize,
     sub_dimension: usize,
-    // partial_query_begin_end: HashMap::<usize, (usize, usize)>
     partial_query_begin_end: Vec::<(usize, usize)>
 
 }
@@ -66,7 +62,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0607_2111_ref".to_string(),
+            name: "fa_pq_REF_0608_0950".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -104,7 +100,6 @@ impl FAProductQuantization {
                 }
             }
         }
-
         residuals
     }
 
@@ -192,23 +187,16 @@ impl FAProductQuantization {
         // Query Arguments
         let clusters_to_search = arguments[0];
         let heap_size = arguments[1];
-        let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
         let best_coarse_quantizers_indexes = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
-        t.stop();
-        // t.print_as_nanos();
 
         // Lets find matches in best candidates for coarse_quantizers
-        let mut t = DebugTimer::start("candidates_from_quantizers");
         let candidates_from_quantizers: Vec::<_> = best_coarse_quantizers_indexes.into_par_iter().flat_map(|index| {
             let residual_point = self.coarse_quantizer[index].compute_residual(query);
             let distance_table = self.coarse_quantizer[index].compute_distance_table(&residual_point, &self.residuals_codebook);
             let dist_and_keys = self.coarse_quantizer[index].approximated_distances_with_keys(&distance_table);
             dist_and_keys
         }).collect();
-        t.stop();
-        // t.print_as_nanos();
 
-        let mut t = DebugTimer::start("candidates_to_rescore");
         let mut candidates_to_rescore = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
         for (neg_distance, child_key) in candidates_from_quantizers {
             if candidates_to_rescore.len() < heap_size {
@@ -218,11 +206,8 @@ impl FAProductQuantization {
                 candidates_to_rescore.push((neg_distance, child_key));
             }
         }
-        t.stop();
-        // t.print_as_nanos();
 
         // Rescore with true distance value of query and candidates
-        let mut t = DebugTimer::start("best_candidates");
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_,index) in candidates_to_rescore.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
@@ -234,8 +219,6 @@ impl FAProductQuantization {
                 best_candidates.push((neg_distance, index));
             }
         }
-        t.stop();
-        // t.print_as_nanos();
 
         // Remove elements from heap, and extract index worst to best.
         let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
