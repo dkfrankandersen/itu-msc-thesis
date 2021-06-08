@@ -5,6 +5,7 @@ use ordered_float::*;
 use crate::algs::*;
 use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
 //use crate::util::{DebugTimer};
+use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct FAKMeans {
@@ -51,12 +52,17 @@ impl AlgorithmImpl for FAKMeans {
     fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> { 
         // Query Arguments
         let clusters_to_search = arguments[0];      
-        let best_centroids = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
+        // let best_centroids = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
 
-        for centroid in self.codebook.iter() {
+        // for centroid in self.codebook.iter() {
+        //     let distance = distance::cosine_similarity(query, &centroid.point.view());
+        //     best_centroids.push((OrderedFloat(distance), *&centroid.id));
+        // }
+
+        let mut best_centroids: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.par_iter().map(|centroid| {
             let distance = distance::cosine_similarity(query, &centroid.point.view());
-            best_centroids.push((OrderedFloat(distance), *&centroid.id));
-        }
+            (OrderedFloat(distance), *&centroid.id)
+        }).collect();
 
         // 
         let clusters_of_interests: Vec<usize> = (0..std::cmp::min(clusters_to_search, best_centroids.len())).map(|_| best_centroids.pop().unwrap().1).collect();
@@ -82,7 +88,6 @@ impl AlgorithmImpl for FAKMeans {
         // Pop all candidate indexes from heap and reverse list.
         let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
-
         best_n_candidates
     }
 }

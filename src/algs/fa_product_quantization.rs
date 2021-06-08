@@ -66,7 +66,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0607_1831_ref".to_string(),
+            name: "fa_pq_REF_0607_2111_ref".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -195,7 +195,7 @@ impl FAProductQuantization {
         let mut t = DebugTimer::start("best_coarse_quantizers_indexes");
         let best_coarse_quantizers_indexes = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
         t.stop();
-        t.print_as_nanos();
+        // t.print_as_nanos();
 
         // Lets find matches in best candidates for coarse_quantizers
         let mut t = DebugTimer::start("candidates_from_quantizers");
@@ -206,7 +206,7 @@ impl FAProductQuantization {
             dist_and_keys
         }).collect();
         t.stop();
-        t.print_as_nanos();
+        // t.print_as_nanos();
 
         let mut t = DebugTimer::start("candidates_to_rescore");
         let mut candidates_to_rescore = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
@@ -219,7 +219,7 @@ impl FAProductQuantization {
             }
         }
         t.stop();
-        t.print_as_nanos();
+        // t.print_as_nanos();
 
         // Rescore with true distance value of query and candidates
         let mut t = DebugTimer::start("best_candidates");
@@ -235,7 +235,7 @@ impl FAProductQuantization {
             }
         }
         t.stop();
-        t.print_as_nanos();
+        // t.print_as_nanos();
 
         // Remove elements from heap, and extract index worst to best.
         let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
