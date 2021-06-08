@@ -4,8 +4,11 @@ use rand::{prelude::*};
 use ordered_float::*;
 use crate::algs::*;
 use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
-//use crate::util::{DebugTimer};
+use crate::util::{DebugTimer};
 use rayon::prelude::*;
+use std::fs::File;
+use std::path::Path;
+use bincode::serialize_into;
 
 #[derive(Debug, Clone)]
 pub struct FAKMeans {
@@ -47,6 +50,25 @@ impl AlgorithmImpl for FAKMeans {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let rng = thread_rng();
         self.codebook = kmeans(rng, self.k_clusters, self.max_iterations, dataset, false);
+        let fit_from_file = true;
+        let file_fa_kmeans_codebook = "saved_objects/fa_kmeans_codebook.bin";
+
+        // Load existing pre-computede data if exists
+        if fit_from_file && Path::new(file_fa_kmeans_codebook).exists() 
+                                && Path::new(file_fa_kmeans_codebook).exists() {
+            let mut t = DebugTimer::start("fit fa_kmeans_codebook from file");
+            let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
+            self.codebook = bincode::deserialize_from(&mut read_file).unwrap();
+            t.stop();
+            t.print_as_secs();
+        } else {
+            // Write compute_coarse_quantizers to bin
+            let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
+            let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
+            serialize_into(&mut new_file, &self.codebook).unwrap();
+            t.stop();
+            t.print_as_secs();
+        }
     }
 
     fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> { 

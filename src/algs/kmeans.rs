@@ -120,7 +120,6 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         t.print_as_millis();
         
         // Update
-        let mut t = DebugTimer::start("kmeans Update");
         for centroid in centroids.iter_mut() {
             if centroid.indexes.len() > 0 {
 
@@ -142,9 +141,6 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 }
             }
         }
-        t.stop();
-        t.print_as_millis();
-        println!("");
         bar_max_iterations.inc(1);
     }
     bar_max_iterations.finish();

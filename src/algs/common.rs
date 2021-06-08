@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use rayon::prelude::*;
 use ordered_float::*;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Centroid {
     pub id: usize,
     pub point: Array1<f64>,
