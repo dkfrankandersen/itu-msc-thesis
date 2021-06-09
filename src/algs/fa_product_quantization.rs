@@ -1,13 +1,18 @@
-use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap, HashMap};
-use rand::{prelude::*};
-pub use ordered_float::*;
+use std::fs::File;
+use std::path::Path;
+use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity};
 use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{DebugTimer};
+use rand::{prelude::*};
+pub use ordered_float::*;
 use indicatif::ProgressBar;
+use bincode::serialize_into;
+use rayon::prelude::*;
+
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {
@@ -22,8 +27,12 @@ pub struct FAProductQuantization {
     residuals_codebook: Array2::<Array1::<f64>>,
     residuals_codebook_k: usize,
     sub_dimension: usize,
-    partial_query_begin_end: HashMap::<usize, (usize, usize)>
+    partial_query_begin_end: Vec::<(usize, usize)>
+
 }
+
+unsafe impl Send for FAProductQuantization {}
+unsafe impl Sync for FAProductQuantization {}
 
 impl FAProductQuantization {
 
@@ -53,7 +62,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0518_0856".to_string(),
+            name: "fa_pq_REF_0609_0908".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -91,7 +100,6 @@ impl FAProductQuantization {
                 }
             }
         }
-
         residuals
     }
 
@@ -101,8 +109,8 @@ impl FAProductQuantization {
         println!("Started Train residuals codebook");
         let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
         for m in 0..m_subspaces {
-            let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
-            let partial_data = residuals_training_data.slice(s![.., partial_dim.0..partial_dim.1]);
+            let (partial_from, partial_to) = self.partial_query_begin_end[m];
+            let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
             let centroids = kmeans(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
@@ -123,7 +131,7 @@ impl FAProductQuantization {
         let bar_residuals = ProgressBar::new(residuals.nrows() as u64);
         for n in 0..residuals.nrows() {
             for m in 0..residuals_codebook.nrows() {
-                let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
+                let partial_dim = self.partial_query_begin_end[m];
                 let partial_dimension = residuals.slice(s![n, partial_dim.0..partial_dim.1]);
 
                 let mut best_distance = OrderedFloat(f64::NEG_INFINITY);
@@ -147,7 +155,7 @@ impl FAProductQuantization {
     fn compute_coarse_quantizers(&self, centroids: &Vec::<Centroid>, residual_pq_codes: &Array1<Array1<usize>>, m_centroids: usize) -> Vec::<PQCentroid> {
         // Compute coarse quantizer for centroids with pq codes
         let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
-        println!("Stared compute_coarse_quantizers");
+        println!("Started compute_coarse_quantizers");
         let bar_centroids = ProgressBar::new(centroids.len() as u64);
         for centroid in centroids.iter() {
             let mut pqchilderen =  HashMap::<usize, Vec::<usize>>::new();
@@ -164,36 +172,74 @@ impl FAProductQuantization {
     }
 
     fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, clusters_to_search: usize) -> Vec::<usize> {
-        // Find best coarse_quantizer
-        let best_coarse_quantizers = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-    
-        for centroid in coarse_quantizer.iter() {
-            let distance = OrderedFloat(cosine_similarity(query, &centroid.point.view()));
-            best_coarse_quantizers.push((distance, centroid.id));
-        }
+
+        // For each coarse_quantizer compute distance between query and centroid, push to heap.
+        let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> = coarse_quantizer.par_iter().map(|centroid| 
+            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)
+        ).collect();
+
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let result_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
         result_indexes
     }
-}
 
-fn distance_from_indexes(distance_table: &ArrayView2<f64>, child_values: &Vec::<usize>) -> f64 {
-    let mut distance: f64 = 0.;
-    for (m, k) in child_values.iter().enumerate() {
-        distance += distance_table[[m, *k]];
+    fn query_type2(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
+        // Query Arguments
+        let clusters_to_search = arguments[0];
+        let heap_size = arguments[1];
+        let best_coarse_quantizers_indexes = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
+
+        // Lets find matches in best candidates for coarse_quantizers
+        let candidates_from_quantizers: Vec::<_> = best_coarse_quantizers_indexes.into_par_iter().flat_map(|index| {
+            let residual_point = self.coarse_quantizer[index].compute_residual(query);
+            let distance_table = self.coarse_quantizer[index].compute_distance_table(&residual_point, &self.residuals_codebook);
+            let dist_and_keys = self.coarse_quantizer[index].approximated_distances_with_keys(&distance_table);
+            dist_and_keys
+        }).collect();
+
+        let mut candidates_to_rescore = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
+        for (neg_distance, child_key) in candidates_from_quantizers {
+            if candidates_to_rescore.len() < heap_size {
+                candidates_to_rescore.push((neg_distance, child_key));
+            } else if neg_distance < candidates_to_rescore.peek().unwrap().0 {
+                candidates_to_rescore.pop();
+                candidates_to_rescore.push((neg_distance, child_key));
+            }
+        }
+
+        // Rescore with true distance value of query and candidates
+        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
+        for (_,index) in candidates_to_rescore.into_iter() {
+            let datapoint = dataset.slice(s![index,..]);
+            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            if best_candidates.len() < results_per_query {
+                best_candidates.push((neg_distance, index));
+            } else if neg_distance < best_candidates.peek().unwrap().0 {
+                best_candidates.pop();
+                best_candidates.push((neg_distance, index));
+            }
+        }
+
+        // Remove elements from heap, and extract index worst to best.
+        let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
+        while let Some((_,index)) = best_candidates.pop() {
+            best_n_candidates.push(index);
+        }
+      
+        // Invert best indexes to get best to worst
+        best_n_candidates.reverse();
+        best_n_candidates
     }
-    distance
 }
 
-fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> HashMap::<usize, (usize, usize)> {
-    let mut result = HashMap::new();
+fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec::<(usize, usize)> {
+    let mut result = Vec::new();
     for m in 0..m_clusters {
         let begin = dimension_size * m;
         let end = begin + dimension_size;
-        result.insert(m, (begin, end));
+        result.push((begin, end));
     } 
     result
-    
 }
 
 impl AlgorithmImpl for FAProductQuantization {
@@ -204,102 +250,79 @@ impl AlgorithmImpl for FAProductQuantization {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
-        let rng = thread_rng();
-        let mut t = DebugTimer::start("fit run kmeans");
-        let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
-        t.stop();
-        t.print_as_secs();
+        let fit_from_file = true;
+        let file_residuals_codebook = "saved_objects/pq_residuals_codebook.bin";
+        let file_compute_coarse_quantizers = "saved_objects/pq_compute_coarse_quantizers.bin";
 
-        let mut t = DebugTimer::start("fit compute_residuals");
-        let residuals = self.compute_residuals(&centroids, dataset);
-        t.stop();
-        t.print_as_secs();
+        // Load existing pre-computede data if exists
+        if fit_from_file && Path::new(file_compute_coarse_quantizers).exists() 
+                                && Path::new(file_residuals_codebook).exists() {
+            let mut t = DebugTimer::start("fit train_residuals_codebook from file");
+            let mut read_file = File::open(file_residuals_codebook).unwrap();
+            self.residuals_codebook = bincode::deserialize_from(&mut read_file).unwrap();
+            t.stop();
+            t.print_as_secs();
 
-        // Residuals PQ Training data
-        let rng = thread_rng();
-        let mut t = DebugTimer::start("fit random_traindata");
-        let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
-        t.stop();
-        t.print_as_secs();
-        
-        let mut t = DebugTimer::start("fit train_residuals_codebook");
-        self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
-        t.stop();
-        t.print_as_secs();
-        
-        let mut t = DebugTimer::start("fit residual_encoding");
-        let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
-        t.stop();
-        t.print_as_secs();
-        
-        let mut t = DebugTimer::start("fit compute_coarse_quantizers");
-        self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
-        t.stop();
-        t.print_as_secs();
+            let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
+            let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
+            self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
+            t.stop();
+            t.print_as_secs();
+        } else {
+            let rng = thread_rng();
+            let mut t = DebugTimer::start("fit run kmeans");
+            let centroids = kmeans(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+            t.stop();
+            t.print_as_secs();
+
+            let mut t = DebugTimer::start("fit compute_residuals");
+            let residuals = self.compute_residuals(&centroids, dataset);
+            t.stop();
+            t.print_as_secs();
+
+            // Residuals PQ Training data
+            let rng = thread_rng();
+            let mut t = DebugTimer::start("fit random_traindata");
+            let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
+            t.stop();
+            t.print_as_secs();
+            
+
+            let mut t = DebugTimer::start("fit train_residuals_codebook");
+            self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, self.residuals_codebook_k, self.sub_dimension);
+            t.stop();
+            t.print_as_secs();
+            
+            // Write residuals_codebook to bin
+            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            let mut new_file = File::create(file_residuals_codebook).unwrap();
+            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            t.stop();
+            t.print_as_secs();
+ 
+            let mut t = DebugTimer::start("fit residual_encoding");
+            let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
+            t.stop();
+            t.print_as_secs();
+            
+            let mut t = DebugTimer::start("fit compute_coarse_quantizers");
+            self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
+            t.stop();
+            t.print_as_secs();
+
+            // Write compute_coarse_quantizers to bin
+            let mut t = DebugTimer::start("Fit write compute_coarse_quantizers to file");
+            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            t.stop();
+            t.print_as_secs();
+        }
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
         
-        // Query Arguments
-        let clusters_to_search = arguments[0];
-        let heap_size = arguments[1];
-        
-        let best_coarse_quantizers = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
-        // Lets find matches in best coarse_quantizers
-        let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
-        for coarse_quantizer_index in best_coarse_quantizers.iter() {
-            // Get coarse_quantizer from index
-            let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
-            
-            // Compute residuals between query and coarse_quantizer
-            let rq = query.to_owned()-best_coares_quantizer.point.to_owned();
-
-            // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-            let mut distance_table = Array::from_elem((self.m, self.residuals_codebook_k), 0.);
-            for m in 0..self.m {
-                let partial_dim = self.partial_query_begin_end.get(&m).unwrap();
-                let partial_query = rq.slice(s![partial_dim.0..partial_dim.1]);
-                for k in 0..self.residuals_codebook_k {
-                    let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    distance_table[[m,k]] = partial_residual_codeword.dot(&partial_query);
-                }
-            }
-
-            // Read off the distance using the distance table           
-            for (child_key, child_values) in best_coares_quantizer.children.iter() {
-                let neg_distance = OrderedFloat(-distance_from_indexes(&distance_table.view(), &child_values));
-                best_quantizer_candidates.push((neg_distance,*child_key));
-            }
-        }
-        
-
-        // Rescore with true distance value of query and candidates
-        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
-        for candidate in best_quantizer_candidates.iter() {
-            let index = candidate.1;
-            let datapoint = dataset.slice(s![index,..]);
-            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
-            if best_candidates.len() < heap_size {
-                best_candidates.push((neg_distance, index));
-            } else if neg_distance < best_candidates.peek().unwrap().0 {
-                best_candidates.pop();
-                best_candidates.push((neg_distance, index));
-            }
-        }
-
-        // Remove worst elements from heap, and extract best index worst to best.
-        let pop_off = best_candidates.len()-results_per_query;
-        let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
-        for i in 0..best_candidates.len() {
-            let c = best_candidates.pop();
-            if i >= pop_off {
-                best_n_candidates.push(c.unwrap().1);
-            }
-        }
-        
-        // Invert best indexes to get best to worst
-        best_n_candidates.reverse();
-        best_n_candidates
+        let query_type = self.query_type2(dataset, query, results_per_query, arguments);
+        query_type
     }
 }
 

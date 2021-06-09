@@ -38,7 +38,13 @@ pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     p.dot(q) / (p.dot(p).sqrt()*q.dot(q).sqrt())
 }
 
+pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) {
 
+}
+
+pub fn _anisotropic_loss() {
+
+}
 
 #[cfg(test)]
 mod euclidian_tests {

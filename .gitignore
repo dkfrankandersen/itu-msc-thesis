@@ -17,4 +17,5 @@ Cargo.lock
 # Added by Frank Andersen
 /datasets
 /results
+/saved_objects
 
