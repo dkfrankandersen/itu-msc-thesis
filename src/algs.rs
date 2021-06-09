@@ -61,9 +61,8 @@ impl AlgorithmImpl for Algorithm {
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
-    pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algorithm: &str, args: &Vec<String>) -> Result<Algorithm, String> {
-        println!("args {:?}", args);
-        match algorithm.as_ref() {
+    pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algo_parameters: &AlgoParameters) -> Result<Algorithm, String> {
+        match algo_parameters.algorithm.as_ref() {
             "bruteforce" => {   let alg = FABruteforce::new(verbose_print);
                                 match alg {
                                     Ok(a) => Ok(Algorithm::FABruteforce(a)),
@@ -71,24 +70,24 @@ impl AlgorithmFactory {
                                 }
                             },
             "kmeans" => {
-                                let alg = FAKMeans::new(verbose_print, args[0].parse::<usize>().unwrap(), args[1].parse::<usize>().unwrap());
+                                let alg = FAKMeans::new(verbose_print, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
                                 match alg {
                                     Ok(a) => Ok(Algorithm::FAKMeans(a)),
                                     Err(e) => Err(e)
                                 }
                         },
             "pq" => {
-                        let alg = FAProductQuantization::new(verbose_print, dataset, args[0].parse::<usize>().unwrap(), 
-                                                                            args[1].parse::<usize>().unwrap(), args[2].parse::<usize>().unwrap(), 
-                                                                            args[3].parse::<usize>().unwrap(), args[4].parse::<usize>().unwrap());
+                        let alg = FAProductQuantization::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
                         match alg {
                             Ok(a) => Ok(Algorithm::FAProductQuantization(a)),
                             Err(e) => Err(e)
                         }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, dataset, args[0].parse::<i32>().unwrap(), 
-                                                    args[1].parse::<i32>().unwrap(), args[2].parse::<i32>().unwrap());
+                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<i32>().unwrap(), 
+                        algo_parameters.algo_arguments[1].parse::<i32>().unwrap(), algo_parameters.algo_arguments[2].parse::<i32>().unwrap());
                         match alg {
                             Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)
@@ -101,7 +100,7 @@ impl AlgorithmFactory {
 
 pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParameters, dataset: &ArrayView2<f64>) -> Result<(f64, Algorithm, AlgoParameters), String> {
     
-    let algo = AlgorithmFactory::get(verbose_print, dataset, &algo_parameters.algorithm, &algo_parameters.algo_arguments);
+    let algo = AlgorithmFactory::get(verbose_print, dataset, &algo_parameters);
     match algo {
         Ok(mut a) => {
                     for elem in algo_parameters.run_parameters.iter_mut() {

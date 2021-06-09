@@ -1,8 +1,5 @@
 #!/bin/bash
 
-METRIC="angular"
-RESULTS="[10]"
-
 DATASET=""
 ARGS_KM=""
 ARGS_PQ=""
@@ -32,58 +29,26 @@ read ds
 
 case $ds in
     '0' )
-        DATASET="random-xs-20-angular"
-        ARGS_KM="[128 200]"
-        ARGS_PQ="[4 128 2000 255 200]"
-        CLUSTERS_To_SEARCH_KM="[1]"
-        CLUSTERS_To_SEARCH_PQ="[1]";;
+        DATASET="random-xs-20-angular";;
     '1' )
-        DATASET="glove-25-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[5 1024 20000 255 200]"
-        CLUSTERS_To_SEARCH_KM="[32 64 128 256]"
-        CLUSTERS_To_SEARCH_PQ="[32 64 128 256]";;
+        DATASET="glove-25-angular";;
     '2' )n
-        DATASET="glove-50-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[10 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="glove-50-angular";;
     '3' )
-        DATASET="glove-100-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[10 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="glove-100-angular";;
     '4' )
-        DATASET="glove-200-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[20 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="glove-200-angular";;
     '5' )
-        DATASET="nytimes-256-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[32 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="nytimes-256-angular";;
     '6' )
-        DATASET="deep-image-96-angular"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[16 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[1 2 3 5 10 20]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="deep-image-96-angular";;
     '7' )
-        DATASET="lastfm-64-dot"
-        ARGS_KM="[1024 200]"
-        ARGS_PQ="[16 255 20000 1024 200]"
-        CLUSTERS_To_SEARCH_KM="[[1 1] [2 2] [3 3] [5 5] [10 10] [20 20]]"
-        CLUSTERS_To_SEARCH_PQ="[1 2 3 5 10 20]";;
+        DATASET="lastfm-64-dot";;
     *) printf "Error: Invalid option"
         exit 1;;
 esac
 
-echo "Run on $DATASET use [s]ingle or [m]ultiple or [t]est or [full]?"
+echo "Run on $DATASET use [t]est or [f]ull?"
 read run_type
 
 # echo "Remove results folder before generating new? [y]?"
@@ -96,40 +61,36 @@ read run_type
 
 cargo build --release
 
-if [ $run_type = 's' ]
+if [ $run_type = 't' ]
 then
-    '''
-    cargo run --release angular random-xs-20-angular bruteforce [10]
-    cargo run --release angular random-xs-20-angular kmeans [10] [1024 200] [1 2 3 5 10 20]
-    cargo run --release angular random-xs-20-angular pq [10] [10 255 20000 1024 200] [1 2 3 5 10 20]
-    '''
-    # cargo run --release $METRIC $DATASET bruteforce $RESULTS
-    cargo run --release $METRIC $DATASET kmeans $RESULTS $ARGS_KM $CLUSTERS_To_SEARCH_KM
-    # cargo run --release $METRIC $DATASET pq $RESULTS $ARGS_PQ $CLUSTERS_To_SEARCH_PQ
+    # cargo run --release angular $DATASET bruteforce [10]
+    cargo run --release angular $DATASET kmeans [10] [500 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
+    cargo run --release angular $DATASET kmeans [10] [1000 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
+    cargo run --release angular $DATASET kmeans [10] [2000 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
 
-elif [ $run_type = 'm' ]
+    cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+
+    cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+
+    cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+
+    cargo run --release angular $DATASET pq [10] [50 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+
+elif [ $run_type = 'f' ]
 then
-    cargo run --release $METRIC $DATASET bruteforce $RESULTS
-    for (( k=4; k<=1024; k=k+k )) do
-        cargo run --release $METRIC $DATASET kmeans $RESULTS [$k 200] $CLUSTERS_To_SEARCH_KM
-    done
-
-    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 5000 10 200] $CLUSTERS_To_SEARCH_PQ
-    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 10000 10 200] $CLUSTERS_To_SEARCH_PQ
-    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 20000 10 200] $CLUSTERS_To_SEARCH_PQ
-    # cargo run --release $METRIC $DATASET pq $RESULTS [1024 255 50000 10 200] $CLUSTERS_To_SEARCH_PQ
-elif [ $run_type = 't' ]
-then
-
-    # cargo run --release $METRIC $DATASET bruteforce [10]
-    cargo run --release $METRIC $DATASET kmeans [10] [2000 200] [[1] [2] [4] [8] [30] [40] [45] [50] [55] [60] [65] [75] [90] [110]]
-    # cargo run --release $METRIC $DATASET pq [10] [50 2000 250000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [30 120] [30 340] [30 680] [30 1360] [30 2720] [30 5440] [30 10880] [60 120] [60 340] [60 680] [60 1360] [60 2720] [60 5440] [60 10880] [120 120] [120 340] [120 680] [120 1360] [120 2720] [120 5440] [120 10880]]
-    # cargo run --release $METRIC $DATASET pq [10] [100 1024 2000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
-
-elif [ $run_type = 'full' ]
-then
-    # cargo run --release $METRIC $DATASET kmeans [10] [2000 200] [[1] [2] [4] [8] [30] [35] [40] [45] [50] [55] [60] [65] [75] [90] [110] [130] [150] [170] [200] [220] [250] [310] [400] [500] [800]]
-    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 255 200] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
+    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 255 200] [[1 30]]]
 else
     exit 0
 fi
