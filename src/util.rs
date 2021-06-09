@@ -3,6 +3,7 @@ pub mod hdf5_store_file;
 pub mod testcases;
 pub mod dataset;
 pub mod sampling;
+use std::fs::create_dir_all;
 
 pub fn store_results_and_fix_attributes(results: Vec<(f64, std::vec::Vec<(usize, f64)>)>, attrs: hdf5_store_file::Attributes) {
     let store_result = hdf5_store_file::store_results(results, attrs);
@@ -140,6 +141,24 @@ pub struct AlgoParameters {
     pub algo_arguments: Vec::<String>,
     pub run_parameters: Vec<RunParameters>
 } 
+
+impl AlgoParameters {
+    fn fit_create_path(&self) -> String {
+        let s = format!("fit_file_output/{}/{}", self.algorithm, self.dataset);
+        let res = create_dir_all(&s);
+        match res {
+            Ok(_) => println!("fit_create_path \n {}", s),
+            Err(e) => panic!("fit_create_path \n{}", e)
+        };
+        s
+    }   
+
+    pub fn fit_file_output(&self, additional: &str) -> String {
+        let path = self.fit_create_path();
+        let s = format!("{}/{}_[{}]_{}.bin", path, self.metric, self.algo_arguments.join("_"), additional);
+        s
+    }   
+}
 
 pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
 

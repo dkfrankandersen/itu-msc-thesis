@@ -2,18 +2,19 @@ use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
-use crate::algs::*;
+use crate::algs::{AlgorithmImpl, distance::cosine_similarity, AlgoParameters};
 use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
 use crate::util::{DebugTimer};
-use rayon::prelude::*;
 use std::fs::File;
 use std::path::Path;
 use bincode::serialize_into;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct FAKMeans {
     name: String,
     metric: String,
+    algo_parameters: AlgoParameters,
     codebook: Vec<Centroid>,
     k_clusters: usize,
     max_iterations: usize,
@@ -21,7 +22,7 @@ pub struct FAKMeans {
 }
 
 impl FAKMeans {
-    pub fn new(verbose_print: bool, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
+    pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
         if k_clusters <= 0 {
             return Err("Clusters must be greater than 0".to_string());
         }
@@ -33,6 +34,7 @@ impl FAKMeans {
             FAKMeans {
                         name: "fa_kmeans_REF_0609_0908".to_string(),
                         metric: "angular".to_string(),
+                        algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
                         max_iterations: max_iterations,
@@ -48,11 +50,10 @@ impl AlgorithmImpl for FAKMeans {
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
-        let fit_from_file = true;
-        let file_fa_kmeans_codebook = "saved_objects/fa_kmeans_codebook.bin";
+        let file_fa_kmeans_codebook = &self.algo_parameters.fit_file_output("codebook");
         
         // Load existing pre-computede data if exists
-        if fit_from_file && Path::new(file_fa_kmeans_codebook).exists() 
+        if Path::new(file_fa_kmeans_codebook).exists() 
                 && Path::new(file_fa_kmeans_codebook).exists() {
             let mut t = DebugTimer::start("fit fa_kmeans_codebook from file");
             let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
@@ -80,21 +81,20 @@ impl AlgorithmImpl for FAKMeans {
         let clusters_to_search = arguments[0];      
 
         // Calculate distance between query and all centroids, collect result into max heap
-        let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.par_iter().map(|centroid| {
-            let distance = distance::cosine_similarity(query, &centroid.point.view());
-            (OrderedFloat(distance), *&centroid.id)
+        let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
+            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), *&centroid.id)
         }).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
-        let centroid_indexes_of_interests: Vec<usize> = (0..std::cmp::min(clusters_to_search, query_centroid_distances.len()))
-                                                                                .map(|_| query_centroid_distances.pop().unwrap().1).collect();
+        let min_val = std::cmp::min(clusters_to_search, query_centroid_distances.len());
+        let best_centroid_indexes: Vec<usize> = (0..min_val).map(|_| query_centroid_distances.pop().unwrap().1).collect();
 
         // For every best centroid, collect best candidates with negative distance into max heap, and limited heap size by replacing worst with better.
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-        for centroid_index in centroid_indexes_of_interests.into_iter() {
+        for centroid_index in best_centroid_indexes.into_iter() {
             for candidate_key in self.codebook[centroid_index].indexes.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
-                let neg_distance = OrderedFloat(-distance::cosine_similarity(query, &candidate.view()));
+                let neg_distance = OrderedFloat(-cosine_similarity(query, &candidate.view()));
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {
                     best_candidates.push((neg_distance, *candidate_key));
