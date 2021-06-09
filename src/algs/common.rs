@@ -11,19 +11,12 @@ pub struct Centroid {
     pub indexes: Vec::<usize>
 }
 
-unsafe impl Send for Centroid {}
-unsafe impl Sync for Centroid {}
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct PQCentroid {
     pub id: usize,
     pub point: Array1<f64>,
     pub children: HashMap::<usize, Vec::<usize>>
 }
-
-unsafe impl Send for PQCentroid {}
-unsafe impl Sync for PQCentroid {}
-
 
 impl PQCentroid {
     pub fn compute_residual(&self, query: &ArrayView1<f64>) -> Array1<f64> {

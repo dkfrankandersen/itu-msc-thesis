@@ -61,22 +61,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         // Remove centroid children
         centroids.par_iter_mut().for_each(|c| c.indexes.clear());
 
-        // Assign
-        // let mut t = DebugTimer::start("kmeans assign");
-        // for (index, datapoint) in dataset.outer_iter().enumerate() {
-        //     let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
-        //     let mut best_index: usize = 0;
-        //     for centroid in centroids.iter() {
-        //         let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &datapoint));
-        //         if distance > best_distance { 
-        //             best_distance = distance;
-        //             best_index = centroid.id; 
-        //         }
-        //     }
-        //     centroids[best_index].indexes.push(index);
-        // }
-
-        
+        // Assign      
         let centroids_arc = Arc::new(centroids.clone());
         let mut handles = Vec::new();
         for (f, t) in chunks.clone().into_iter() {
@@ -141,6 +126,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 }
             }
         }
+        println!("");
         bar_max_iterations.inc(1);
     }
     bar_max_iterations.finish();

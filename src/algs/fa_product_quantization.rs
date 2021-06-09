@@ -62,7 +62,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0608_0950".to_string(),
+            name: "fa_pq_REF_0609_0908".to_string(),
             metric: "angular".to_string(),
             m: m,         // M
             training_size: training_size,
@@ -251,8 +251,8 @@ impl AlgorithmImpl for FAProductQuantization {
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
         let fit_from_file = true;
-        let file_residuals_codebook = "saved_objects/residuals_codebook.bin";
-        let file_compute_coarse_quantizers = "saved_objects/compute_coarse_quantizers.bin";
+        let file_residuals_codebook = "saved_objects/pq_residuals_codebook.bin";
+        let file_compute_coarse_quantizers = "saved_objects/pq_compute_coarse_quantizers.bin";
 
         // Load existing pre-computede data if exists
         if fit_from_file && Path::new(file_compute_coarse_quantizers).exists() 
