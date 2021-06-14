@@ -4,7 +4,7 @@ pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
 use indicatif::ProgressBar;
-use crate::util::{DebugTimer};
+use crate::util::{debug_timer::DebugTimer};
 use std::collections::{HashMap};
 use std::thread;
 use std::sync::Arc;

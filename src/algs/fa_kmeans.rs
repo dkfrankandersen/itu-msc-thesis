@@ -4,7 +4,7 @@ use rand::{prelude::*};
 use ordered_float::*;
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity, AlgoParameters};
 use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
-use crate::util::{DebugTimer};
+use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
 use std::path::Path;
 use bincode::serialize_into;

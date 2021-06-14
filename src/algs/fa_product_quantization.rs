@@ -6,7 +6,7 @@ use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity, AlgoParameters};
 use crate::algs::{kmeans::{kmeans}};
 use crate::algs::common::{PQCentroid, Centroid};
-use crate::util::{DebugTimer};
+use crate::util::{debug_timer::DebugTimer};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use indicatif::ProgressBar;
@@ -185,7 +185,7 @@ impl FAProductQuantization {
     fn query_type1(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
         // Query Arguments
         let clusters_to_search = arguments[0];
-        let heap_size = arguments[1];
+        let results_to_rescore = arguments[1];
 
         // Lets find matches in best coarse_quantizers
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
@@ -214,7 +214,7 @@ impl FAProductQuantization {
         }
 
         // Remove worst candidates
-        while best_quantizer_candidates.len() > heap_size {
+        while best_quantizer_candidates.len() > results_to_rescore {
                 best_quantizer_candidates.pop();
         }
 

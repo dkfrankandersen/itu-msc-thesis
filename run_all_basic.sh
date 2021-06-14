@@ -64,33 +64,33 @@ cargo build --release
 if [ $run_type = 't' ]
 then
     # cargo run --release angular $DATASET bruteforce [10]
-    cargo run --release angular $DATASET kmeans [10] [500 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
-    cargo run --release angular $DATASET kmeans [10] [1000 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
-    cargo run --release angular $DATASET kmeans [10] [2000 100] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
+    cargo run --release angular $DATASET kmeans [10] [500 200] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
+    cargo run --release angular $DATASET kmeans [10] [1000 200] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
+    cargo run --release angular $DATASET kmeans [10] [2000 200] [[1] [2] [3] [4] [5] [10] [30] [60] [120] [150] [500]]
 
-    cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
-    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
-    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
-    # cargo run --release angular $DATASET pq [10] [5 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+    cargo run --release angular $DATASET pq [10] [5 2000 250000 256 200] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 256 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 256 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [5 2000 250000 256 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
 
-    cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
-    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
-    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
-    # cargo run --release angular $DATASET pq [10] [10 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+    cargo run --release angular $DATASET pq [10] [10 2000 250000 256 200] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
 
-    cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+    cargo run --release angular $DATASET pq [10] [20 2000 250000 256 200] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
 
-    cargo run --release angular $DATASET pq [10] [50 2000 250000 255 100] [[1 30] [1 60] [1 120] [1 150] [1 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
-    # cargo run --release angular $DATASET pq [10] [20 2000 250000 255 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
+    cargo run --release angular $DATASET pq [10] [50 2000 250000 256 200] [[1 30] [1 60] [1 120] [1 150] [1 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[2 30] [2 60] [2 120] [1 150] [2 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[10 30] [10 60] [10 120] [10 150] [10 500]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[100 30] [100 60] [100 120] [100 150] [100 500]]
 
 elif [ $run_type = 'f' ]
 then
-    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 255 200] [[1 30]]]
+    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 256 200] [[1 30]]]
 else
     exit 0
 fi
