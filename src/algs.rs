@@ -11,7 +11,7 @@ use fa_bruteforce::{FABruteforce};
 use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
 use scann::{FAScann};
-use crate::util::*;
+use crate::util::{AlgoParameters};
 
 
 #[derive(Debug, Clone)]
@@ -86,8 +86,9 @@ impl AlgorithmFactory {
                         }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<i32>().unwrap(), 
-                        algo_parameters.algo_arguments[1].parse::<i32>().unwrap(), algo_parameters.algo_arguments[2].parse::<i32>().unwrap());
+                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
                         match alg {
                             Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)

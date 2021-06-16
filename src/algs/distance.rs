@@ -25,17 +25,12 @@ pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
 }
 
 
-// pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-//     let dot_prod = p.dot(q);
-//     let magnitude_p = p.dot(p).sqrt();
-//     let magnitude_q = q.dot(q).sqrt();
-//     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
-//     return cos_sim;
-// }
-
 pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-    // cosine_similarity = dot_prod / (magnitude_p*magnitude_q)
-    p.dot(q) / (p.dot(p).sqrt()*q.dot(q).sqrt())
+    let dot_prod = p.dot(q);
+    let magnitude_p = p.dot(p).sqrt();
+    let magnitude_q = q.dot(q).sqrt();
+    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
+    return cos_sim;
 }
 
 pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) {

@@ -60,7 +60,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0609_0950".to_string(),
+            name: "fa_pq_REF_0616_1032".to_string(),
             metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M

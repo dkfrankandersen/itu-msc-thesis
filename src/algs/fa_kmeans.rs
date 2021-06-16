@@ -32,7 +32,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_REF_0609_0908".to_string(),
+                        name: "fa_kmeans_REF_0616_1032".to_string(),
                         metric: "angular".to_string(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
