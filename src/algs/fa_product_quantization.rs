@@ -60,7 +60,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0617_1308_M50_2".to_string(),
+            name: "fa_pq_REF_0617_1308_M10_2".to_string(),
             metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -194,19 +194,24 @@ impl FAProductQuantization {
 
             // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
             let distance_table = best_coares_quantizer.compute_distance_table(&residual_point, &self.residuals_codebook);
-            let mut quantizer_candidates: BinaryHeap::<_> = best_coares_quantizer.children.iter().map(|(child_key, child_values)| {
-                let neg_distance = OrderedFloat(best_coares_quantizer.distance_from_indexes(&distance_table, &child_values));
-                (neg_distance, *child_key)
-            }).collect();
-            best_quantizer_candidates.append(&mut quantizer_candidates);
+
+            for (child_key, child_values) in  best_coares_quantizer.children.iter() {
+                let neg_distance = OrderedFloat(-best_coares_quantizer.distance_from_indexes(&distance_table, &child_values));
+                // If candidates list is shorter than min results requestes push to heap
+                if best_quantizer_candidates.len() < results_to_rescore {
+                    best_quantizer_candidates.push((neg_distance, *child_key));
+                }
+                // If distance is better, remove top (worst) and push candidate to heap
+                else if neg_distance < best_quantizer_candidates.peek().unwrap().0 {
+                    best_quantizer_candidates.pop();
+                    best_quantizer_candidates.push((neg_distance, *child_key));
+                }
+            }
         }
 
         // Rescore with true distance value of query and candidates
-        let min_val = std::cmp::min(results_to_rescore, best_quantizer_candidates.len());
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
-        for _ in 0..min_val {
-            let candidate = best_quantizer_candidates.pop().unwrap();
-            let index = candidate.1;
+        for (_, index) in best_quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
             let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
             if best_candidates.len() < results_per_query {
@@ -312,7 +317,6 @@ impl AlgorithmImpl for FAProductQuantization {
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
         
         let query_type = self.query_type1(dataset, query, results_per_query, arguments);
-        // let query_type = self.query_type2(dataset, query, results_per_query, arguments);
         query_type
     }
 }
