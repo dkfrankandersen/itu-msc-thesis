@@ -11,8 +11,6 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
-use rayon::prelude::*;
-
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {
@@ -60,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_0617_1308_M10_2".to_string(),
+            name: "fa_pq_REF_0617_1308_M10_3".to_string(),
             metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -209,7 +207,7 @@ impl FAProductQuantization {
             }
         }
 
-        // Rescore with true distance value of query and candidates
+        // // Rescore with true distance value of query and candidates
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in best_quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);

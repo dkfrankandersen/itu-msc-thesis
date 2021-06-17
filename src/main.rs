@@ -22,9 +22,9 @@ fn main() {
     // let ds_distances_norm = ds.distances_normalize();
     // let ds_neighbors = ds.neighbors();
     
-    // if verbose_print {
-    //     ds.print_true_neighbors(0, 1, 100);
-    // }
+    if verbose_print {
+        ds.print_true_neighbors(0, 1, 100);
+    }
     
     let dataset = &ds_test_norm;
     let algo_fit = algs::get_fitted_algorithm(verbose_print, algo_parameters, &ds_train_norm.view());
