@@ -11,7 +11,6 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
-use rayon::prelude::*;
 
 
 #[derive(Debug, Clone)]
@@ -23,6 +22,7 @@ pub struct FAScann {
     training_size: usize,
     coarse_quantizer_k: usize,
     max_iterations: usize,
+    anisotropic_quantization_threshold: f64,
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
     residuals_codebook: Array2::<Array1::<f64>>,
@@ -35,7 +35,7 @@ pub struct FAScann {
 impl FAScann {
 
     pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
-                            residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
+                            residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
         if m <= 0 {
             return Err("m must be greater than 0".to_string());
@@ -60,13 +60,14 @@ impl FAScann {
         }
 
         return Ok(FAScann {
-            name: "fa_scann_REF_0614_1344".to_string(),
+            name: "fa_scann_REF_0617_1050".to_string(),
             metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
             training_size: training_size,
             coarse_quantizer_k: coarse_quantizer_k,         // K
             max_iterations: max_iterations,
+            anisotropic_quantization_threshold: anisotropic_quantization_threshold,
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
@@ -170,18 +171,6 @@ impl FAScann {
         coarse_quantizer
     }
 
-    fn best_coarse_quantizers_indexes(&self, query: &ArrayView1::<f64>, coarse_quantizer: &Vec::<PQCentroid>, clusters_to_search: usize) -> Vec::<usize> {
-
-        // For each coarse_quantizer compute distance between query and centroid, push to heap.
-        let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> = coarse_quantizer.par_iter().map(|centroid| 
-            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)
-        ).collect();
-
-        let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
-        let result_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
-        result_indexes
-    }
-
     fn query_type1(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
         // Query Arguments
         let clusters_to_search = arguments[0];
@@ -243,53 +232,6 @@ impl FAScann {
         best_n_candidates
     }
 
-    fn query_type2(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,  arguments: &Vec::<usize>) -> Vec<usize> {
-        // Query Arguments
-        let clusters_to_search = arguments[0];
-        let heap_size = arguments[1];
-        let best_coarse_quantizers_indexes = self.best_coarse_quantizers_indexes(query, &self.coarse_quantizer, clusters_to_search);
-
-        // Lets find matches in best candidates for coarse_quantizers
-        let candidates_from_quantizers: Vec::<_> = best_coarse_quantizers_indexes.into_par_iter().flat_map(|index| {
-            let residual_point = self.coarse_quantizer[index].compute_residual(query);
-            let distance_table = self.coarse_quantizer[index].compute_distance_table(&residual_point, &self.residuals_codebook);
-            let dist_and_keys = self.coarse_quantizer[index].approximated_distances_with_keys(&distance_table);
-            dist_and_keys
-        }).collect();
-
-        let mut candidates_to_rescore = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(heap_size);
-        for (neg_distance, child_key) in candidates_from_quantizers {
-            if candidates_to_rescore.len() < heap_size {
-                candidates_to_rescore.push((neg_distance, child_key));
-            } else if neg_distance < candidates_to_rescore.peek().unwrap().0 {
-                candidates_to_rescore.pop();
-                candidates_to_rescore.push((neg_distance, child_key));
-            }
-        }
-
-        // Rescore with true distance value of query and candidates
-        let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
-        for (_,index) in candidates_to_rescore.into_iter() {
-            let datapoint = dataset.slice(s![index,..]);
-            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
-            if best_candidates.len() < results_per_query {
-                best_candidates.push((neg_distance, index));
-            } else if neg_distance < best_candidates.peek().unwrap().0 {
-                best_candidates.pop();
-                best_candidates.push((neg_distance, index));
-            }
-        }
-
-        // Remove elements from heap, and extract index worst to best.
-        let mut best_n_candidates: Vec<usize> = Vec::with_capacity(results_per_query);
-        while let Some((_,index)) = best_candidates.pop() {
-            best_n_candidates.push(index);
-        }
-      
-        // Invert best indexes to get best to worst
-        best_n_candidates.reverse();
-        best_n_candidates
-    }
 }
 
 fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec::<(usize, usize)> {
@@ -418,38 +360,38 @@ mod product_quantization_tests {
 
     #[test]
     fn new_d_div_m_result_ok() {
-        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         assert!(pq.is_ok());
     }
     #[test]
     fn new_d_div_m_result_err() {
-        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 5, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 5, 1, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_m_par_0_result_err() {
-        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 0, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 0, 1, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_clusters_par_is_0_result_err() {
-        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 0, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 0, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_0_result_err() {
-        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_gt_dataset_result_err() {
-        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn random_traindata_2_of_10_rows() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         println!("{}", partial_dataset);
@@ -458,7 +400,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_6_of_6_columns() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         assert!(partial_dataset.ncols() == 6);
@@ -466,7 +408,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_output_of_seed() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
         println!("{}",partial_dataset);

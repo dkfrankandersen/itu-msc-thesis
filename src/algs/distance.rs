@@ -33,7 +33,20 @@ pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     return cos_sim;
 }
 
-pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) {
+// double ComputeParallelCostMultiplier(double t, double squared_l2_norm, DimensionIndex dims) {
+//     const double parallel_cost = Square(t) / squared_l2_norm;
+//     const double perpendicular_cost =
+//     (1.0 - Square(t) / squared_l2_norm) / (dims - 1.0);
+//     return parallel_cost / perpendicular_cost;
+// }
+
+pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) -> f64 {
+    // ScaNN Paper Theorem 3.4
+    let parallel_cost: f64 = t.sqrt() / squared_l2_norm;
+    let perpendicular_cost: f64 = (1.0 - t.sqrt()) / squared_l2_norm;
+
+    let result = parallel_cost / perpendicular_cost;
+    result
 
 }
 

@@ -88,7 +88,8 @@ impl AlgorithmFactory {
             "scann" => {
                         let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
-                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
+                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[5].parse::<f64>().unwrap());
                         match alg {
                             Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)

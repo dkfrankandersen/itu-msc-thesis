@@ -95,7 +95,17 @@ then
 
 elif [ $run_type = 'f' ]
 then
-    cargo run --release $METRIC $DATASET pq [10] [10 2000 250000 256 200] [[1 30]]]
+    # cargo run --release angular $DATASET kmeans [10] [2000 100] [[1] [5] [10] [20] [50] [100] [200] [500]]
+    cargo run --release angular $DATASET pq [10] [5 2000 250000 256 100] [[100 100] [150 100] [150 250]]
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[100 100] [150 100] [150 250]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[100 100] [150 100] [150 250]]
+    # cargo run --release angular $DATASET pq [10] [50 2000 250000 256 100] [[100 100] [150 100] [150 250]]
+
+    # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[30 300] [30 400] [20 500] [20 600] [20 700]]
+    # cargo run --release angular $DATASET pq [10] [20 2000 250000 256 100] [[30 300] [30 400] [20 500] [20 600] [20 700]]
+    # cargo run --release angular $DATASET pq [10] [50 2000 250000 256 100] [[30 300] [30 400] [20 500] [20 600] [20 700]]
+
+
 else
     exit 0
 fi
