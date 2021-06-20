@@ -33,9 +33,10 @@ def write_attributes(f):
 def color_text(text):
     return style.GREEN + text + style.YELLOW
 
-def convert():
-    print(style.MAGENTA + "###########################################################")
-    print("### "+style.GREEN+f"ENTERING PYTHON3 ({os.path.basename(__file__)})"+style.MAGENTA+"           ###")
+def convert(debug):
+    if debug:
+        print(style.MAGENTA + "###########################################################")
+        print("### "+style.GREEN+f"ENTERING PYTHON3 ({os.path.basename(__file__)})"+style.MAGENTA+"           ###")
     if len(sys.argv) < 2:
         print("###    Missing as args, expected a hdf5 file!")
     else:
@@ -48,20 +49,21 @@ def convert():
             try:
                 f = h5py.File(path_file, 'r+')
                 if "attributes" in f:
-                    print("###    "+style.GREEN+"1. Found attributes as dataset in file"+style.MAGENTA+"           ###")
-                    
-                    print("###    "+style.GREEN+"2. Writing attributes into file as attributes.."+style.MAGENTA+"  ###")
                     write_attributes(f)
-                    print("###  ------------------------")
-                    print("### "+style.GREEN+f"{dict(f.attrs)}"+style.MAGENTA+"")
-                    print("###  ------------------------")
-                    print("###    "+style.GREEN+"3. Done writing attributes to file"+style.MAGENTA+"               ###")
+                    if debug:
+                        print("###    "+style.GREEN+"1. Found attributes as dataset in file"+style.MAGENTA+"           ###")
+                        print("###    "+style.GREEN+"2. Writing attributes into file as attributes.."+style.MAGENTA+"  ###")
+                        print("###  ------------------------")
+                        print("### "+style.GREEN+f"{dict(f.attrs)}"+style.MAGENTA+"")
+                        print("###  ------------------------")
+                        print("###    "+style.GREEN+"3. Done writing attributes to file"+style.MAGENTA+"               ###")
                 else:
                     print("###    "+style.GREEN+"No attributes dataset in file"+style.MAGENTA+"           ###")
                 f.close()
             except:
                 print(f"###    "+style.GREEN+"Was unable to read {path_file}"+style.MAGENTA+"            ###")
-                traceback.print_exc()  
-    print("### "+style.GREEN+"LEAVING PYTHON3"+style.MAGENTA+"                                     ###")
-    print("###########################################################" + style.RESET)
-convert()
+                traceback.print_exc()
+    if debug:
+        print("### "+style.GREEN+"LEAVING PYTHON3"+style.MAGENTA+"                                     ###")
+        print("###########################################################" + style.RESET)
+convert(False)

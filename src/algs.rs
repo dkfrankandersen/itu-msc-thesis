@@ -128,10 +128,10 @@ pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &Arr
     let total_time = time_finish.duration_since(time_start);
 
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
-    for i in candidates.iter() {
-        let q = &dataset.slice(s![*i,..]);
+    for i in candidates.into_iter() {
+        let q = &dataset.slice(s![i,..]);
         let dist = distance::cosine_similarity(p, q);
-        candidates_dist.push((*i, 1.-dist));
+        candidates_dist.push((i, 1.-dist));
     }
 
     (total_time.as_secs_f64(), candidates_dist)

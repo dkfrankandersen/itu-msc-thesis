@@ -86,7 +86,7 @@ fn get_result_filename(path: &str, attrs: &Attributes) -> ResultFilename {
 
 pub fn store_results(results: Vec<(f64, Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<String> {
     let file = &get_result_filename("results", &attrs);
-    println!("Storing result data into: {}", format!("{}{}{}", file.path, file.name, file.filetype));
+    // println!("Storing result data into: {}", format!("{}{}{}", file.path, file.name, file.filetype));
 
     {
         fs::create_dir_all(&file.path).ok();
