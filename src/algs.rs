@@ -3,15 +3,15 @@ pub mod fa_kmeans;
 pub mod kmeans;
 pub mod common;
 pub mod fa_product_quantization;
-pub mod scann;
+pub mod fa_scann;
 pub mod distance;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};
 use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
-use scann::{FAScann};
-use crate::util::*;
+use fa_scann::{FAScann};
+use crate::util::{AlgoParameters};
 
 
 #[derive(Debug, Clone)]
@@ -86,8 +86,10 @@ impl AlgorithmFactory {
                         }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<i32>().unwrap(), 
-                        algo_parameters.algo_arguments[1].parse::<i32>().unwrap(), algo_parameters.algo_arguments[2].parse::<i32>().unwrap());
+                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap(), 
+                        algo_parameters.algo_arguments[5].parse::<f64>().unwrap());
                         match alg {
                             Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)
@@ -126,10 +128,10 @@ pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &Arr
     let total_time = time_finish.duration_since(time_start);
 
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
-    for i in candidates.iter() {
-        let q = &dataset.slice(s![*i,..]);
+    for i in candidates.into_iter() {
+        let q = &dataset.slice(s![i,..]);
         let dist = distance::cosine_similarity(p, q);
-        candidates_dist.push((*i, 1.-dist));
+        candidates_dist.push((i, 1.-dist));
     }
 
     (total_time.as_secs_f64(), candidates_dist)

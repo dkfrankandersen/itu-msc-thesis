@@ -4,7 +4,7 @@ pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
 use indicatif::ProgressBar;
-use crate::util::{DebugTimer};
+use crate::util::{debug_timer::DebugTimer};
 use std::collections::{HashMap};
 use std::thread;
 use std::sync::Arc;
@@ -61,7 +61,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         // Remove centroid children
         centroids.par_iter_mut().for_each(|c| c.indexes.clear());
 
-        // Assign      
+        // Assign     
         let centroids_arc = Arc::new(centroids.clone());
         let mut handles = Vec::new();
         for (f, t) in chunks.clone().into_iter() {

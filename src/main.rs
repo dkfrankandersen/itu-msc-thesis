@@ -1,9 +1,12 @@
 use std::env;
 mod algs;
 mod util;
-use util::*;
+use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
-use indicatif::ProgressBar;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::ParallelProgressIterator;
+use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
+use rayon::prelude::*;
 
 fn main() {
     let verbose_print = true;
@@ -28,28 +31,38 @@ fn main() {
     
     let dataset = &ds_test_norm;
     let algo_fit = algs::get_fitted_algorithm(verbose_print, algo_parameters, &ds_train_norm.view());
-    return;
+
     match algo_fit {
         Ok(af) => {
             let (build_time, algo, algo_parameters) = af;
-            println!("Started running run_parameters");
-            let bar_algo_parameters = ProgressBar::new(algo_parameters.run_parameters.len() as u64);
-            for parameters in algo_parameters.run_parameters.iter() {
+            println!("Started running run_parameters {} with {} querys", algo_parameters.run_parameters.len(), dataset.nrows());
+            let pb = ProgressBar::new((algo_parameters.run_parameters.len()*dataset.nrows()) as u64);
+            algo_parameters.run_parameters.par_iter().for_each(|parameters| {
                 let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
-                println!("Started individual querys for {}", parameters.algo_definition());
-                let bar_run_individual_query = ProgressBar::new(dataset.nrows() as u64);
-                for (_, p) in dataset.outer_iter().enumerate() {
+                for p in dataset.outer_iter() {
                     let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
                     results.push(result);
-                    bar_run_individual_query.inc(1);
+                    pb.inc(1);
                 }
-                bar_run_individual_query.finish();
+                println!("Store results into HD5F file for {}\n", parameters.algo_definition());
                 running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
-                bar_algo_parameters.inc(1);
-            }
-            bar_algo_parameters.finish();
+            });
+            pb.finish();
+            // for parameters in algo_parameters.run_parameters.iter() {
+            //     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
+            //     println!("Started individual querys for {}", parameters.algo_definition());
+            //     let bar_run_individual_query = ProgressBar::new(dataset.nrows() as u64);
+            //     for (_, p) in dataset.outer_iter().enumerate() {
+            //         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
+            //         results.push(result);
+            //         bar_run_individual_query.inc(1);
+            //     }
+            //     bar_run_individual_query.finish();
+            //     running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
+            //     bar_algo_parameters.inc(1);
+            // }
+            // bar_algo_parameters.finish();
         },
         Err(e) => eprintln!("{}", e)
     }
-    
 }

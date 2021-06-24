@@ -1,8 +1,6 @@
 use ndarray::{Array, Array1, Array2, s, ArrayView1};
 use std::collections::{HashMap};
 use serde::{Serialize, Deserialize};
-use rayon::prelude::*;
-use ordered_float::*;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Centroid {
@@ -50,13 +48,5 @@ impl PQCentroid {
             distance += &distance_table[[m, *k]];
         }
         distance
-    }
-
-    pub fn approximated_distances_with_keys(&self, distance_table: &Array2::<f64>) -> Vec::<(OrderedFloat<f64>, usize)> {
-        let dist_and_keys: Vec::<_> = self.children.par_iter().map(|(child_key, child_values)| {
-            let neg_distance = OrderedFloat(-self.distance_from_indexes(distance_table, &child_values));
-            (neg_distance, *child_key)
-        }).collect();
-        dist_and_keys
     }
 }

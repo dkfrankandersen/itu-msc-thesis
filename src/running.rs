@@ -1,4 +1,4 @@
-use crate::util::*;
+use crate::util::{hdf5_store_file, RunParameters, store_results_and_fix_attributes};
 
 pub fn compute_timing_and_store(best_search_time: f64, build_time: f64, results: Vec::<(f64, Vec<(usize, f64)>)>, 
                                             results_per_query: usize, dataset_size: usize, parameters: RunParameters) {
@@ -28,6 +28,6 @@ pub fn compute_timing_and_store(best_search_time: f64, build_time: f64, results:
         name: parameters.algo_definition(),
         run_count: 1
 };
-    println!("Store results into HD5F file");
+    // println!("Store results into HD5F file");
     store_results_and_fix_attributes(results, attrs);
 }

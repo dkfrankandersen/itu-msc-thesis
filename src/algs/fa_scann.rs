@@ -12,8 +12,9 @@ pub use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
 
+
 #[derive(Debug, Clone)]
-pub struct FAProductQuantization {
+pub struct FAScann {
     name: String,
     metric: String,
     algo_parameters: AlgoParameters,
@@ -21,6 +22,7 @@ pub struct FAProductQuantization {
     training_size: usize,
     coarse_quantizer_k: usize,
     max_iterations: usize,
+    anisotropic_quantization_threshold: f64,
     verbose_print: bool,
     coarse_quantizer: Vec::<PQCentroid>,
     residuals_codebook: Array2::<Array1::<f64>>,
@@ -30,10 +32,10 @@ pub struct FAProductQuantization {
 
 }
 
-impl FAProductQuantization {
+impl FAScann {
 
     pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
-                            residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
+                            residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
         if m <= 0 {
             return Err("m must be greater than 0".to_string());
@@ -57,14 +59,15 @@ impl FAProductQuantization {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
-        return Ok(FAProductQuantization {
-            name: "fa_pq_REF_M10_R9".to_string(),
-            metric: algo_parameters.metric.clone(),
+        return Ok(FAScann {
+            name: "fa_scann_REF_M10_R2".to_string(),
+            metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
             training_size: training_size,
             coarse_quantizer_k: coarse_quantizer_k,         // K
             max_iterations: max_iterations,
+            anisotropic_quantization_threshold: anisotropic_quantization_threshold,
             verbose_print: verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
@@ -137,6 +140,7 @@ impl FAProductQuantization {
                     let centroid = &residuals_codebook[[m,k]].view();
                     // let distance = OrderedFloat(centroid.dot(&partial_dimension));
                     let distance = OrderedFloat(cosine_similarity(centroid,  &partial_dimension));
+
                     if distance > best_distance { 
                         best_distance = distance;
                         best_index = k; 
@@ -177,7 +181,7 @@ impl FAProductQuantization {
         // Lets find matches in best coarse_quantizers
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.coarse_quantizer.iter().map(|centroid| 
-            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)
+            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)            
         ).collect();
 
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
@@ -212,7 +216,7 @@ impl FAProductQuantization {
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in best_quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));       
             if best_candidates.len() < results_per_query {
                 best_candidates.push((neg_distance, index));
             } else if neg_distance < best_candidates.peek().unwrap().0 {
@@ -238,7 +242,7 @@ fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec:
     result
 }
 
-impl AlgorithmImpl for FAProductQuantization {
+impl AlgorithmImpl for FAScann {
 
     fn name(&self) -> String {
         self.name.to_string()
@@ -323,7 +327,7 @@ impl AlgorithmImpl for FAProductQuantization {
 #[cfg(test)]
 mod product_quantization_tests {
     use ndarray::{Array2, arr2};
-    use crate::algs::fa_product_quantization::FAProductQuantization;
+    use crate::algs::fa_scann::FAScann;
     use crate::util::AlgoParameters;
 
     fn algoParameters() -> AlgoParameters {
@@ -353,38 +357,38 @@ mod product_quantization_tests {
 
     #[test]
     fn new_d_div_m_result_ok() {
-        let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         assert!(pq.is_ok());
     }
     #[test]
     fn new_d_div_m_result_err() {
-        let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 5, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 5, 1, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_m_par_0_result_err() {
-        let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 0, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 0, 1, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_clusters_par_is_0_result_err() {
-        let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 3, 0, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(), &dataset1().view(), 3, 0, 10, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_0_result_err() {
-        let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn new_residual_train_size_is_gt_dataset_result_err() {
-        let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200, 0.2);
         assert!(pq.is_err());
     }
     #[test]
     fn random_traindata_2_of_10_rows() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         println!("{}", partial_dataset);
@@ -393,7 +397,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_6_of_6_columns() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
         assert!(partial_dataset.ncols() == 6);
@@ -401,7 +405,7 @@ mod product_quantization_tests {
     #[test]
     fn random_traindata_output_of_seed() {
         use rand::{SeedableRng, rngs::StdRng};
-        let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
+        let pq = FAScann::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200, 0.2);
         let rng = StdRng::seed_from_u64(11);
         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
         println!("{}",partial_dataset);
