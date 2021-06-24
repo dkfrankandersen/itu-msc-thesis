@@ -3,14 +3,14 @@ pub mod fa_kmeans;
 pub mod kmeans;
 pub mod common;
 pub mod fa_product_quantization;
-pub mod scann;
+pub mod fa_scann;
 pub mod distance;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};
 use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
-use scann::{FAScann};
+use fa_scann::{FAScann};
 use crate::util::{AlgoParameters};
 
 

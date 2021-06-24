@@ -8,7 +8,6 @@ use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
 use std::path::Path;
 use bincode::serialize_into;
-use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct FAKMeans {
@@ -32,8 +31,8 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_REF_0618_1644".to_string(),
-                        metric: "angular".to_string(),
+                        name: "fa_kmeans_REF_M10_R9".to_string(),
+                        metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
@@ -83,6 +82,7 @@ impl AlgorithmImpl for FAKMeans {
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
             (OrderedFloat(cosine_similarity(query, &centroid.point.view())), *&centroid.id)
+            
         }).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
@@ -95,6 +95,7 @@ impl AlgorithmImpl for FAKMeans {
             for candidate_key in self.codebook[centroid_index].indexes.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
                 let neg_distance = OrderedFloat(-cosine_similarity(query, &candidate.view()));
+                
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {
                     best_candidates.push((neg_distance, *candidate_key));

@@ -61,7 +61,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         // Remove centroid children
         centroids.par_iter_mut().for_each(|c| c.indexes.clear());
 
-        // Assign      
+        // Assign     
         let centroids_arc = Arc::new(centroids.clone());
         let mut handles = Vec::new();
         for (f, t) in chunks.clone().into_iter() {

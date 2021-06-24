@@ -58,8 +58,8 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_M10_R2".to_string(),
-            metric: "angular".to_string(),
+            name: "fa_pq_REF_M10_R9".to_string(),
+            metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
             training_size: training_size,
@@ -137,7 +137,6 @@ impl FAProductQuantization {
                     let centroid = &residuals_codebook[[m,k]].view();
                     // let distance = OrderedFloat(centroid.dot(&partial_dimension));
                     let distance = OrderedFloat(cosine_similarity(centroid,  &partial_dimension));
-
                     if distance > best_distance { 
                         best_distance = distance;
                         best_index = k; 

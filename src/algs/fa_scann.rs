@@ -181,7 +181,7 @@ impl FAScann {
         // Lets find matches in best coarse_quantizers
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.coarse_quantizer.iter().map(|centroid| 
-            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)
+            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), centroid.id)            
         ).collect();
 
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
@@ -216,7 +216,7 @@ impl FAScann {
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in best_quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));       
             if best_candidates.len() < results_per_query {
                 best_candidates.push((neg_distance, index));
             } else if neg_distance < best_candidates.peek().unwrap().0 {
