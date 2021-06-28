@@ -3,10 +3,8 @@ mod algs;
 mod util;
 use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use indicatif::ParallelProgressIterator;
+use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
-use rayon::prelude::*;
 
 fn main() {
     let verbose_print = true;
@@ -48,20 +46,6 @@ fn main() {
                 running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
             });
             pb.finish();
-            // for parameters in algo_parameters.run_parameters.iter() {
-            //     let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
-            //     println!("Started individual querys for {}", parameters.algo_definition());
-            //     let bar_run_individual_query = ProgressBar::new(dataset.nrows() as u64);
-            //     for (_, p) in dataset.outer_iter().enumerate() {
-            //         let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
-            //         results.push(result);
-            //         bar_run_individual_query.inc(1);
-            //     }
-            //     bar_run_individual_query.finish();
-            //     running::compute_timing_and_store(best_search_time, build_time, results.clone(), parameters.results_per_query, dataset.nrows(), parameters.clone());
-            //     bar_algo_parameters.inc(1);
-            // }
-            // bar_algo_parameters.finish();
         },
         Err(e) => eprintln!("{}", e)
     }

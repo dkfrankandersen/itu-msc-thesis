@@ -31,7 +31,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_REF_M10_R9".to_string(),
+                        name: "fa_kmeans_REF_M10_R13".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -82,7 +82,6 @@ impl AlgorithmImpl for FAKMeans {
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
             (OrderedFloat(cosine_similarity(query, &centroid.point.view())), *&centroid.id)
-            
         }).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search

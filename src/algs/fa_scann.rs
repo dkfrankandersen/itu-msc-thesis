@@ -242,6 +242,50 @@ fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec:
     result
 }
 
+fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
+    ((x-q).dot(x)*x) / x.dot(x).powi(2)
+}
+
+fn r_orthogonal_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
+    (x-q) - r_parallel_residual_error(x, q)
+}
+
+// fn h_parallel(d: usize, w: f64, x:f64) -> f64 {
+//     (d-1) 
+// }
+
+// fn h_orthogonal(w: f64, x: f64) -> f64 {
+    
+// }
+
+// fn eta_value(w: f64, x: &ArrayView1::<f64>) -> f64 {
+//     h_parallel(w, x.dot(x).sqrt()) / h_orthogonal(w, x.dot(x).sqrt())
+// }
+
+fn score_aware_quantization_loss_fixed_eta(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>, w: f64) {
+
+}
+
+// double ComputeParallelCostMultiplier(double t, double squared_l2_norm, DimensionIndex dims) {
+//     const double parallel_cost = Square(t) / squared_l2_norm;
+//     const double perpendicular_cost =
+//     (1.0 - Square(t) / squared_l2_norm) / (dims - 1.0);
+//     return parallel_cost / perpendicular_cost;
+// }
+
+pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) -> f64 {
+    // ScaNN Paper Theorem 3.4
+    let parallel_cost: f64 = t.sqrt() / squared_l2_norm;
+    let perpendicular_cost: f64 = (1.0 - t.sqrt()) / squared_l2_norm;
+
+    let result = parallel_cost / perpendicular_cost;
+    result
+}
+
+pub fn _anisotropic_loss() {
+
+}
+
 impl AlgorithmImpl for FAScann {
 
     fn name(&self) -> String {
