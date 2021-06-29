@@ -39,7 +39,7 @@ impl FAProductQuantization {
             return Err("m must be greater than 0".to_string());
         }
         else if dataset.ncols() % m != 0 {
-            return Err("M is not divisable with dataset dimension!".to_string());
+            return Err(format!("M={} is not divisable with dataset dimension d={}!", m, dataset.ncols()));
         }
         else if coarse_quantizer_k <= 0 {
             return Err("coarse_quantizer_k must be greater than 0".to_string());
@@ -58,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_pq_REF_M10_R14".to_string(),
+            name: "fa_pq_REF_M10_R15".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M

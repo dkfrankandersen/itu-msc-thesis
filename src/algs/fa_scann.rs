@@ -243,20 +243,21 @@ fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec:
 }
 
 fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
-    ((x-q).dot(x)*x) / x.dot(x).powi(2)
+    // Takes dot product of the residuals (x-q) and x, then multiplie onto x and divides with the norm of x to the power of 2 (so just dot product).
+    ((x-q).dot(x)*x) / x.dot(x) //.sqrt().powi(2)
 }
 
 fn r_orthogonal_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
     (x-q) - r_parallel_residual_error(x, q)
 }
 
-// fn h_parallel(d: usize, w: f64, x:f64) -> f64 {
-//     (d-1) 
-// }
+fn h_parallel(x:f64, w: f64, d: usize) -> f64 {
+    panic!("todo");
+}
 
-// fn h_orthogonal(w: f64, x: f64) -> f64 {
-    
-// }
+fn h_orthogonal(x: f64, w: f64) -> f64 {
+    panic!("todo");
+}
 
 // fn eta_value(w: f64, x: &ArrayView1::<f64>) -> f64 {
 //     h_parallel(w, x.dot(x).sqrt()) / h_orthogonal(w, x.dot(x).sqrt())
@@ -282,9 +283,12 @@ pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64) -> f64 {
     result
 }
 
-pub fn _anisotropic_loss() {
-
-}
+// pub fn _anisotropic_loss(p: ArrayView1::<f64>, q: ArrayView1::<f64>) {
+//     let w = 1. as f64;
+//     let a = h_parallel(p.dot(&p), w, p.len()) * r_parallel_residual_error(&p, &q);
+//     let b = h_orthogonal(p, w) * 
+//      //*  + h_orthogonal(w: f64, x: f64)
+// }
 
 impl AlgorithmImpl for FAScann {
 
