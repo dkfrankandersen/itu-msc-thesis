@@ -60,7 +60,7 @@ mod euclidian_tests {
         let q: Array1::<f64> = arr1(&[1.0, 1.0]);
         let distance = euclidian(&p.view(), &q.view());
 
-        let _assert = expect_float_relative_eq!(distance, 1.4142, 0.0001);
+        assert!(expect_f64_near!(distance, 1.4142).is_ok());
     }
     #[test]
     fn given_2d_origin_to_origin() {
@@ -68,15 +68,15 @@ mod euclidian_tests {
         let q: Array1::<f64> = arr1(&[0.0, 0.0]);
         let distance = euclidian(&p.view(), &q.view());
 
-        let _assert = expect_float_absolute_eq!(distance, 0.0, 0.0);
+        assert!(expect_f64_near!(distance, 0.0).is_ok());
     }
     #[test]
     fn given_2d_origin_to_neg_point() {
         let p: Array1::<f64> = arr1(&[0.0, 0.0]);
         let q: Array1::<f64> = arr1(&[-2.0, -1.0]);
         let distance = euclidian(&p.view(), &q.view());
-
-        let _assert = expect_float_relative_eq!(distance, 2.2360, 0.0001);
+        println!("{}", distance);
+        assert!(expect_f64_near!(distance, 2.23606797749979).is_ok());
     }
 }
 

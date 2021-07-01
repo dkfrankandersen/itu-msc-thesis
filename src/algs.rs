@@ -5,6 +5,8 @@ pub mod common;
 pub mod fa_product_quantization;
 pub mod fa_scann;
 pub mod distance;
+pub mod fa_scann_util;
+pub mod fa_scann_matrices;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};
