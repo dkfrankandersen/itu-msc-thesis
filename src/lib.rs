@@ -4,3 +4,4 @@ extern crate ndarray;
 extern crate hdf5;
 extern crate indicatif;
 extern crate rayon;
+extern crate ndarray_linalg;

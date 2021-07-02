@@ -7,6 +7,7 @@ use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
 
 fn main() {
+
     let verbose_print = true;
     let args: Vec<String> = env::args().collect();
     

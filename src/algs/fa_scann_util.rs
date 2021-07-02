@@ -1,6 +1,7 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{HashMap};
 use serde::{Serialize, Deserialize};
+use ndarray_linalg::*;
 
 fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
     // Takes dot product of the residuals (x-q) and x, then multiplie onto x and divides with the norm of x to the power of 2 (so just dot product).
