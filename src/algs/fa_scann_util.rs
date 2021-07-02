@@ -1,4 +1,6 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
+use std::collections::{HashMap};
+use serde::{Serialize, Deserialize};
 
 fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
     // Takes dot product of the residuals (x-q) and x, then multiplie onto x and divides with the norm of x to the power of 2 (so just dot product).
@@ -84,25 +86,71 @@ pub fn _compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64, dim: usiz
 
 // }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Centroid {
-    point: Array1::<f64>,
-    indexes: Vec::<usize>
+    pub id: usize,
+    pub point: Array1<f64>,
+    pub indexes: Vec::<usize>
 }
 
-pub fn recompute_centroids_with_parallel_cost_multiplier(centroids: Vec::<Centroid>) {
+pub fn recompute_centroids_simple(spherical: bool, dataset: ArrayView2::<f64>, datapoint_dimension: usize, parallel_cost_multiplier: f64, centroids: &mut Vec::<Centroid>) {
+    // Update new means
+    for centroid in centroids.iter_mut() {
+        if centroid.indexes.len() > 0 {
+            // Clear centroid point
+            centroid.point = Array::from_elem(datapoint_dimension, 0.);
 
-    let parallel_cost_multiplier: f64 = 0.; // from some where
-    if parallel_cost_multiplier == 1.0 {
-        panic!("parallel_cost_multiplier is 1.0, should be something else");
+            
+            // Add dimension value of each
+            for index in centroid.indexes.iter() {
+                let point = dataset.slice(s![*index,..]);
+                for (i, x) in point.iter().enumerate() {
+                    centroid.point[i] += x;
+                }
+            }
+
+            let divisor = if spherical { centroid.point.dot(&centroid.point).sqrt() }
+                          else { centroid.indexes.len() as f64};
+     
+            if divisor == 0. {
+                continue;
+            }
+            let multiplier = 1.0 / divisor;
+            // Divide by indexes to get mean
+            for i in 0..datapoint_dimension {  
+                centroid.point[i] *= multiplier;
+            }
+        }
     }
-    let dimensionality: usize = 100; // Change to vector dim
+}
 
-    let mean_vec = Vec::<f64>::with_capacity(dimensionality);
+// pub fn recompute_centroids_with_parallel_cost_multiplier(centroids: &mut Vec::<Centroid>, dataset: ArrayView2::<f64>, datapoint_dim: usize, parallel_cost_multiplier: f64, centroids: Vec::<Centroid>) {
+//     extern crate nalgebra as na;
+//     use na::{LU, DVector, DMatrix};
 
+//     let parallel_cost_multiplier: f64 = parallel_cost_multiplier;
+//     if parallel_cost_multiplier == 1.0 {
+//         panic!("parallel_cost_multiplier is 1.0, should be something else");
+//     }
+//     let dimensionality: usize = datapoint_dim;
+
+//     let mean_vec = Vec::<f64>::with_capacity(dimensionality);
+
+//     let mut means = Vec::<Vec::<f64>>::new();
+//     recompute_centroids_simple(false, dataset, dimensionality, parallel_cost_multiplier, &mut centroids);
+
+//     fn add_outer_product(vec: Vec::<f64>) {
+//         let outer_prodsums::Eigen
+//         let vm = DVector::from_vec(vec);
+//         let denom = vm.transpose() * vm;
+//         if denom > 0. {
+//             outer_prodsums += (vm * vm.transpose()) / denom;
+//         }
+//     }
     
 
 
-}
+// }
 
 /***
  * Status GmmUtils::RecomputeCentroidsWithParallelCostMultiplier(
