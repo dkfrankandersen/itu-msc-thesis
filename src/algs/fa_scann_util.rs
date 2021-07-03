@@ -1,7 +1,6 @@
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{HashMap};
 use serde::{Serialize, Deserialize};
-use ndarray_linalg::*;
 
 fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
     // Takes dot product of the residuals (x-q) and x, then multiplie onto x and divides with the norm of x to the power of 2 (so just dot product).
@@ -99,7 +98,7 @@ pub fn recompute_centroids_simple(spherical: bool, dataset: ArrayView2::<f64>, d
     for centroid in centroids.iter_mut() {
         if centroid.indexes.len() > 0 {
             // Clear centroid point
-            centroid.point = Array::from_elem(datapoint_dimension, 0.);
+            centroid.point.fill(0.);
 
             
             // Add dimension value of each
@@ -125,91 +124,79 @@ pub fn recompute_centroids_simple(spherical: bool, dataset: ArrayView2::<f64>, d
     }
 }
 
-// pub fn recompute_centroids_with_parallel_cost_multiplier(centroids: &mut Vec::<Centroid>, dataset: ArrayView2::<f64>, datapoint_dim: usize, parallel_cost_multiplier: f64, centroids: Vec::<Centroid>) {
-//     extern crate nalgebra as na;
-//     use na::{LU, DVector, DMatrix};
+fn add_outer_product(outer_prodsums: Array2::<f64>, vec: Array1::<f64>) -> Array2::<f64> {
+    let mut outer_prodsums = outer_prodsums.clone();
+    if vec.len() != outer_prodsums.nrows() {
+        panic!("add_outer_product row dimension dont match");
+    }
+    if vec.len() != outer_prodsums.ncols() {
+        panic!("add_outer_product column dimension dont match");
+    }
+    let denom: f64 = vec.dot(&vec);
+    if denom > 0. {
+        // let val = (vm * vm.reversed_axes())[0] / denom;
+        let mut matrix = Array2::from_elem((vec.len(), 1), 0.);
+        for i in 0..vec.len() {
+            matrix[[i, 0]] = vec[i];
+        }
+        let nominator = matrix * vec;
+        let res = nominator / denom;
+        outer_prodsums = outer_prodsums+res;
+    }
+    outer_prodsums
+}
 
+#[cfg(test)]
+mod add_outer_product_tests {
+    use ndarray::{Array1, Array2, arr1, arr2};
+    use crate::algs::fa_scann_util::*;
+    use assert_float_eq::*;
+
+    #[test]
+    fn add_outer_product_test() {
+        let vec: Array1::<f64> = arr1(&[1., 2., 3.]);
+        let outer_prodsums: Array2::<f64> = Array2::from_elem((vec.len(), vec.len()), 0.);
+
+        let _assert = add_outer_product(outer_prodsums, vec);
+        println!("{:?}", _assert);
+    }
+}
+
+// pub fn recompute_centroids_with_parallel_cost_multiplier(centroids: &mut Vec::<Centroid>, dataset: &ArrayView2::<f64>, datapoint_dim: usize, parallel_cost_multiplier: f64) {
+//     use ndarray_linalg::Inverse;
+//     use ndarray_linalg::Solve;
 //     let parallel_cost_multiplier: f64 = parallel_cost_multiplier;
 //     if parallel_cost_multiplier == 1.0 {
 //         panic!("parallel_cost_multiplier is 1.0, should be something else");
 //     }
 //     let dimensionality: usize = datapoint_dim;
 
-//     let mean_vec = Vec::<f64>::with_capacity(dimensionality);
-
-//     let mut means = Vec::<Vec::<f64>>::new();
 //     recompute_centroids_simple(false, dataset, dimensionality, parallel_cost_multiplier, &mut centroids);
 
-//     fn add_outer_product(vec: Vec::<f64>) {
-//         let outer_prodsums::Eigen
-//         let vm = DVector::from_vec(vec);
-//         let denom = vm.transpose() * vm;
-//         if denom > 0. {
-//             outer_prodsums += (vm * vm.transpose()) / denom;
-//         }
-//     }
+//     let mut outer_prodsums = Array2::from_elem((dimensionality, dimensionality), 0.);
+
     
 
+//     let lambda = 1.0 / parallel_cost_multiplier;
+//     for centroid in centroids.iter_mut() {
+//         let mean = centroid.point;
+//         if centroid.indexes.len() == 0 {
+//             centroid.point.fill(0.);
+//             continue;
+//         }
 
+//         outer_prodsums.fill(0.);
+//         for index in centroid.indexes.iter() {
+//             let index_point = &dataset.slice(s![index,..]).clone();
+//             outer_prodsums = add_outer_product(outer_prodsums, index_point.to_owned());
+//         }
+//         outer_prodsums *= (1.0 - lambda) / centroid.indexes.len() as f64;
+
+//         for i in 0..dimensionality {
+//             outer_prodsums[[i,i]] += lambda;
+//         }
+
+//         let new_point: Array1::<f64> = (outer_prodsums.inv().unwrap()).solve_into(mean).unwrap();
+//         centroid.point = new_point;
+//     }
 // }
-
-/***
- * Status GmmUtils::RecomputeCentroidsWithParallelCostMultiplier(
-    ConstSpan<pair<uint32_t, double>> top1_results, GmmUtilsImplInterface* impl,
-    ConstSpan<uint32_t> partition_sizes, bool spherical,
-    DenseDataset<double>* centroids) const {
-  const double parallel_cost_multiplier = opts_.parallel_cost_multiplier;
-  SCANN_RET_CHECK_NE(parallel_cost_multiplier, 1.0);
-  const size_t dimensionality = impl->dimensionality();
-
-  vector<double> mean_vec(centroids->data().size());
-  DenseDataset<double> means(std::move(mean_vec), centroids->size());
-  SCANN_RETURN_IF_ERROR(RecomputeCentroidsSimple(
-      top1_results, impl, partition_sizes, false, &means));
-
-  vector<std::vector<DatapointIndex>> assignments(centroids->size());
-  for (DatapointIndex dp_idx : IndicesOf(top1_results)) {
-    const size_t partition_idx = top1_results[dp_idx].first;
-    assignments[partition_idx].push_back(dp_idx);
-  }
-
-  Datapoint<double> storage;
-  Eigen::MatrixXd outer_prodsums;
-  auto add_outer_product = [&outer_prodsums](ConstSpan<double> vec) {
-    DCHECK_EQ(vec.size(), outer_prodsums.cols());
-    DCHECK_EQ(vec.size(), outer_prodsums.rows());
-    Eigen::Map<const Eigen::VectorXd> vm(vec.data(), vec.size());
-    const double denom = vm.transpose() * vm;
-    if (denom > 0) {
-      outer_prodsums += (vm * vm.transpose()) / denom;
-    }
-  };
-  const double lambda = 1.0 / parallel_cost_multiplier;
-  for (size_t partition_idx : IndicesOf(assignments)) {
-    MutableSpan<double> mut_centroid = centroids->mutable_data(partition_idx);
-    if (assignments[partition_idx].empty()) {
-      std::fill(mut_centroid.begin(), mut_centroid.end(), 0.0);
-      continue;
-    }
-    outer_prodsums = Eigen::MatrixXd::Zero(dimensionality, dimensionality);
-    for (DatapointIndex dp_idx : assignments[partition_idx]) {
-      ConstSpan<double> datapoint =
-          impl->GetPoint(dp_idx, &storage).values_slice();
-      add_outer_product(datapoint);
-    }
-    outer_prodsums *= (1.0 - lambda) / assignments[partition_idx].size();
-
-    for (size_t i : Seq(dimensionality)) {
-      outer_prodsums(i, i) += lambda;
-    }
-
-    Eigen::Map<const Eigen::VectorXd> mean(means[partition_idx].values(),
-                                           dimensionality);
-    Eigen::VectorXd centroid = outer_prodsums.inverse() * mean;
-    for (size_t i : Seq(dimensionality)) {
-      mut_centroid[i] = centroid(i);
-    }
-  }
-  return OkStatus();
-}
- */
