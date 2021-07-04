@@ -1,4 +1,3 @@
-extern crate hdf5;
 use hdf5::types::{VarLenUnicode};
 use std::str::FromStr;
 use ndarray::{s};
