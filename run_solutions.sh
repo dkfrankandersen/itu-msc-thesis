@@ -1,19 +1,5 @@
 #!/bin/bash
 
-DATASET=""
-ARGS_KM=""
-ARGS_PQ=""
-CLUSTERS_To_SEARCH_KM=""
-CLUSTERS_To_SEARCH_PQ=""
-
-echo "Is conda activate thesis used [y]?"
-read ready
-
-if [ $ready != 'y' ]
-then
-    exit 1
-fi
-
 printf "Datasets:
         [0] random-xs-20-angular (default)
         [1] glove-25-angular
@@ -50,14 +36,6 @@ esac
 
 echo "Run on $DATASET use [t]est or [f]ull?"
 read run_type
-
-# echo "Remove results folder before generating new? [y]?"
-# read cmd_remove
-
-# if [ $cmd_remove = 'y' ]
-# then
-# rm -r results
-# fi
 
 cargo build --release
 
