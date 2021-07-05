@@ -1,6 +1,7 @@
-use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use std::collections::{HashMap};
 use serde::{Serialize, Deserialize};
+use ndarray::prelude::*;
+use ndarray_linalg::*;
 
 fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
     // Takes dot product of the residuals (x-q) and x, then multiplie onto x and divides with the norm of x to the power of 2 (so just dot product).
@@ -124,7 +125,7 @@ pub fn recompute_centroids_simple(spherical: bool, dataset: ArrayView2::<f64>, d
     }
 }
 
-fn add_outer_product(outer_prodsums: Array2::<f64>, vec: Array1::<f64>) -> Array2::<f64> {
+pub fn add_outer_product(outer_prodsums: Array2::<f64>, vec: Array1::<f64>) -> Array2::<f64> {
     let mut outer_prodsums = outer_prodsums.clone();
     if vec.len() != outer_prodsums.nrows() {
         panic!("add_outer_product row dimension dont match");
@@ -139,9 +140,10 @@ fn add_outer_product(outer_prodsums: Array2::<f64>, vec: Array1::<f64>) -> Array
         for i in 0..vec.len() {
             matrix[[i, 0]] = vec[i];
         }
-        let nominator = matrix * vec;
-        let res = nominator / denom;
-        outer_prodsums = outer_prodsums+res;
+        let nominator = matrix.dot(&vec);
+        println!("{:?}", nominator);
+        // let res = nominator / denom;
+        outer_prodsums = outer_prodsums; //+res;
     }
     outer_prodsums
 }
