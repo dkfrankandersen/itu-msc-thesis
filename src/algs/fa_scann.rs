@@ -11,7 +11,6 @@ use rand::{prelude::*};
 pub use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
-use crate::algs::fa_scann_util::*;
 
 
 #[derive(Debug, Clone)]

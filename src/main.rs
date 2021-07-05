@@ -5,28 +5,30 @@ use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
 use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
-use algs::fa_scann_util::add_outer_product;
 use ndarray::prelude::*;
-use ndarray_linalg::Solve;
+use ndarray_linalg::*;
 
 fn main() {
 
-
-    // let a: Array2<f64> = random((3, 3));
-    // let f = a.factorize_into().unwrap(); // LU factorize A (A is consumed)
-    // for _ in 0..10 {
-    //     let b: Array1<f64> = random(3);
-    //     let x = f.solve_into(b).unwrap(); // Solve A * x = b using factorized L, U
-    //     println!("{}", x);
-    // }
-
-    let vec: Array2::<f64> = arr2(&[[1., 2., 3.]]);
-    // let vec: Array2::<f64> = arr2(&[[1., 2., 3.]]);
-    let outer_prodsums: Array2::<f64> = Array2::from_elem((vec.len(), vec.len()), 0.);
+    // let vec: Array1::<f64> = arr1(&[1., 2., 3.]);
+    // let mut outer_prodsums: Array2::<f64> = Array2::from_elem((vec.len(), vec.len()), 0.);
     
-    // let _assert = add_outer_product(outer_prodsums, vec);
-    let val = &vec.t().dot(&vec);
-    println!("{:?}", val/(14. as f64));
+    // outer_prodsums = add_outer_product(outer_prodsums, vec);
+    // println!("{:?}", outer_prodsums);
+
+    // let mut mean_matrix: Array2::<f64> = Array::from_elem((2,mean.len()), 0.);
+
+    
+    let matrix: Array2::<f64> = arr2(&[[1., 2.], 
+                                       [3. ,4.]]);
+        
+    let vector: Array1::<f64> = arr1(&[5., 6.]);
+    let matrix_inv = matrix.inv().unwrap();
+    let res_vector = &matrix_inv.dot(&vector.t());
+
+    println!("matrix_inv\n {:?}\n", matrix_inv);
+    println!("res_vector\n {:?}\n", res_vector);
+
     panic!("Testing matrix");
 
     let verbose_print = true;
