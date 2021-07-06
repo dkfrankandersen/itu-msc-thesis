@@ -11,32 +11,6 @@ use crate::algs::scann_impl::{loss::squared_l2_norm, loss::compute_parallel_cost
 
 fn main() {
 
-    let y = squared_l2_norm(&arr1(&[1.,2.,3.]).view());
-    println!("squared_l2_norm {:?}", y);
-
-    let x = compute_parallel_cost_multiplier(0.2, 1., 100);
-    println!("compute_parallel_cost_multiplier {:?}", x);
-
-    // let vec: Array1::<f64> = arr1(&[1., 2., 3.]);
-    // let mut outer_prodsums: Array2::<f64> = Array2::from_elem((vec.len(), vec.len()), 0.);
-    
-    // outer_prodsums = add_outer_product(outer_prodsums, vec);
-    // println!("{:?}", outer_prodsums);
-
-    // let mut mean_matrix: Array2::<f64> = Array::from_elem((2,mean.len()), 0.);
-    
-    let matrix: Array2::<f64> = arr2(&[[1., 2.], 
-                                       [3. ,4.]]);
-        
-    let vector: Array1::<f64> = arr1(&[5., 6.]);
-    let matrix_inv = matrix.inv().unwrap();
-    let res_vector = &matrix_inv.dot(&vector.t());
-
-    println!("matrix_inv\n {:?}\n", matrix_inv);
-    println!("res_vector\n {:?}\n", res_vector);
-
-    panic!("Testing matrix");
-
     let verbose_print = true;
     let args: Vec<String> = env::args().collect();
 
