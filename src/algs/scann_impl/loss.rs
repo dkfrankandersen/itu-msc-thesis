@@ -1,5 +1,5 @@
 
-// use ndarray::prelude::*;
+use ndarray::prelude::*;
 // // use ndarray_linalg::*;
 
 // // fn r_parallel_residual_error(x: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> Array1::<f64> {
@@ -42,11 +42,18 @@
 //     }
 // }
 
-// pub fn compute_parallel_cost_multiplier(t: f64, squared_l2_norm: f64, dim: usize) -> f64 {
-//     // ScaNN Paper Theorem 3.4
-//     let parallel_cost: f64 = t.sqrt() / squared_l2_norm;
-//     let perpendicular_cost: f64 = (1.0 - t.sqrt()) / squared_l2_norm / (dim - 1) as f64;
+#[allow(dead_code)]
+pub fn squared_l2_norm(datapoint: &ArrayView1::<f64>) -> f64 {
+    datapoint.dot(datapoint)
+}
 
-//     let result = parallel_cost / perpendicular_cost;
-//     result
-// }
+#[allow(dead_code)]
+pub fn compute_parallel_cost_multiplier(threshold_t: f64, squared_l2_norm: f64, dim: usize) -> f64 {
+    // ScaNN Paper Theorem 3.4
+    let threshold_t_squared = threshold_t*threshold_t;
+    let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
+    let perpendicular_cost: f64 = (1.0 - threshold_t_squared) / squared_l2_norm / (dim - 1) as f64;
+
+    let result = parallel_cost / perpendicular_cost;
+    result
+}

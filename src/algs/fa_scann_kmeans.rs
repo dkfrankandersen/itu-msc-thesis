@@ -3,7 +3,7 @@ use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
 use crate::algs::{AlgorithmImpl, distance::cosine_similarity, AlgoParameters};
-use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
+use crate::algs::scann_impl::{common::*, loss::*, compute_centroid::*,kmeans::*};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
 use std::path::Path;
@@ -17,11 +17,13 @@ pub struct FAScannKMeans {
     codebook: Vec<Centroid>,
     k_clusters: usize,
     max_iterations: usize,
-    verbose_print: bool
+    verbose_print: bool,
+    anisotropic_quantization_threshold: f64,
+    parallel_cost_multiplier: f64
 }
 
 impl FAScannKMeans {
-    pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
+    pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
         if k_clusters <= 0 {
             return Err("Clusters must be greater than 0".to_string());
         }
@@ -31,13 +33,15 @@ impl FAScannKMeans {
         
         return Ok(
             FAScannKMeans {
-                        name: "fa_kmeans_REF_M10_R19".to_string(),
+                        name: "fa_scann_kmeans_REF_1".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
                         max_iterations: max_iterations,
-                        verbose_print: verbose_print
+                        verbose_print: verbose_print,
+                        anisotropic_quantization_threshold: anisotropic_quantization_threshold,
+                        parallel_cost_multiplier: 0.
                     });
     }
 }
@@ -49,13 +53,15 @@ impl AlgorithmImpl for FAScannKMeans {
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
-        let file_fa_kmeans_codebook = &self.algo_parameters.fit_file_output("codebook");
+        self.parallel_cost_multiplier = compute_parallel_cost_multiplier(self.anisotropic_quantization_threshold, 1., dataset.ncols());
+        println!("Set parallel_cost_multiplier {}", self.parallel_cost_multiplier);
+        let file_codebook = &self.algo_parameters.fit_file_output("codebook");
         
         // Load existing pre-computede data if exists
-        if Path::new(file_fa_kmeans_codebook).exists() 
-                && Path::new(file_fa_kmeans_codebook).exists() {
-            let mut t = DebugTimer::start("fit fa_kmeans_codebook from file");
-            let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
+        if Path::new(file_codebook).exists() 
+                && Path::new(file_codebook).exists() {
+            let mut t = DebugTimer::start("fit codebook from file");
+            let mut read_file = File::open(file_codebook).unwrap();
             self.codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
             t.print_as_secs();
@@ -63,12 +69,12 @@ impl AlgorithmImpl for FAScannKMeans {
             // Write compute_coarse_quantizers to bin
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
-            self.codebook = kmeans(rng, self.k_clusters, self.max_iterations, dataset, false);
+            self.codebook = kmeans(rng, self.k_clusters, self.max_iterations, dataset, false, self.parallel_cost_multiplier);
             t.stop();
             t.print_as_secs();
 
-            let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
-            let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
+            let mut t = DebugTimer::start("Fit write codebook to file");
+            let mut new_file = File::create(file_codebook).unwrap();
             serialize_into(&mut new_file, &self.codebook).unwrap();
             t.stop();
             t.print_as_secs();
