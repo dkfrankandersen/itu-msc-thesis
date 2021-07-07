@@ -109,7 +109,9 @@ impl AlgorithmFactory {
                                                             algo_parameters, 
                                                             algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                                                             algo_parameters.algo_arguments[1].parse::<usize>().unwrap(),
-                                                            algo_parameters.algo_arguments[2].parse::<f64>().unwrap());
+                                                            //algo_parameters.algo_arguments[2].parse::<f64>().unwrap()
+                                                            0.2 as f64
+                                                            );
                                     match alg {
                                         Ok(a) => Ok(Algorithm::FAScannKMeans(a)),
                                         Err(e) => Err(e)

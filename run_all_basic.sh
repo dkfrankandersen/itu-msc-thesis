@@ -64,6 +64,7 @@ cargo build --release
 if [ $run_type = 't' ]
 then
     cargo run --release angular $DATASET bruteforce [10]
+    cargo run --release angular random-xs-20-angular bruteforce [10]
     # cargo run --release angular random-xs-20-angular bruteforce [10]
     # cargo run --release angular $DATASET kmeans [10] [50 100] [[1] [2] [3] [4] [5] [10] [30] [50]]
     # cargo run --release angular $DATASET pq [10] [5 500 250000 256 100] [[1 30] [1 60] [1 120] [1 150] [1 500] [5 30] [5 60] [5 120] [5 150] [10 500] [10 30] [10 60] [10 120] [10 150] [10 500]]
