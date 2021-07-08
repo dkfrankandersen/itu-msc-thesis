@@ -57,7 +57,7 @@ pub fn add_outer_product(outer_prodsums: Array2::<f64>, vec: Array1::<f64>) -> A
 
 #[allow(dead_code)]
 pub fn recompute_centroids_with_parallel_cost_multiplier(centroids: &mut Vec::<Centroid>, dataset: &ArrayView2::<f64>, parallel_cost_multiplier: f64) {
-    
+    println!("recompute_centroids_with_parallel_cost_multiplier, parallel_cost_multiplier {}", parallel_cost_multiplier);
     if parallel_cost_multiplier == 1.0 {
         panic!("parallel_cost_multiplier is 1.0, should be something else");
     }

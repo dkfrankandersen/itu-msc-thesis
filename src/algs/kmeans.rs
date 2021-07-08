@@ -36,7 +36,7 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
     let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
     let dataset_arc = Arc::new(dataset.to_owned());
 
-    const NTHREADS: usize = 4;
+    const NTHREADS: usize = 8;
     let max_val = dataset.nrows();
     let chunk = max_val/NTHREADS;
 

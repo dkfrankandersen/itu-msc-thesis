@@ -111,6 +111,7 @@ pub fn store_results(results: Vec<(f64, Vec<(usize, f64)>)>, attrs: Attributes) 
                         distances.write_slice(&res_dist, s![i,..]).ok();
                     }
                     times.write(&res_times).ok();
+                    f.close();
                     return Ok(file.path_and_filename());
         },
         Err(e) =>   { 
