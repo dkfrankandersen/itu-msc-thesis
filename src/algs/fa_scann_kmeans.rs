@@ -33,7 +33,7 @@ impl FAScannKMeans {
         
         return Ok(
             FAScannKMeans {
-                        name: "fa_scann_kmeans_REF_2".to_string(),
+                        name: "fa_scann_kmeans_REF_3".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -54,6 +54,7 @@ impl AlgorithmImpl for FAScannKMeans {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         self.parallel_cost_multiplier = compute_parallel_cost_multiplier(self.anisotropic_quantization_threshold, 1., dataset.ncols());
+        println!("From anisotropic_quantization_threshold {}", self.anisotropic_quantization_threshold);
         println!("Set parallel_cost_multiplier {}", self.parallel_cost_multiplier);
         let file_codebook = &self.algo_parameters.fit_file_output("codebook");
         
