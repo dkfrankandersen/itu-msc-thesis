@@ -6,10 +6,10 @@ use ndarray_linalg::*;
 pub fn recompute_centroids_simple(spherical: bool, dataset: &ArrayView2::<f64>, centroids: &mut Vec::<Centroid>) {
     // Update new means
     for centroid in centroids.iter_mut() {
-        if centroid.indexes.len() > 0 {
-            // Clear centroid point
-            centroid.point.fill(0.);
+        // Clear centroid point
+        centroid.point.fill(0.);
 
+        if centroid.indexes.len() > 0 {
             // Add dimension value of each
             for index in centroid.indexes.iter() {
                 let point = dataset.slice(s![*index,..]);
