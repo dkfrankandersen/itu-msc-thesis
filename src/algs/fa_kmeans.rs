@@ -31,7 +31,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans".to_string(),
+                        name: "fa_kmeans_c09".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -88,6 +88,7 @@ impl AlgorithmImpl for FAKMeans {
         let min_val = std::cmp::min(clusters_to_search, query_centroid_distances.len());
         let best_centroid_indexes: Vec<usize> = (0..min_val).map(|_| query_centroid_distances.pop().unwrap().1).collect();
 
+        let t3 = &mut DebugTimer::start("Rescore all");
         // For every best centroid, collect best candidates with negative distance into max heap, and limited heap size by replacing worst with better.
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid_index in best_centroid_indexes.into_iter() {
@@ -106,10 +107,14 @@ impl AlgorithmImpl for FAKMeans {
                 }
             }
         }
+        t3.stop();
+        t3.print_as_nanos();
 
         // Pop all candidate indexes from heap and reverse list.
         let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
         best_n_candidates.reverse();
+        panic!("OHHHH");
+
         best_n_candidates
     }
 }
