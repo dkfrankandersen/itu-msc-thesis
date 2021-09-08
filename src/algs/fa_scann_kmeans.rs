@@ -33,7 +33,7 @@ impl FAScannKMeans {
         
         return Ok(
             FAScannKMeans {
-                        name: "fa_scann_kmeans_c02".to_string(),
+                        name: "fa_scann_kmeans_c05".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),

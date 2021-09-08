@@ -5,7 +5,7 @@ use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{distance::cosine_similarity, common::{Centroid}};
 use indicatif::ProgressBar;
 use crate::util::{debug_timer::DebugTimer};
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
@@ -49,8 +49,9 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
         }
         chunks.push((from, to));
     }
-
+    
     for iterations in 0..max_iterations  {
+        t.stopwatch_start();
         if centroids == last_centroids {
             if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
             break;
@@ -101,8 +102,9 @@ pub fn kmeans<T: RngCore>(rng: T, k_centroids: usize, max_iterations: usize, dat
                 Err(e) => {panic!("kmeans threading failed {:?}", e)}
             }
         }
-        t.stop();
-        t.print_as_millis();
+        t.stopwatch_stop();
+        t.print_stopwatch_duration_as_secs();
+
         
         // Update
         for centroid in centroids.iter_mut() {

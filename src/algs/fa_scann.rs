@@ -60,7 +60,7 @@ impl FAScann {
         }
 
         return Ok(FAScann {
-            name: "fa_scann_REF_M10_R2".to_string(),
+            name: "fa_scann_c04".to_string(),
             metric: "angular".to_string(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
