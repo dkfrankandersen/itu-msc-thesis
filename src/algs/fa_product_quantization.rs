@@ -58,7 +58,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_product_quantization_c15".to_string(),
+            name: "fa_product_quantization_c16".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -183,8 +183,8 @@ impl FAProductQuantization {
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_coarse_quantizers_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers.pop().unwrap().1).collect();
 
-        let m_dim = *&self.residuals_codebook.nrows();
-        let k_dim = *&self.residuals_codebook.ncols();
+        let m_dim = self.m;
+        let k_dim = self.residuals_codebook_k;
         
         let mut best_quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         
