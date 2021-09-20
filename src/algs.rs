@@ -1,19 +1,18 @@
 pub mod fa_bruteforce;
 pub mod fa_kmeans;
 pub mod kmeans;
+pub mod scann_kmeans;
 pub mod common;
 pub mod fa_product_quantization;
 pub mod fa_scann;
-pub mod fa_scann_kmeans;
 pub mod distance;
-pub mod scann_impl;
+// pub mod scann_impl;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};
 use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
 use fa_scann::{FAScann};
-use fa_scann_kmeans::{FAScannKMeans};
 use crate::util::{AlgoParameters};
 
 
@@ -23,7 +22,6 @@ pub enum Algorithm {
     FAKMeans(FAKMeans),
     FAProductQuantization(FAProductQuantization),
     FAScann(FAScann),
-    FAScannKMeans(FAScannKMeans),
 }
 
 trait AlgorithmImpl {
@@ -40,7 +38,6 @@ impl AlgorithmImpl for Algorithm {
             Algorithm::FAKMeans(ref mut x) => x.fit(dataset),
             Algorithm::FAProductQuantization(ref mut x) => x.fit(dataset),
             Algorithm::FAScann(ref mut x) => x.fit(dataset),
-            Algorithm::FAScannKMeans(ref mut x) => x.fit(dataset),
         }
     }
 
@@ -50,7 +47,6 @@ impl AlgorithmImpl for Algorithm {
             Algorithm::FAKMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
             Algorithm::FAProductQuantization(ref x) => x.query(dataset, p, results_per_query, arguments),
             Algorithm::FAScann(ref x) => x.query(dataset, p, results_per_query, arguments),
-            Algorithm::FAScannKMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
         
         }
     }
@@ -61,7 +57,6 @@ impl AlgorithmImpl for Algorithm {
             Algorithm::FAKMeans(ref x) => x.name(),
             Algorithm::FAProductQuantization(ref x) => x.name(),
             Algorithm::FAScann(ref x) => x.name(),
-            Algorithm::FAScannKMeans(ref x) => x.name(),
         }
     }
 }
@@ -104,19 +99,6 @@ impl AlgorithmFactory {
                             Err(e) => Err(e)
                         }
                     },
-            "scann_kmeans" => {
-                        let alg = FAScannKMeans::new(verbose_print, 
-                                                            algo_parameters, 
-                                                            algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
-                                                            algo_parameters.algo_arguments[1].parse::<usize>().unwrap(),
-                                                            //algo_parameters.algo_arguments[2].parse::<f64>().unwrap()
-                                                            0.2 as f64
-                                                            );
-                                    match alg {
-                                        Ok(a) => Ok(Algorithm::FAScannKMeans(a)),
-                                        Err(e) => Err(e)
-                                    }
-            },
             &_ => unimplemented!(),
         }
     }

@@ -18,3 +18,4 @@ Cargo.lock
 /datasets
 /results
 /fit_file_output
+/flamegraph

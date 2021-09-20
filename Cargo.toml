@@ -25,3 +25,6 @@ ndarray-linalg = { version = "0.13", features = ["openblas-static"] }
 [lib]
 name = "hdf5_attribute_fix"
 crate-type = ["cdylib"]
+
+[profile.release]
+debug = true
