@@ -2,7 +2,7 @@ use ndarray::{Array, ArrayView1, ArrayView2, s};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{distance::{cosine_similarity, CosineSimilarity}, common::Centroid};
+use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
 use indicatif::ProgressBar;
 use crate::util::debug_timer::DebugTimer;
 use std::collections::HashMap;
@@ -17,18 +17,6 @@ impl KMeans {
         Self{}
     }
 
-    pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        -cosine_similarity(&p, &q)
-    }
-
-    pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(self.distance(p, q))
-    }
-
-    pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(-self.distance(p, q))
-    }
-
     pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
@@ -40,11 +28,11 @@ impl KMeans {
         let mut t = DebugTimer::start("kmeans init");
         let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
         let mut centroids: Vec::<Centroid> = unique_indexes.into_par_iter()
-        .enumerate()
-        .map(|(k, index)| {
-            let datapoint = dataset.slice(s![index,..]);
-            Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()}
-        }).collect();
+                    .enumerate()
+                    .map(|(k, index)| {
+                        let datapoint = dataset.slice(s![index,..]);
+                        Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()}
+                    }).collect();
         bar_unique_indexes.finish();
         t.stop();
         t.print_as_millis();

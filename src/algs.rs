@@ -126,16 +126,16 @@ pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParame
     }
 }
 
-pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let candidates = algo.query(dataset, &p, results_per_query, arguments);
+    let candidates = algo.query(dataset, &query, results_per_query, arguments);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
     // let dist = distance::Distance::;
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
     for i in candidates.into_iter() {
-        let q = &dataset.slice(s![i,..]);
-        let dist = distance::cosine_similarity(p, q);
+        let datapoint = &dataset.slice(s![i,..]);
+        let dist = distance::cosine_similarity(query, datapoint);
         candidates_dist.push((i, 1.-dist));
     }
 

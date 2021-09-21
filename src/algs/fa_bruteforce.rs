@@ -2,7 +2,7 @@ use ndarray::{ArrayView1, ArrayView2};
 use std::collections::BinaryHeap;
 pub use ordered_float::*;
 use crate::algs::*;
-use crate::algs::{distance::{DistanceMetric, cosine_similarity}};
+use crate::algs::{distance::{DistanceMetric}};
 
 use super::distance::CosineSimilarity;
 
@@ -18,7 +18,7 @@ pub struct FABruteforce {
 impl FABruteforce {
     pub fn new(verbose_print: bool, dist_metric: DistanceMetric) -> Result<Self, String> {
         return Ok(FABruteforce {
-            name: "fa_bruteforce_c03T".to_string(),
+            name: "fa_bruteforce_cX".to_string(),
             metric: "angular".to_string(),
             verbose_print: verbose_print,
             dist: dist_metric,

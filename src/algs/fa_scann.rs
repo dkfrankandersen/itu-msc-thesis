@@ -3,7 +3,7 @@ use std::fs::File;
 use std::path::Path;
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{AlgorithmImpl, distance::{cosine_similarity, DistanceMetric, euclidian}, AlgoParameters};
+use crate::algs::{AlgorithmImpl, distance::{DistanceMetric, euclidian}, AlgoParameters};
 use crate::algs::{scann_kmeans::{scann_kmeans}};
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{debug_timer::DebugTimer};
@@ -285,7 +285,8 @@ impl AlgorithmImpl for FAScann {
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in best_quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            // let neg_distance = OrderedFloat(-cosine_similarity(query,  &datapoint));
+            let neg_distance = OrderedFloat(0f64);
             if best_candidates.len() < results_per_query {
                 best_candidates.push((neg_distance, index));
             } else if neg_distance < best_candidates.peek().unwrap().0 {

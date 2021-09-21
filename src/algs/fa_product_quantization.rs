@@ -75,15 +75,15 @@ impl FAProductQuantization {
     }
 
     pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        -cosine_similarity(&p, &q)
+        cosine_similarity(&p, &q)
     }
 
     pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(self.distance(p, q))
+        OrderedFloat(-self.distance(p, q))
     }
 
     pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(-self.distance(p, q))
+        OrderedFloat(self.distance(p, q))
     }
 
     pub fn random_traindata<T: RngCore>(&self, rng: T, dataset: &ArrayView2::<f64>, train_dataset_size: usize) -> Array2::<f64> {
@@ -345,101 +345,11 @@ impl AlgorithmImpl for FAProductQuantization {
         }
 
         // Pop all candidate indexes from heap and reverse list.
-        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
+        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len())
+                                                        .map(|_| best_candidates
+                                                        .pop().unwrap().1).collect();
         best_n_candidates.reverse();
         best_n_candidates
         
     }
 }
-
-// #[cfg(test)]
-// mod product_quantization_tests {
-//     use ndarray::{Array2, arr2};
-//     use crate::algs::fa_product_quantization::FAProductQuantization;
-//     use crate::util::AlgoParameters;
-
-//     fn algoParameters() -> AlgoParameters {
-//         AlgoParameters {
-//             metric: "metric".to_string(),
-//             dataset: "dataset".to_string(),
-//             algorithm: "algorithm".to_string(),
-//             algo_arguments: Vec::new(),
-//             run_parameters: Vec::new()
-//         } 
-//     } 
-
-//     fn dataset1() -> Array2<f64> {
-//         arr2(&[
-//             [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-//             [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
-//             [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
-//             [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
-//             [4.0, 4.1, 4.2, 4.3, 4.4, 4.5],
-//             [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
-//             [6.0, 6.1, 6.2, 6.3, 6.4, 6.5],
-//             [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
-//             [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
-//             [9.0, 9.1, 9.2, 9.3, 9.4, 9.5],
-//         ])
-//     }
-
-//     #[test]
-//     fn new_d_div_m_result_ok() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 3, 1, 10, 20, 200);
-//         assert!(pq.is_ok());
-//     }
-//     #[test]
-//     fn new_d_div_m_result_err() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 5, 1, 10, 20, 200);
-//         assert!(pq.is_err());
-//     }
-//     #[test]
-//     fn new_m_par_0_result_err() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 0, 1, 10, 20, 200);
-//         assert!(pq.is_err());
-//     }
-//     #[test]
-//     fn new_clusters_par_is_0_result_err() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(), &dataset1().view(), 3, 0, 10, 20, 200);
-//         assert!(pq.is_err());
-//     }
-//     #[test]
-//     fn new_residual_train_size_is_0_result_err() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
-//         assert!(pq.is_err());
-//     }
-//     #[test]
-//     fn new_residual_train_size_is_gt_dataset_result_err() {
-//         let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 0, 20, 200);
-//         assert!(pq.is_err());
-//     }
-//     #[test]
-//     fn random_traindata_2_of_10_rows() {
-//         use rand::{SeedableRng, rngs::StdRng};
-//         let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
-//         let rng = StdRng::seed_from_u64(11);
-//         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
-//         println!("{}", partial_dataset);
-//         assert!(partial_dataset.nrows() == 2);
-//     }
-//     #[test]
-//     fn random_traindata_6_of_6_columns() {
-//         use rand::{SeedableRng, rngs::StdRng};
-//         let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
-//         let rng = StdRng::seed_from_u64(11);
-//         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 2);
-//         assert!(partial_dataset.ncols() == 6);
-//     }
-//     #[test]
-//     fn random_traindata_output_of_seed() {
-//         use rand::{SeedableRng, rngs::StdRng};
-//         let pq = FAProductQuantization::new(false, &algoParameters(),  &dataset1().view(), 3, 1, 10, 20, 200);
-//         let rng = StdRng::seed_from_u64(11);
-//         let partial_dataset = pq.unwrap().random_traindata(rng, &dataset1().view(), 4);
-//         println!("{}",partial_dataset);
-//         assert!(partial_dataset == arr2(&[[5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
-//                                             [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
-//                                             [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
-//                                             [4.0, 4.1, 4.2, 4.3, 4.4, 4.5]]));
-//     }
-// }

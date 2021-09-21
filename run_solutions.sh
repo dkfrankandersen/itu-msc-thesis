@@ -42,11 +42,9 @@ cargo build --release
 if [ $run_type = 't' ]
 then
     cargo run --release angular $DATASET bruteforce [10]
-    # cargo run --release angular $DATASET kmeans [10] [2000 10] [[16]]
+    cargo run --release angular $DATASET kmeans [10] [2000 10] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
     # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[256 49152] [384 73728]]]
-    #cargo run --release angular random-xs-20-angular bruteforce [10]
 
-    # cargo run --release angular random-xs-20-angular bruteforce [10]
     # cargo run --release angular $DATASET kmeans [10] [50 100] [[1] [2] [3] [4] [5] [10] [30] [50]]
     # cargo run --release angular $DATASET pq [10] [5 500 250000 256 100] [[1 30] [1 60] [1 120] [1 150] [1 500] [5 30] [5 60] [5 120] [5 150] [10 500] [10 30] [10 60] [10 120] [10 150] [10 500]]
     # cargo run --release angular $DATASET scann [10] [10 2000 250000 256 10 0.2] [[1 32]]
@@ -56,10 +54,8 @@ then
 
     cargo run --release angular $DATASET bruteforce [10]
     # cargo run --release angular $DATASET kmeans [10] [2000 100] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
-    # cargo run --release angular $DATASET scann_kmeans [10] [2000 10] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
     # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[16 3072] [24 3072] [32 4096] [64 8192] [64 12288] [72 16384] [88 24576] [128 24576] [192 32768] [192 49152] [384 73728] [384 131072] [512 131072]]
     # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [128 12288] [192 16384] [256 32768] [384 73728]]
-    # cargo run --release angular $DATASET pq [10] [13 500 250000 256 100] [[8 512] [8 1024] [16 1024] [16 2048] [16 3072] [24 3072] [32 4096] [64 8192] [64 12288] [72 16384] [88 24576] [128 24576] [192 32768] [192 49152] [384 73728] [384 131072] [512 131072]]
     # cargo run --release angular $DATASET pq [10] [5 2000 250000 256 100] [[8 512] [8 1024] [16 1024] [16 2048] [16 3072] [24 3072] [32 4096] [64 8192] [64 12288] [72 16384] [88 24576] [128 24576] [192 32768] [192 49152] [384 73728] [384 131072] [512 131072]]
     
     # cargo run --release angular $DATASET scann [10] [10 2000 250000 256 50 0.2] [[1 64] [2 128] [4 256] [4 512] [8 512] [8 1024] [16 1024] [16 2048] [16 3072] [24 3072] [32 4096] [64 8192] [64 12288] [72 16384] [88 24576] [128 24576] [192 32768] [192 49152] [384 73728] [384 131072] [512 131072]]

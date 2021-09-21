@@ -2,7 +2,7 @@ use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
-use crate::algs::{AlgorithmImpl, distance::{CosineSimilarity, cosine_similarity, DistanceMetric}, AlgoParameters};
+use crate::algs::{AlgorithmImpl, distance::{CosineSimilarity, DistanceMetric}, AlgoParameters};
 use crate::algs::{kmeans::{KMeans}, common::{Centroid}};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
@@ -32,7 +32,7 @@ impl FAKMeans {
 
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_c12T".to_string(),
+                        name: "fa_kmeans_cX".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
