@@ -6,6 +6,7 @@ pub mod common;
 pub mod fa_product_quantization;
 pub mod fa_scann;
 pub mod distance;
+
 // pub mod scann_impl;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
@@ -14,7 +15,7 @@ use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
 use fa_scann::{FAScann};
 use crate::util::{AlgoParameters};
-
+use distance::{DistanceMetric};
 
 #[derive(Debug, Clone)]
 pub enum Algorithm {
@@ -60,28 +61,28 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 }
-
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algo_parameters: &AlgoParameters) -> Result<Algorithm, String> {
+        let dist = DistanceMetric::CosineSimilarity;
         match algo_parameters.algorithm.as_ref() {
             "bruteforce" => {   
-                            let alg = FABruteforce::new(verbose_print);
+                            let alg = FABruteforce::new(verbose_print, dist);
                             match alg {
                                 Ok(a) => Ok(Algorithm::FABruteforce(a)),
                                 Err(e) => Err(e)
                             }
                             },
             "kmeans" => {
-                            let alg = FAKMeans::new(verbose_print, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
+                            let alg = FAKMeans::new(verbose_print, dist, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
                             match alg {
                                 Ok(a) => Ok(Algorithm::FAKMeans(a)),
                                 Err(e) => Err(e)
                             }
                         },
             "pq" => {
-                            let alg = FAProductQuantization::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                            let alg = FAProductQuantization::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                             algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
                             algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
                             match alg {
@@ -90,7 +91,7 @@ impl AlgorithmFactory {
                             }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        let alg = FAScann::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[5].parse::<f64>().unwrap());
@@ -130,7 +131,7 @@ pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &Arr
     let candidates = algo.query(dataset, &p, results_per_query, arguments);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
-
+    // let dist = distance::Distance::;
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
     for i in candidates.into_iter() {
         let q = &dataset.slice(s![i,..]);

@@ -2,8 +2,8 @@ use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
-use crate::algs::{AlgorithmImpl, distance::cosine_similarity, AlgoParameters};
-use crate::algs::{kmeans::{kmeans}, common::{Centroid}};
+use crate::algs::{AlgorithmImpl, distance::{cosine_similarity, DistanceMetric}, AlgoParameters};
+use crate::algs::{kmeans::{KMeans}, common::{Centroid}};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
 use std::path::Path;
@@ -21,7 +21,7 @@ pub struct FAKMeans {
 }
 
 impl FAKMeans {
-    pub fn new(verbose_print: bool, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
+    pub fn new(verbose_print: bool, dist: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
         if k_clusters <= 0 {
             return Err("Clusters must be greater than 0".to_string());
         }
@@ -31,7 +31,7 @@ impl FAKMeans {
         
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_c10".to_string(),
+                        name: "fa_kmeans_c10T".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -39,6 +39,18 @@ impl FAKMeans {
                         max_iterations: max_iterations,
                         verbose_print: verbose_print
                     });
+    }
+
+    pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+        -cosine_similarity(&p, &q)
+    }
+
+    pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
+        OrderedFloat(self.distance(p, q))
+    }
+
+    pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
+        OrderedFloat(-self.distance(p, q))
     }
 }
 
@@ -63,7 +75,8 @@ impl AlgorithmImpl for FAKMeans {
             // Write compute_coarse_quantizers to bin
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
-            self.codebook = kmeans(rng, self.k_clusters, self.max_iterations, dataset, false);
+            let kmeans = KMeans::new();
+            self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false);
             t.stop();
             t.print_as_secs();
 
@@ -81,7 +94,7 @@ impl AlgorithmImpl for FAKMeans {
 
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
-            (OrderedFloat(cosine_similarity(query, &centroid.point.view())), *&centroid.id)
+            (self.max_distance_ordered(query, &centroid.point.view()), *&centroid.id)
         }).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
@@ -93,16 +106,16 @@ impl AlgorithmImpl for FAKMeans {
         for centroid_index in best_centroid_indexes.into_iter() {
             for candidate_key in self.codebook[centroid_index].indexes.iter() {
                 let candidate = dataset.slice(s![*candidate_key,..]);
-                let neg_distance = OrderedFloat(-cosine_similarity(query, &candidate.view()));
+                let distance = self.min_distance_ordered(query, &candidate.view());
                 
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {
-                    best_candidates.push((neg_distance, *candidate_key));
+                    best_candidates.push((distance, *candidate_key));
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
-                else if neg_distance < best_candidates.peek().unwrap().0 {
+                else if distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push((neg_distance, *candidate_key));
+                    best_candidates.push((distance, *candidate_key));
                 }
             }
         }

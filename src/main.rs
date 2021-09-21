@@ -5,9 +5,7 @@ use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
 use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
-use ndarray::prelude::*;
-use ndarray_linalg::*;
-// use crate::algs::scann_impl::{loss::squared_l2_norm, loss::compute_parallel_cost_multiplier};
+mod distances;
 
 fn main() {
 
