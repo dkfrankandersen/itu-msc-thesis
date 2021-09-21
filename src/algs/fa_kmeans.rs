@@ -2,7 +2,7 @@ use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
-use crate::algs::{AlgorithmImpl, distance::{cosine_similarity, DistanceMetric}, AlgoParameters};
+use crate::algs::{AlgorithmImpl, distance::{CosineSimilarity, cosine_similarity, DistanceMetric}, AlgoParameters};
 use crate::algs::{kmeans::{KMeans}, common::{Centroid}};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
@@ -17,7 +17,8 @@ pub struct FAKMeans {
     codebook: Vec<Centroid>,
     k_clusters: usize,
     max_iterations: usize,
-    verbose_print: bool
+    verbose_print: bool,
+    cosine_metric: Option<CosineSimilarity>
 }
 
 impl FAKMeans {
@@ -28,29 +29,18 @@ impl FAKMeans {
         else if max_iterations <= 0 {
             return Err("max_iterations must be greater than 0".to_string());
         }
-        
+
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_c10T".to_string(),
+                        name: "fa_kmeans_c12T".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters: k_clusters,
                         max_iterations: max_iterations,
-                        verbose_print: verbose_print
+                        verbose_print: verbose_print,
+                        cosine_metric: None
                     });
-    }
-
-    pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        -cosine_similarity(&p, &q)
-    }
-
-    pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(self.distance(p, q))
-    }
-
-    pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(-self.distance(p, q))
     }
 }
 
@@ -61,10 +51,14 @@ impl AlgorithmImpl for FAKMeans {
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
+
+        println!("Fitting for faster CosineSimilarity");
+        self.cosine_metric = Some(CosineSimilarity::new(dataset));
+
         let file_fa_kmeans_codebook = &self.algo_parameters.fit_file_output("codebook");
-        
+
         // Load existing pre-computede data if exists
-        if Path::new(file_fa_kmeans_codebook).exists() 
+        if Path::new(file_fa_kmeans_codebook).exists()
                 && Path::new(file_fa_kmeans_codebook).exists() {
             let mut t = DebugTimer::start("fit fa_kmeans_codebook from file");
             let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
@@ -88,13 +82,16 @@ impl AlgorithmImpl for FAKMeans {
         }
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> { 
+    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
         // Query Arguments
-        let clusters_to_search = arguments[0];      
+        let clusters_to_search = arguments[0];
+
+        let cosine_metric = self.cosine_metric.as_ref().unwrap();
+        let q_dot_sqrt = cosine_metric.query_dot_sqrt(query);
 
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
-            (self.max_distance_ordered(query, &centroid.point.view()), *&centroid.id)
+            (cosine_metric.max_distance_ordered(query, &centroid.point.view()), *&centroid.id)
         }).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
@@ -105,23 +102,28 @@ impl AlgorithmImpl for FAKMeans {
         let best_candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for centroid_index in best_centroid_indexes.into_iter() {
             for candidate_key in self.codebook[centroid_index].indexes.iter() {
+                let candidate_index = *candidate_key;
                 let candidate = dataset.slice(s![*candidate_key,..]);
-                let distance = self.min_distance_ordered(query, &candidate.view());
-                
+
+                // let distance = self.min_distance_ordered(query, &candidate.view());
+                let distance = cosine_metric.fast_min_distance_ordered(candidate_index, &candidate, &query, q_dot_sqrt);
+
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {
-                    best_candidates.push((distance, *candidate_key));
+                    best_candidates.push((distance, candidate_index));
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
                 else if distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push((distance, *candidate_key));
+                    best_candidates.push((distance, candidate_index));
                 }
             }
         }
 
         // Pop all candidate indexes from heap and reverse list.
-        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len()).map(|_| best_candidates.pop().unwrap().1).collect();
+        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len())
+                                                    .map(|_| best_candidates
+                                                    .pop().unwrap().1).collect();
         best_n_candidates.reverse();
         best_n_candidates
     }

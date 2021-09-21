@@ -4,36 +4,27 @@ pub use ordered_float::*;
 use crate::algs::*;
 use crate::algs::{distance::{DistanceMetric, cosine_similarity}};
 
+use super::distance::CosineSimilarity;
+
 #[derive(Debug, Clone)]
 pub struct FABruteforce {
     name: String,
     metric: String,
     verbose_print: bool,
     dist: DistanceMetric,
+    cosine_metric: Option<CosineSimilarity>
 }
 
 impl FABruteforce {
     pub fn new(verbose_print: bool, dist_metric: DistanceMetric) -> Result<Self, String> {
         return Ok(FABruteforce {
-            name: "fa_bruteforce_c01T".to_string(),
+            name: "fa_bruteforce_c03T".to_string(),
             metric: "angular".to_string(),
             verbose_print: verbose_print,
-            dist: dist_metric
+            dist: dist_metric,
+            cosine_metric: None
         });
     }
-
-    pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        -cosine_similarity(&p, &q)
-    }
-
-    pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(self.distance(p, q))
-    }
-
-    pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {
-        OrderedFloat(-self.distance(p, q))
-    }
-    
 }
 
 impl AlgorithmImpl for FABruteforce {
@@ -42,30 +33,33 @@ impl AlgorithmImpl for FABruteforce {
         self.name.to_string()
     }
     
-    fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
-        
+    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
+        println!("Fitting for faster CosineSimilarity");
+        self.cosine_metric = Some(CosineSimilarity::new(dataset));
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, _arguments: &Vec::<usize>) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, _arguments: &Vec::<usize>) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
-
-        for (idx, datapoint) in dataset.outer_iter().enumerate() {
-            let distance = self.min_distance_ordered(&p, &datapoint);
+        let cosine_metric = self.cosine_metric.as_ref().unwrap();
+        let q_dot_sqrt = cosine_metric.query_dot_sqrt(query);
+        for (index, datapoint) in dataset.outer_iter().enumerate() {
+            // let distance = OrderedFloat(cosine_similarity(&query, &datapoint));
+            let distance = cosine_metric.fast_min_distance_ordered(index, &datapoint, &query, q_dot_sqrt);
             if best_candidates.len() < results_per_query {
-                best_candidates.push((distance, idx));
+                best_candidates.push((distance, index));
                 
             } else {
                 if distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
-                    best_candidates.push((distance, idx));
+                    best_candidates.push((distance, index));
                 }
             }
         }
 
-        let mut best_n_candidates: Vec<usize> = Vec::new();
-        for _ in 0..best_candidates.len() {
-            best_n_candidates.push(best_candidates.pop().unwrap().1);
-        }
+        // Pop all candidate indexes from heap and reverse list.
+        let mut best_n_candidates: Vec<usize> =  (0..best_candidates.len())
+                                                    .map(|_| best_candidates
+                                                    .pop().unwrap().1).collect();
         best_n_candidates.reverse();
         best_n_candidates
     }

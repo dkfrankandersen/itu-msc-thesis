@@ -2,7 +2,7 @@ use ndarray::{Array, ArrayView1, ArrayView2, s};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{distance::{cosine_similarity}, common::Centroid};
+use crate::algs::{distance::{cosine_similarity, CosineSimilarity}, common::Centroid};
 use indicatif::ProgressBar;
 use crate::util::debug_timer::DebugTimer;
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ impl KMeans {
     }
 
     pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
-            
+        let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init
@@ -55,6 +55,7 @@ impl KMeans {
         let bar_max_iterations = ProgressBar::new(max_iterations as u64);
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
+        let metric_arc = Arc::new(metric.clone());
 
         const NTHREADS: usize = 8;
         let max_val = dataset.nrows();
@@ -71,7 +72,6 @@ impl KMeans {
         }
         
         for iterations in 0..max_iterations  {
-            let mut t_last = DebugTimer::start("centroid clone");
             if centroids == last_centroids {
                 if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
                 break;
@@ -81,23 +81,28 @@ impl KMeans {
 
             // Remove centroid children
             centroids.par_iter_mut().for_each(|c| c.indexes.clear());
-            t_last.stop();
-            t_last.print_as_millis();
+          
 
             // Assign     
             let centroids_arc = Arc::new(centroids.clone());
             let mut handles = Vec::new();
             for (f, t) in chunks.clone().into_iter() {
                 let centroids_arc = Arc::clone(&centroids_arc);
+                let metric_arc = Arc::clone(&metric_arc);
                 let dataset_arc = Arc::clone(&dataset_arc);
+
                 handles.push(thread::spawn(move || {
                     let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                     for index in f..t {
-                        let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::NEG_INFINITY);
+                        let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::INFINITY);
                         let mut best_index: usize = 0;
+                        let datapoint = &dataset_arc.slice(s![index,..]);
                         for (centroid_index, centroid) in centroids_arc.iter().enumerate() {
-                            let distance = OrderedFloat(cosine_similarity(&centroid.point.view(), &dataset_arc.slice(s![index,..])));
-                            if distance > best_distance { 
+                            let q =  &centroid.point.view();
+                            let q_dot_sqrt = metric_arc.query_dot_sqrt(q);
+                            let distance = metric_arc.fast_min_distance_ordered(index, q, datapoint, q_dot_sqrt);
+                            // let distance =  OrderedFloat(cosine_similarity(&centroid.point.view(), datapoint));
+                            if distance < best_distance { 
                                 best_distance = distance;
                                 best_index = centroid_index; 
                             }
