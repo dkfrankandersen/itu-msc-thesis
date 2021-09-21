@@ -5,7 +5,6 @@ use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
 use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
-mod distances;
 
 fn main() {
 
