@@ -305,7 +305,6 @@ impl AlgorithmImpl for FAProductQuantization {
         }
 
         for coarse_quantizer_index in best_coarse_quantizers_indexes.iter() {
-
             // Get coarse_quantizer from index
             let best_coares_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
 
@@ -350,6 +349,5 @@ impl AlgorithmImpl for FAProductQuantization {
                                                         .pop().unwrap().1).collect();
         best_n_candidates.reverse();
         best_n_candidates
-        
     }
 }
