@@ -57,7 +57,7 @@ impl RunParameters {
     pub fn algo_definition(&self) -> String {
         let algo_arg = format!("{:?}", self.algo_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
         let query_arg = format!("{:?}", self.query_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
-        return format!("{}({}_{}_{})", self.algorithm, self.metric, algo_arg, query_arg);
+        return format!("{}[{}_{}_{}]", self.algorithm, self.metric, algo_arg, query_arg);
     }
 }
 

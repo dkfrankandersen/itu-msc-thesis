@@ -11,7 +11,7 @@ echo "Copy results in ann benchmark folder [y]?"
 read cmd_copy
 if [ $cmd_copy = 'y' ]
 then
-cp -r results /d/repository/itu/thesis/ann-benchmarks/
+cp -r results ../ann-benchmarks/
 fi
 
 exit 0

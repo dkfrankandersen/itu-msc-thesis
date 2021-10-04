@@ -1,12 +1,13 @@
 pub mod fa_bruteforce;
 pub mod fa_kmeans;
 pub mod kmeans;
+pub mod scann_kmeans;
 pub mod common;
 pub mod fa_product_quantization;
 pub mod fa_scann;
 pub mod distance;
-pub mod fa_scann_util;
-pub mod fa_scann_matrices;
+
+// pub mod scann_impl;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};
@@ -14,7 +15,7 @@ use fa_kmeans::{FAKMeans};
 use fa_product_quantization::{FAProductQuantization};
 use fa_scann::{FAScann};
 use crate::util::{AlgoParameters};
-
+use distance::{DistanceMetric};
 
 #[derive(Debug, Clone)]
 pub enum Algorithm {
@@ -47,6 +48,7 @@ impl AlgorithmImpl for Algorithm {
             Algorithm::FAKMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
             Algorithm::FAProductQuantization(ref x) => x.query(dataset, p, results_per_query, arguments),
             Algorithm::FAScann(ref x) => x.query(dataset, p, results_per_query, arguments),
+        
         }
     }
 
@@ -59,36 +61,37 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 }
-
 pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algo_parameters: &AlgoParameters) -> Result<Algorithm, String> {
+        let dist = DistanceMetric::CosineSimilarity;
         match algo_parameters.algorithm.as_ref() {
-            "bruteforce" => {   let alg = FABruteforce::new(verbose_print);
-                                match alg {
-                                    Ok(a) => Ok(Algorithm::FABruteforce(a)),
-                                    Err(e) => Err(e)
-                                }
+            "bruteforce" => {   
+                            let alg = FABruteforce::new(verbose_print, dist);
+                            match alg {
+                                Ok(a) => Ok(Algorithm::FABruteforce(a)),
+                                Err(e) => Err(e)
+                            }
                             },
             "kmeans" => {
-                                let alg = FAKMeans::new(verbose_print, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
-                                match alg {
-                                    Ok(a) => Ok(Algorithm::FAKMeans(a)),
-                                    Err(e) => Err(e)
-                                }
+                            let alg = FAKMeans::new(verbose_print, dist, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
+                            match alg {
+                                Ok(a) => Ok(Algorithm::FAKMeans(a)),
+                                Err(e) => Err(e)
+                            }
                         },
             "pq" => {
-                        let alg = FAProductQuantization::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
-                        algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
-                        algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
-                        match alg {
-                            Ok(a) => Ok(Algorithm::FAProductQuantization(a)),
-                            Err(e) => Err(e)
-                        }
+                            let alg = FAProductQuantization::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                            algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
+                            algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
+                            match alg {
+                                Ok(a) => Ok(Algorithm::FAProductQuantization(a)),
+                                Err(e) => Err(e)
+                            }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        let alg = FAScann::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[5].parse::<f64>().unwrap());
@@ -96,7 +99,7 @@ impl AlgorithmFactory {
                             Ok(a) => Ok(Algorithm::FAScann(a)),
                             Err(e) => Err(e)
                         }
-            },
+                    },
             &_ => unimplemented!(),
         }
     }
@@ -123,16 +126,16 @@ pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParame
     }
 }
 
-pub fn run_individual_query(algo: &Algorithm, p: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let candidates = algo.query(dataset, &p, results_per_query, arguments);
+    let candidates = algo.query(dataset, &query, results_per_query, arguments);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
-
+    // let dist = distance::Distance::;
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
     for i in candidates.into_iter() {
-        let q = &dataset.slice(s![i,..]);
-        let dist = distance::cosine_similarity(p, q);
+        let datapoint = &dataset.slice(s![i,..]);
+        let dist = distance::cosine_similarity(query, datapoint);
         candidates_dist.push((i, 1.-dist));
     }
 

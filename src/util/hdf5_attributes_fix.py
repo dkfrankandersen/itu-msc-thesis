@@ -47,6 +47,7 @@ def convert(debug):
             print("###    File is not hdf5            ###")
         else:
             try:
+                os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
                 f = h5py.File(path_file, 'r+')
                 if "attributes" in f:
                     write_attributes(f)
@@ -61,9 +62,10 @@ def convert(debug):
                     print("###    "+style.GREEN+"No attributes dataset in file"+style.MAGENTA+"           ###")
                 f.close()
             except:
-                print(f"###    "+style.GREEN+"Was unable to read {path_file}"+style.MAGENTA+"            ###")
+                print("###    "+style.GREEN+"Was unable to read "+ f"{path_file}" +style.MAGENTA+"            ###")
                 traceback.print_exc()
     if debug:
         print("### "+style.GREEN+"LEAVING PYTHON3"+style.MAGENTA+"                                     ###")
         print("###########################################################" + style.RESET)
+
 convert(False)
