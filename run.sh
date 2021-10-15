@@ -52,7 +52,6 @@ then
 
 elif [ $run_type = 'f' ]
 then
-
     cargo run --release angular $DATASET bruteforce [10]
     # cargo run --release angular $DATASET kmeans [10] [2000 100] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
     # cargo run --release angular $DATASET pq [10] [10 2000 250000 256 100] [[16 3072] [24 3072] [32 4096] [64 8192] [64 12288] [72 16384] [88 24576] [128 24576] [192 32768] [192 49152] [384 73728] [384 131072] [512 131072]]
@@ -64,6 +63,7 @@ then
 else
     exit 0
 fi
+
 sh ./copy_results_to_ann.sh
 
 exit 0
