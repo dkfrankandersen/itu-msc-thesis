@@ -1,15 +1,15 @@
+use crate::util::{sampling::sampling_without_replacement};
+use crate::util::debug_timer::DebugTimer;
+use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
+extern crate sys_info;
 use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
-pub use ordered_float::*;
-use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
+use ordered_float::*;
 use indicatif::ProgressBar;
-use crate::util::debug_timer::DebugTimer;
 use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
-extern crate sys_info;
 
 pub struct SCANNKMeans {}
 
@@ -39,8 +39,8 @@ impl SCANNKMeans {
         t.print_as_millis();
 
         // Repeat
-        println!("Started kmeans Repeat");
-        let mut t = DebugTimer::start("kmeans Repeat");
+        println!("Started scann kmeans repeat");
+        let mut t = DebugTimer::start("scann kmeans Repeat");
         let bar_max_iterations = ProgressBar::new(max_iterations as u64);
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());

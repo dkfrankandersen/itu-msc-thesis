@@ -71,7 +71,6 @@ impl KMeans {
             // Remove centroid children
             centroids.par_iter_mut().for_each(|c| c.indexes.clear());
           
-
             // Assign     
             let centroids_arc = Arc::new(centroids.clone());
             let mut handles = Vec::new();
