@@ -3,8 +3,9 @@ use std::fs::File;
 use std::path::Path;
 use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{AlgorithmImpl, distance::{DistanceMetric, euclidian}, AlgoParameters};
-use crate::algs::{scann_kmeans::{scann_kmeans}};
+use crate::algs::{AlgorithmImpl, distance::{DistanceMetric}, AlgoParameters};
+use crate::algs::distance::cosine_similarity;
+use crate::algs::scann_kmeans::*;
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{debug_timer::DebugTimer};
 use rand::{prelude::*};
@@ -33,7 +34,7 @@ pub struct FAScann {
 
 impl FAScann {
 
-    pub fn new(verbose_print: bool, dist: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
+    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
         if m <= 0 {
@@ -76,7 +77,7 @@ impl FAScann {
             anisotropic_quantization_threshold: anisotropic_quantization_threshold,
         });
     }
-    
+
     pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
         cosine_similarity(&p, &q)
     }
@@ -128,7 +129,7 @@ impl FAScann {
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
-            let kmeans = KMeans::new();
+            let kmeans = SCANNKMeans::new();
             let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
 
             for (k, centroid) in centroids.iter().enumerate() {
@@ -228,7 +229,7 @@ impl AlgorithmImpl for FAScann {
         } else {
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
-            let kmeans = KMeans::new();
+            let kmeans = SCANNKMeans::new();
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
             t.stop();
             t.print_as_secs();

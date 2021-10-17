@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use ndarray::{ArrayView1, ArrayView2, Array1, Array2, arr1, arr2};
+use ndarray::{ArrayView1, ArrayView2};
 use ordered_float::OrderedFloat;
 #[allow(dead_code)]
 #[derive(Debug, Clone)]

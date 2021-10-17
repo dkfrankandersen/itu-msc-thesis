@@ -33,7 +33,7 @@ pub struct FAProductQuantization {
 
 impl FAProductQuantization {
 
-    pub fn new(verbose_print: bool, dist: DistanceMetric, algo_parameters: &AlgoParameters,
+    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters,
                 dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                 residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
 

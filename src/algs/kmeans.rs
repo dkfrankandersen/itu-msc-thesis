@@ -1,4 +1,4 @@
-use ndarray::{Array, ArrayView1, ArrayView2, s};
+use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
 pub use ordered_float::*;
 use crate::util::{sampling::sampling_without_replacement};
@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
+extern crate sys_info;
 
 pub struct KMeans {}
 
@@ -44,13 +45,13 @@ impl KMeans {
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
         let metric_arc = Arc::new(metric.clone());
-
-        const NTHREADS: usize = 8;
+                
+        let no_of_threads: usize = sys_info::cpu_num().unwrap_or(1) as usize;
         let max_val = dataset.nrows();
-        let chunk = max_val/NTHREADS;
+        let chunk = max_val/no_of_threads;
 
         let mut chunks = Vec::<(usize,usize)>::new();
-        for i in 0..NTHREADS {
+        for i in 0..no_of_threads {
             let from = chunk*i;
             let mut to = from+chunk;
             if max_val-to < chunk {
@@ -148,40 +149,3 @@ impl KMeans {
         centroids
     }
 }
-
-// #[cfg(test)]
-// mod pq_kmeans_tests {
-//     use ndarray::{Array2, arr2};
-//     use crate::algs::kmeans::{kmeans};
-
-//     fn dataset1() -> Array2<f64> {
-//         arr2(&[
-//             [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-//             [1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
-//             [2.0, 2.1, 2.2, 2.3, 2.4, 2.5],
-//             [3.0, 3.1, 3.2, 3.3, 3.4, 3.5],
-//             [4.0, 4.1, 4.2, 4.3, 4.4, 4.5],
-//             [5.0, 5.1, 5.2, 5.3, 5.4, 5.5],
-//             [6.0, 6.1, 6.2, 6.3, 6.4, 6.5],
-//             [7.0, 7.1, 7.2, 7.3, 7.4, 7.5],
-//             [8.0, 8.1, 8.2, 8.3, 8.4, 8.5],
-//             [9.0, 9.1, 9.2, 9.3, 9.4, 9.5],
-//         ])
-//     }
-//     #[test]
-//     fn kmeans_with_k_7_clusters_7() {
-//         use rand::{SeedableRng, rngs::StdRng};
-//         let rng = StdRng::seed_from_u64(11);
-//         let centroids = kmeans(rng, 7, 200, &dataset1().view(), false);
-//         println!("{:?}", centroids);
-//         assert!(centroids.len() == 7);
-//     }
-
-//     #[test]
-//     fn kmeans_with_k_3_seed_111_centroid0_is() {
-//         use rand::{SeedableRng, rngs::StdRng};
-//         let rng = StdRng::seed_from_u64(111);
-//         let centroids = kmeans(rng, 4, 200, &dataset1().view(), false);
-//         assert!(centroids[0].indexes == vec![3, 4, 5]);
-//     }
-// }

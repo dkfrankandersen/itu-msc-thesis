@@ -22,7 +22,7 @@ pub struct FAKMeans {
 }
 
 impl FAKMeans {
-    pub fn new(verbose_print: bool, dist: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
+    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
         if k_clusters <= 0 {
             return Err("Clusters must be greater than 0".to_string());
         }

@@ -5,12 +5,27 @@ use util::{AlgoParameters, dataset, create_run_parameters};
 mod running;
 use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
+extern crate sys_info;
+
+fn print_sys_info() {
+    let m = sys_info::mem_info().unwrap();
+    println!("+----------------------------------------------+");
+    println!("| hostname {:?}", sys_info::hostname().unwrap_or("hostname unknown".to_string()));
+    println!("| os_release {:?}", sys_info::os_release().unwrap_or("os_release unknown".to_string()));
+    println!("| cpu_speed {:?}", sys_info::cpu_speed().unwrap_or(0));
+    println!("| cpu_num {:?}", sys_info::cpu_num().unwrap_or(0));
+    println!("| os_type {:?}", sys_info::os_type().unwrap_or("os_type unknown".to_string()));
+    println!("| mem_info {:?} GB", m.total/1024/1024);
+    println!("+----------------------------------------------+");
+
+}
 
 fn main() {
 
+    print_sys_info();
+
     let verbose_print = true;
     let args: Vec<String> = env::args().collect();
-
     
     println!("Running algorithm with");
     println!("args: {:?}\n", args);
