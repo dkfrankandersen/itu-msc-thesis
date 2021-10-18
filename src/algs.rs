@@ -1,13 +1,13 @@
 pub mod fa_bruteforce;
 pub mod fa_kmeans;
-pub mod kmeans;
-pub mod scann_kmeans;
-pub mod common;
 pub mod fa_product_quantization;
-pub mod fa_scann;
+pub mod kmeans;
+pub mod common;
 pub mod distance;
+pub mod fa_scann;
+pub mod scann_kmeans;
+pub mod scann_common;
 
-// pub mod scann_impl;
 use std::time::{Instant};
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::{FABruteforce};

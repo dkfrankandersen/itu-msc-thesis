@@ -1,15 +1,16 @@
-use std::collections::{BinaryHeap, HashMap};
-use std::fs::File;
-use std::path::Path;
-use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::{DistanceMetric}, AlgoParameters};
 use crate::algs::distance::cosine_similarity;
 use crate::algs::scann_kmeans::*;
+use crate::algs::scann_common::*;
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{debug_timer::DebugTimer};
+use std::collections::{BinaryHeap, HashMap};
+use std::fs::File;
+use std::path::Path;
+use ndarray::{Array, Array1, Array2, ArrayView1, ArrayView2, s};
 use rand::{prelude::*};
-pub use ordered_float::*;
+use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
 

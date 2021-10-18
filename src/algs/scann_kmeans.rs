@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
+use crate::algs::scann_common::*;
+
 
 pub struct SCANNKMeans {}
 
