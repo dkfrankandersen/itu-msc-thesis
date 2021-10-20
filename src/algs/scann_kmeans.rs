@@ -23,7 +23,7 @@ impl SCANNKMeans {
     pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, 
                 dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
         
-                    let metric = CosineSimilarity::new(&dataset);
+        let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init
@@ -137,10 +137,10 @@ impl SCANNKMeans {
                         }
                     }
 
-                    // Divide by indexes to get mean
-                    let centroid_indexes_count = centroid.indexes.len() as f64;
+                    // Divide by indexes to get mean, using divisor
+                    let point_multiplier = 1.0 / centroid.indexes.len() as f64;
                     for i in 0..datapoint_dimension {  
-                        centroid.point[i] = centroid.point[i]/centroid_indexes_count;
+                        centroid.point[i] *= point_multiplier;
                     }
                 }
             }
