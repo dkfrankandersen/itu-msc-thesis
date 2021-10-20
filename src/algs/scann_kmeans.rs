@@ -20,8 +20,10 @@ impl SCANNKMeans {
         Self{}
     }
 
-    pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
-        let metric = CosineSimilarity::new(&dataset);
+    pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, 
+                dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+        
+                    let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init

@@ -235,47 +235,56 @@ impl AlgorithmImpl for FAScann {
             t.stop();
             t.print_as_secs();
 
-            let mut t = DebugTimer::start("fit compute_residuals");
-            let residuals = self.compute_residuals(&centroids, dataset);
-            t.stop();
-            t.print_as_secs();
+            for centroid in centroids.iter() {
+                for index in centroid.indexes.iter() {
+                    let datapoint = dataset.slice(s![*index,..]);
+                    let residual = datapoint.to_owned() - centroid.point.to_owned();
+                    // coordinate_descent_ah_quantize()
+                }
+            }
 
-            // Residuals PQ Training data
-            let rng = thread_rng();
-            let mut t = DebugTimer::start("fit random_traindata");
-            let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
-            t.stop();
-            t.print_as_secs();
+            // let mut t = DebugTimer::start("fit compute_residuals");
+            // let residuals = self.compute_residuals(&centroids, dataset);
+            // t.stop();
+            // t.print_as_secs();
 
-            let mut t = DebugTimer::start("fit train_residuals_codebook");
-            self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
-                                                                    self.residuals_codebook_k, self.sub_dimension);
-            t.stop();
-            t.print_as_secs();
+            // // Residuals PQ Training data
+            // let rng = thread_rng();
+            // let mut t = DebugTimer::start("fit random_traindata");
+            // let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
+            // t.stop();
+            // t.print_as_secs();
+
+            // let mut t = DebugTimer::start("fit train_residuals_codebook");
+            // self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
+            //                                                         self.residuals_codebook_k, self.sub_dimension);
+            // t.stop();
+            // t.print_as_secs();
+
             
-            // Write residuals_codebook to bin
-            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            let mut new_file = File::create(file_residuals_codebook).unwrap();
-            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
-            t.stop();
-            t.print_as_secs();
+            // // Write residuals_codebook to bin
+            // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            // let mut new_file = File::create(file_residuals_codebook).unwrap();
+            // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            // t.stop();
+            // t.print_as_secs();
  
-            let mut t = DebugTimer::start("fit residual_encoding");
-            let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
-            t.stop();
-            t.print_as_secs();
+            // let mut t = DebugTimer::start("fit residual_encoding");
+            // let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
+            // t.stop();
+            // t.print_as_secs();
             
-            let mut t = DebugTimer::start("fit compute_coarse_quantizers");
-            self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
-            t.stop();
-            t.print_as_secs();
+            // let mut t = DebugTimer::start("fit compute_coarse_quantizers");
+            // self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
+            // t.stop();
+            // t.print_as_secs();
 
-            // Write compute_coarse_quantizers to bin
-            let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
-            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            t.stop();
-            t.print_as_secs();
+            // // Write compute_coarse_quantizers to bin
+            // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
+            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            // t.stop();
+            // t.print_as_secs();
         }
     }
     
