@@ -35,16 +35,6 @@ pub fn recompute_centroids_simple(spherical: bool, dataset: &ArrayView2::<f64>, 
     }
 }
 
-#[allow(dead_code)]
-pub fn compute_parallel_cost_multiplier(threshold_t: f64, squared_l2_norm: f64, dim: usize) -> f64 {
-    // ScaNN Paper Theorem 3.4
-    let threshold_t_squared = threshold_t*threshold_t;
-    let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
-    let perpendicular_cost: f64 = (1.0 - threshold_t_squared) / squared_l2_norm / (dim - 1) as f64;
-
-    let result = parallel_cost / perpendicular_cost;
-    result
-}
 
 // perpendicular_norm_delta =
 //         residual_norm_delta - parallel_norm_delta;
@@ -59,19 +49,6 @@ pub fn compute_parallel_cost_multiplier(threshold_t: f64, squared_l2_norm: f64, 
 //      //*  + h_orthogonal(w: f64, x: f64)
 // }
 
-
-#[derive(Debug, Clone)]
-pub struct CoordinateDescentResult {
-    new_center_idx: usize,
-    cost_delta: f64,
-    new_parallel_residual_component: f64
-}
-
-#[derive(Debug, Clone)]
-pub struct SubspaceResidualStats {
-    residual_norm: f64,
-    parallel_residual_component: f64
-}
 
 pub fn compute_residual_stats_for_cluster(
     maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
@@ -127,12 +104,15 @@ pub fn optimize_single_subspace(
     return result;
 }
 
-pub fn squared_l2_norm(p: ArrayView1<f64>) -> f64 {
-    let mut res: f64 = 0.0;
-    for x in p.iter() {
-        res += x*x;
+
+pub fn compute_parallel_residual_component(quantized: Vec<usize>, residual_stats: Vec::<Vec::<SubspaceResidualStats>>) -> f64 {
+    let mut result: f64 = 0.0;
+    for subspace_idx in 0..quantized.len() {
+      let cluster_idx: usize = quantized[subspace_idx];
+      result +=
+          residual_stats[subspace_idx][cluster_idx].parallel_residual_component;
     }
-    res.sqrt()
+    return result;
 }
 
 // pub fn initialize_to_min_residual_norm(residual_stats: Vec<Vec<SubspaceResidualStats>>, result: &mut Vec<usize>) {
@@ -149,21 +129,9 @@ pub fn squared_l2_norm(p: ArrayView1<f64>) -> f64 {
 //   }
 // }
 
-pub fn compute_parallel_residual_component(
-    quantized: Vec<usize>,
-    residual_stats: Vec::<Vec::<SubspaceResidualStats>>) -> f64 {
-  let mut result: f64 = 0.0;
-  for subspace_idx in 0..quantized.len() {
-    let cluster_idx: usize = quantized[subspace_idx];
-    result +=
-        residual_stats[subspace_idx][cluster_idx].parallel_residual_component;
-  }
-  return result;
-}
-
 // pub fn coordinate_descent_ah_quantize(
 //     maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
-//     centers: Vec::<Centroid>, threshold: f64, result: Vec<usize>) {
+//     centers: Vec::<Centroid>, const ChunkingProjection<T>& projection, threshold: f64, result: Vec<usize>) {
 
     // let residual_stats = compute_residual_stats(maybe_residual_dptr, original_dptr, centers, projection);
 
@@ -214,3 +182,46 @@ pub fn compute_parallel_residual_component(
     //         residual_stats[subspace_idx][center_idx].residual_norm;
     // }
 // }
+
+pub fn compute_parallel_cost_multiplier(threshold_t: f64, squared_l2_norm: f64, dim: usize) -> f64 {
+    // ScaNN Paper Theorem 3.4
+    let threshold_t_squared = threshold_t*threshold_t;
+    let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
+    let perpendicular_cost: f64 = (1.0 - threshold_t_squared / squared_l2_norm) / (dim - 1) as f64;
+
+    let result = parallel_cost / perpendicular_cost;
+    result
+}
+
+pub fn squared_l2_norm(p: ArrayView1<f64>) -> f64 {
+    let mut res: f64 = 0.0;
+    for x in p.iter() {
+        res += x*x;
+    }
+    res.sqrt()
+}
+
+#[derive(Debug, Clone)]
+pub struct CoordinateDescentResult {
+    new_center_idx: usize,
+    cost_delta: f64,
+    new_parallel_residual_component: f64
+}
+
+#[derive(Debug, Clone)]
+pub struct SubspaceResidualStats {
+    residual_norm: f64,
+    parallel_residual_component: f64
+}
+
+
+pub fn compute_residual_stats(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>, centers: &Vec::<Array1<f64>>) {
+    let result = Vec<Vec<SubspaceResidualStats>>
+}
+
+pub fn coordinate_descent_ah_quantize(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>, centers: &Vec::<Array1<f64>>, threshold: &f64) {
+
+    let residual_stats = compute_residual_stats(residual, datapoint, centers);
+    let parallel_cost_multiplier = compute_parallel_cost_multiplier(threshold, squared_l2_norm(datapoint), datapoint.dim());
+
+}

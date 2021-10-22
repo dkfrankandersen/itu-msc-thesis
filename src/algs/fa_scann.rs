@@ -235,14 +235,6 @@ impl AlgorithmImpl for FAScann {
             t.stop();
             t.print_as_secs();
 
-            // for centroid in centroids.iter() {
-            //     for index in centroid.indexes.iter() {
-            //         let datapoint = dataset.slice(s![*index,..]);
-            //         let residual = datapoint.to_owned() - centroid.point.to_owned();
-            //         // coordinate_descent_ah_quantize()
-            //     }
-            // }
-
             let mut t = DebugTimer::start("fit compute_residuals");
             let residuals = self.compute_residuals(&centroids, dataset);
             t.stop();
@@ -260,7 +252,6 @@ impl AlgorithmImpl for FAScann {
                                                                     self.residuals_codebook_k, self.sub_dimension);
             t.stop();
             t.print_as_secs();
-
             
             // Write residuals_codebook to bin
             let mut t = DebugTimer::start("Fit write residuals_codebook to file");
@@ -285,6 +276,19 @@ impl AlgorithmImpl for FAScann {
             serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
             t.stop();
             t.print_as_secs();
+
+
+            // Trying a new angle
+            let threshold = &self.anisotropic_quantization_threshold;
+            let centers: Vec<Array1<f64>> = self.coarse_quantizer.iter().map(|x| x.point.clone()).collect();
+            for centroid in self.coarse_quantizer.iter_mut() {
+                for (index, pq_codes) in centroid.children.iter() {
+                    let residual = residuals.slice(s![*index,..]);
+                    let datapoint = dataset.slice(s![*index,..]);
+                    let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
+                }
+            }
+
         }
     }
     
