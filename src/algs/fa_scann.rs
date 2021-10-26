@@ -281,12 +281,10 @@ impl AlgorithmImpl for FAScann {
             // Trying a new angle
             let threshold = &self.anisotropic_quantization_threshold;
             let centers: Vec<Array1<f64>> = self.coarse_quantizer.iter().map(|x| x.point.clone()).collect();
-            for centroid in self.coarse_quantizer.iter_mut() {
-                for (index, pq_codes) in centroid.children.iter() {
-                    let residual = residuals.slice(s![*index,..]);
-                    let datapoint = dataset.slice(s![*index,..]);
-                    let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
-                }
+            for index in 0..dataset.nrows() {
+                let residual = residuals.slice(s![index,..]);
+                let datapoint = dataset.slice(s![index,..]);
+                let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
             }
 
         }

@@ -183,7 +183,7 @@ pub fn compute_parallel_residual_component(quantized: Vec<usize>, residual_stats
     // }
 // }
 
-pub fn compute_parallel_cost_multiplier(threshold_t: f64, squared_l2_norm: f64, dim: usize) -> f64 {
+pub fn compute_parallel_cost_multiplier(threshold_t: &f64, squared_l2_norm: f64, dim: usize) -> f64 {
     // ScaNN Paper Theorem 3.4
     let threshold_t_squared = threshold_t*threshold_t;
     let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
@@ -215,13 +215,26 @@ pub struct SubspaceResidualStats {
 }
 
 
-pub fn compute_residual_stats(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>, centers: &Vec::<Array1<f64>>) {
-    let result = Vec<Vec<SubspaceResidualStats>>
+pub fn compute_residual_stats(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>, centers: &Vec::<Array1<f64>>) -> Vec<Vec<SubspaceResidualStats>> {
+    // let result = Vec<Vec<SubspaceResidualStats>>
+    let residual_stats = Vec::new();
+    let srs = SubspaceResidualStats {residual_norm: 0.0, parallel_residual_component: 0.0}
+    let a = Vec::new();
+    a.append(srs);
+    residual_stats.append(a)
+    residual_stats
 }
 
-pub fn coordinate_descent_ah_quantize(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>, centers: &Vec::<Array1<f64>>, threshold: &f64) {
+pub fn coordinate_descent_ah_quantize(residual: ArrayView1<f64>,  datapoint: ArrayView1<f64>,
+                                                 centers: &Vec::<Array1<f64>>, threshold: &f64) {
+    println!("Dimension residual.len() = {} expect D=100", residual.len());
+    println!("Dimension datapoint.len() = {} expect D=100", datapoint.len());
+    println!("Dimension centers.len() = {} expect M=50", centers.len());
+    println!("Dimension centers[0].len() = {} expect K=16", centers[0].len());
+    panic!("ARHHHHH");
+    let residual_stats: Vec<Vec<SubspaceResidualStats>> = compute_residual_stats(residual, datapoint, centers);
+    let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(datapoint), datapoint.dim());
+    let result:Vec<usize>  = InitializeToMinResidualNorm(residual_stats, result);
 
-    let residual_stats = compute_residual_stats(residual, datapoint, centers);
-    let parallel_cost_multiplier = compute_parallel_cost_multiplier(threshold, squared_l2_norm(datapoint), datapoint.dim());
-
+    
 }
