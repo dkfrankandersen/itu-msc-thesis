@@ -126,7 +126,7 @@ pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParame
     }
 }
 
-pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec<usize>) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
     let candidates = algo.query(dataset, &query, results_per_query, arguments);
     let time_finish = Instant::now();

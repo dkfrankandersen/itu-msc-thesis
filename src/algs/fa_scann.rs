@@ -248,6 +248,7 @@ impl AlgorithmImpl for FAScann {
             t.print_as_secs();
 
             let mut t = DebugTimer::start("fit train_residuals_codebook");
+            // residuals_codebook[m][k] -> pq code
             self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
                                                                     self.residuals_codebook_k, self.sub_dimension);
             t.stop();
@@ -261,7 +262,8 @@ impl AlgorithmImpl for FAScann {
             t.print_as_secs();
  
             let mut t = DebugTimer::start("fit residual_encoding");
-            let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
+            // residual_pq_codes[n][m] -> pq code
+            let residual_pq_codes: Array1<Array1<usize>> = self.residual_encoding(&residuals, &self.residuals_codebook);
             t.stop();
             t.print_as_secs();
             
@@ -291,7 +293,7 @@ impl AlgorithmImpl for FAScann {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,
-                                                                arguments: &Vec::<usize>) -> Vec<usize> {
+                                                                arguments: &Vec::<usize>) -> Vec::<usize> {
         
         // Query Arguments
         let clusters_to_search = arguments[0];
