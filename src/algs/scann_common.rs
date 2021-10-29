@@ -59,14 +59,6 @@ pub fn check_dimension_ge(a: usize, b: usize, msg: &str) {
     }
 }
 
-pub fn squared_l2_norm(p: ArrayView1<f64>) -> f64 {
-    let mut res: f64 = 0.0;
-    for x in p.iter() {
-        res += x*x;
-    }
-    res.sqrt()
-}
-
 // Checked 1:1 OK
 #[derive(Debug, Clone)]
 pub struct CoordinateDescentResult {
@@ -99,6 +91,7 @@ pub fn compute_residual_stats_for_cluster(
   result
 }
 
+// My understanding of function
 pub fn get_chunked_datapoint(point: ArrayView1<f64>, num_subspaces: usize) -> Vec<Vec<f64>>{
     let chunk_size = point.len() / num_subspaces;
     let mut chunked = vec![vec![0.; chunk_size]; num_subspaces];
@@ -112,8 +105,21 @@ pub fn get_chunked_datapoint(point: ArrayView1<f64>, num_subspaces: usize) -> Ve
     chunked
 }
 
+// My understanding of function
+pub fn squared_l2_norm(p: ArrayView1<f64>) -> f64 {
+    let mut res: f64 = 0.0;
+    for x in p.iter() {
+        res += x*x;
+    }
+    res.sqrt()
+}
+
+pub fn square(a: f64) -> f64 {
+    a*a
+}
+
+// Checked 1:1 OK
 pub fn compute_residual_stats(maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>, centers: &Vec<Vec<Vec<f64>>>) -> Vec<Vec<SubspaceResidualStats>> {
-    // let result = Vec<Vec<SubspaceResidualStats>>
     let num_subspaces: usize = centers.len(); // expect m=50
     check_dimension_ge(num_subspaces, 1, "compute_residual_stats");
     
@@ -133,31 +139,67 @@ pub fn compute_residual_stats(maybe_residual_dptr: ArrayView1<f64>,  original_dp
     let chunked_norm: f64 = chunked_norm.sqrt();
     let inverse_chunked_norm: f64 = 1.0 / chunked_norm;
 
-    for subspace_idx in 0..num_subspaces { // m
-        // let mut cur_subspace_residual_stats = &residual_stats[subspace_idx];
-        // let cur_subspace_centers = &centers[subspace_idx];
-        
+    for subspace_idx in 0..num_subspaces { // m        
         for cluster_idx in 0..num_clusters_per_block { //  k
-            // let center = &cur_subspace_centers[cluster_idx];
+            let center = &centers[subspace_idx][cluster_idx];
             let maybe_residual_dptr_span = &maybe_residual_dptr_chunked[subspace_idx];
             let original_dptr_span = &original_dptr_chunked[subspace_idx];
             residual_stats[subspace_idx][cluster_idx] = compute_residual_stats_for_cluster(
                     &maybe_residual_dptr_span, &original_dptr_span, inverse_chunked_norm,
-                    &centers[subspace_idx][cluster_idx]);
+                    center);
         }
     }
     residual_stats
 }
- 
+
+// Checked 1:1 OK
+pub fn compute_parallel_cost_multiplier(threshold_t: &f64, squared_l2_norm: f64, dimension: usize) -> f64 {
+    // ScaNN Paper Theorem 3.4
+    let threshold_t_squared = threshold_t*threshold_t;
+    let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
+    let perpendicular_cost: f64 = ((1.0 - threshold_t_squared) / squared_l2_norm) / (dimension - 1) as f64;
+    parallel_cost / perpendicular_cost
+}
+
+// Checked 1:1 OK
+pub fn initialize_to_min_residual_norm(residual_stats: &Vec<Vec<SubspaceResidualStats>>, result: &mut Vec<usize>) {
+    check_dimension_eq(result.len(), residual_stats.len(), "initialize_to_min_residual_norm");
+
+    let num_subspaces = residual_stats.len();
+    let num_clusters_per_block = residual_stats[0].len();
+    
+    for subspace_idx in 0..num_subspaces { // m        
+        let mut min_norm = (f64::INFINITY, 0 as usize);
+        for cluster_idx in 0..num_clusters_per_block { //  k
+            let residual_norm = residual_stats[subspace_idx][cluster_idx].residual_norm;
+            if residual_norm < min_norm.0 {
+                min_norm = (residual_norm, cluster_idx)
+            }
+        }
+        result[subspace_idx] = min_norm.1;
+  }
+}
+
+// Checked 1:1 OK
+pub fn compute_parallel_residual_component(quantized: &Vec<usize>, residual_stats: &Vec::<Vec::<SubspaceResidualStats>>) -> f64 {
+    let mut result: f64 = 0.0;
+    for subspace_idx in 0..quantized.len() {
+      let cluster_idx: usize = quantized[subspace_idx];
+      result += residual_stats[subspace_idx][cluster_idx].parallel_residual_component;
+    }
+    result
+}
+
+// Checked 1:1 OK
 pub fn optimize_single_subspace(
-    cur_subspace_residual_stats: Vec<SubspaceResidualStats>,
-    cur_center_idx: usize, parallel_residual_component: f64,
-    parallel_cost_multiplier: f64) -> CoordinateDescentResult {
+            cur_subspace_residual_stats: &Vec<SubspaceResidualStats>,
+            cur_center_idx: usize, parallel_residual_component: f64,
+            parallel_cost_multiplier: f64) -> CoordinateDescentResult {
 
     let mut result = CoordinateDescentResult {
-        new_center_idx: cur_center_idx,
-        cost_delta: 0.0,
-        new_parallel_residual_component: parallel_residual_component};
+                        new_center_idx: cur_center_idx,
+                        cost_delta: 0.0,
+                        new_parallel_residual_component: parallel_residual_component};
 
     let old_subspace_residual_norm: f64 =
         cur_subspace_residual_stats[cur_center_idx].residual_norm;
@@ -168,16 +210,14 @@ pub fn optimize_single_subspace(
 
         let rs: SubspaceResidualStats = cur_subspace_residual_stats[new_center_idx].clone();
         let new_parallel_residual_component: f64 =
-            parallel_residual_component - old_subspace_parallel_component +
-            rs.parallel_residual_component;
-        let parallel_norm_delta: f64 = new_parallel_residual_component.sqrt() -
-                                            parallel_residual_component.sqrt();
+                        parallel_residual_component - old_subspace_parallel_component +
+                        rs.parallel_residual_component;
+        let parallel_norm_delta: f64 = square(new_parallel_residual_component) -
+                                            square(parallel_residual_component);
         if parallel_norm_delta > 0.0 { continue; }
-        
-        let residual_norm_delta: f64 =
-            rs.residual_norm - old_subspace_residual_norm;
-        let perpendicular_norm_delta: f64 =
-            residual_norm_delta - parallel_norm_delta;
+    
+        let residual_norm_delta: f64 = rs.residual_norm - old_subspace_residual_norm;
+        let perpendicular_norm_delta: f64 = residual_norm_delta - parallel_norm_delta;
         let cost_delta: f64 = parallel_cost_multiplier * parallel_norm_delta +
                                 perpendicular_norm_delta;
         if cost_delta < result.cost_delta {
@@ -189,105 +229,59 @@ pub fn optimize_single_subspace(
     return result;
 }
 
-
-pub fn compute_parallel_residual_component(quantized: Vec<usize>, residual_stats: Vec::<Vec::<SubspaceResidualStats>>) -> f64 {
-    let mut result: f64 = 0.0;
-    for subspace_idx in 0..quantized.len() {
-      let cluster_idx: usize = quantized[subspace_idx];
-      result +=
-          residual_stats[subspace_idx][cluster_idx].parallel_residual_component;
-    }
-    return result;
-}
-
-// pub fn initialize_to_min_residual_norm(residual_stats: Vec<Vec<SubspaceResidualStats>>, result: &mut Vec<usize>) {
-//   for subspace_idx in 0..residual_stats.len() {
+pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
+                                                 centers: &Vec<Vec<Vec<f64>>>, threshold: &f64, result: &mut Vec<usize>) {
     
-//     let mut min_norm = f64::INFINITY;
-//     for x in subspace_idx.iter() {
-//         if x.residual_norm < min {
-//             min = x.residual_norm;
-//         }
-//     }
+    check_dimension_eq(result.len(), centers.len(), "coordinate_descent_ah_quantize");
+    check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "coordinate_descent_ah_quantize");
     
-//     result[subspace_idx] = (min_norm - residual_stats[subspace_idx][0]) as usize;
-//   }
-// }
+    println!("Dimension maybe_residual_dptr.len() = {} expect D=100", maybe_residual_dptr.len());
+    println!("Dimension original_dptr.len() = {} expect D=100", original_dptr.len());
+    println!("Dimension centers.len() = {} expect M=50", centers.len());
+    println!("Dimension centers[0].len() = {} expect K=16", centers[0].len());
 
-// pub fn coordinate_descent_ah_quantize(
-//     maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
-//     centers: Vec::<Centroid>, const ChunkingProjection<T>& projection, threshold: f64, result: Vec<usize>) {
-
-    // let residual_stats = compute_residual_stats(maybe_residual_dptr, original_dptr, centers, projection);
-
-    // let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(
-    //                                                     threshold, squared_l2_norm(original_dptr), original_dptr.len());
-    //                                                     initialize_to_min_residual_norm(residual_stats, result);
-
-    // let parallel_residual_component: f64 = compute_parallel_residual_component(result, residual_stats);
-
-    // let subspace_idxs = Vec<usize>::new();
-    // let subspace_residual_norms = Vec<f64>::new();
-    // for subspace_idx in 0..result.len() {
-    //     let cluster_idx: usize = result[subspace_idx];
-    //     subspace_residual_norms[subspace_idx] =
-    //         residual_stats[subspace_idx][cluster_idx].residual_norm;
-    // }
-    // let result_sorted =  Vec<usize>::new();
-
-    // let k_max_rounds: usize = 10;
-    // let cur_round_changes = true;
-    // for _ in 0..k_max_rounds {
-    //     cur_round_changes = false;
-    //     for i in 0..subspace_idxs.len() {
-    //         let subspace_idx: usize = subspace_idxs[i];
-    //         let cur_subspace_residual_stats: Vec<SubspaceResidualStats> = residual_stats[subspace_idx];
-    //         let cur_center_idx: usize = result_sorted[i];
-    //         let subspace_result = optimize_single_subspace(
-    //             cur_subspace_residual_stats, cur_center_idx,
-    //             parallel_residual_component, parallel_cost_multiplier);
-    //         if (subspace_result.new_center_idx != cur_center_idx) {
-    //             parallel_residual_component =
-    //                 subspace_result.new_parallel_residual_component;
-    //             result_sorted[i] = subspace_result.new_center_idx;
-    //             cur_round_changes = true;
-    //         }
-    //     }
-    //     if cur_round_changes != true {
-    //         break
-    //     }
-    // }
-
-    // let mut final_residual_norm: f64 = 0.0;
-    // for i in 0..result_sorted.len() {
-    //     let subspace_idx: usize = subspace_idxs[i];
-    //     let center_idx: usize = result_sorted[i];
-    //     result[subspace_idx] = center_idx;
-    //     final_residual_norm +=
-    //         residual_stats[subspace_idx][center_idx].residual_norm;
-    // }
-// }
-
-// pub fn compute_parallel_cost_multiplier(threshold_t: &f64, squared_l2_norm: f64, dim: usize) -> f64 {
-//     // ScaNN Paper Theorem 3.4
-//     let threshold_t_squared = threshold_t*threshold_t;
-//     let parallel_cost: f64 = threshold_t_squared / squared_l2_norm;
-//     let perpendicular_cost: f64 = (1.0 - threshold_t_squared / squared_l2_norm) / (dim - 1) as f64;
-
-//     let result = parallel_cost / perpendicular_cost;
-//     result
-// }
-
-pub fn coordinate_descent_ah_quantize(residual: ArrayView1::<f64>,  datapoint: ArrayView1<f64>,
-                                                 centers: &Vec::<Array1::<f64>>, threshold: &f64) {
-    // println!("Dimension residual.len() = {} expect D=100", residual.len());
-    // println!("Dimension datapoint.len() = {} expect D=100", datapoint.len());
-    // println!("Dimension centers.len() = {} expect M=50", centers.len());
-    // println!("Dimension centers[0].len() = {} expect K=16", centers[0].len());
+    let residual_stats: Vec<Vec<SubspaceResidualStats>> = compute_residual_stats(maybe_residual_dptr, original_dptr, centers);
+    println!("Dimension residual_stats.len() = {} expect K=16", residual_stats.len());
+    println!("Dimension residual_stats[0].len() = {} expect K=16", residual_stats[0].len());
+    
+    
+    let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(original_dptr), original_dptr.len());
+    initialize_to_min_residual_norm(&residual_stats, result); // update result with pq codes
+    
+    let mut parallel_residual_component: f64 =  compute_parallel_residual_component(&result,& residual_stats);
     // panic!("ARHHHHH");
-    // let residual_stats: Vec<Vec<SubspaceResidualStats>> = compute_residual_stats(residual, datapoint, centers);
-    // let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(datapoint), datapoint.dim());
-    // // let result:Vec<usize>  = InitializeToMinResidualNorm(residual_stats, result);
-
     
+    // let subspace_idxs = 0..result.len();
+    let mut subspace_residual_norms = vec![0.0 as f64; result.len()];
+
+    for subspace_idx in 0..result.len() {
+        let cluster_idx = result[subspace_idx];
+        subspace_residual_norms[subspace_idx] = residual_stats[subspace_idx][cluster_idx].residual_norm;
+    }
+
+    // Some sorting going on not sure why...result
+    let num_subspaces = result.len();
+    let k_max_rounds = 10;
+    let mut cur_round_changes = true;
+    for round in 0..k_max_rounds {
+        if cur_round_changes == false {
+            break;
+        }
+        cur_round_changes = false;
+        for subspace_idx in 0..num_subspaces {
+            let cur_subspace_residual_stats = &residual_stats[subspace_idx];
+            
+            let cur_center_idx: usize = result[subspace_idx];
+            let subspace_result: CoordinateDescentResult =  
+                            optimize_single_subspace(
+                                cur_subspace_residual_stats, cur_center_idx,
+                                parallel_residual_component, parallel_cost_multiplier);
+            
+            if subspace_result.new_center_idx != cur_center_idx {
+                parallel_residual_component = subspace_result.new_parallel_residual_component;
+                result[subspace_idx] = subspace_result.new_center_idx;
+                cur_round_changes = true;
+            }
+        }
+    }
 }
