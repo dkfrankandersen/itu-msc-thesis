@@ -229,6 +229,20 @@ pub fn optimize_single_subspace(
     return result;
 }
 
+// Sorting in the same way as scann do, might be a faster solution
+pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, result_sorted: &mut Vec<usize>, subspace_idxs: &mut Vec<usize>) {
+    let mut sorted_tuple: Vec<(f64, usize, usize)> = Vec::new();
+    for i in 0..result_sorted.len() {
+        sorted_tuple.push((subspace_residual_norms[i], result_sorted[i], i));
+    }
+    sorted_tuple.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    for i in 0..result_sorted.len() {
+        subspace_residual_norms[i] = sorted_tuple[i].0;
+        result_sorted[i] = sorted_tuple[i].1;
+        subspace_idxs[i] = sorted_tuple[i].2;
+    }
+}
+
 pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
                                                  centers: &Vec<Vec<Vec<f64>>>, threshold: &f64, result: &mut Vec<usize>) {
     
@@ -244,7 +258,6 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  ori
     println!("Dimension residual_stats.len() = {} expect K=16", residual_stats.len());
     println!("Dimension residual_stats[0].len() = {} expect K=16", residual_stats[0].len());
     
-    
     let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(original_dptr), original_dptr.len());
     initialize_to_min_residual_norm(&residual_stats, result); // update result with pq codes
     
@@ -253,35 +266,45 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  ori
     
     // let subspace_idxs = 0..result.len();
     let mut subspace_residual_norms = vec![0.0 as f64; result.len()];
-
+    let mut result_sorted = result.clone();
+    let mut subspace_idxs: Vec<usize> = (0..result.len()).collect();
+    
     for subspace_idx in 0..result.len() {
         let cluster_idx = result[subspace_idx];
         subspace_residual_norms[subspace_idx] = residual_stats[subspace_idx][cluster_idx].residual_norm;
     }
+    
+    sorted_by_max_residual_norms(&mut subspace_residual_norms, &mut result_sorted, &mut subspace_idxs);
 
-    // Some sorting going on not sure why...result
     let num_subspaces = result.len();
     let k_max_rounds = 10;
     let mut cur_round_changes = true;
-    for round in 0..k_max_rounds {
+    for _ in 0..k_max_rounds {
         if cur_round_changes == false {
             break;
         }
         cur_round_changes = false;
-        for subspace_idx in 0..num_subspaces {
+        for i in 0..num_subspaces {
+            let subspace_idx = result_sorted[i];
             let cur_subspace_residual_stats = &residual_stats[subspace_idx];
             
-            let cur_center_idx: usize = result[subspace_idx];
+            let cur_center_idx: usize = result_sorted[subspace_idx];
             let subspace_result: CoordinateDescentResult =  
-                            optimize_single_subspace(
-                                cur_subspace_residual_stats, cur_center_idx,
-                                parallel_residual_component, parallel_cost_multiplier);
+                                    optimize_single_subspace(
+                                        cur_subspace_residual_stats, cur_center_idx,
+                                        parallel_residual_component, parallel_cost_multiplier);
             
             if subspace_result.new_center_idx != cur_center_idx {
                 parallel_residual_component = subspace_result.new_parallel_residual_component;
-                result[subspace_idx] = subspace_result.new_center_idx;
+                result_sorted[subspace_idx] = subspace_result.new_center_idx;
                 cur_round_changes = true;
             }
         }
+    }
+
+    for i in 0..result_sorted.len() {
+        let subspace_idx: usize = subspace_idxs[i];
+        let center_idx: usize = result_sorted[i];
+        result[subspace_idx] = center_idx;
     }
 }
