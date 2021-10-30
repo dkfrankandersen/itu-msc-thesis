@@ -120,7 +120,8 @@ impl FAProductQuantization {
                                 k_centroids: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
-        println!("Started Train residuals codebook");
+        println!("Started Train residuals codebook with kmeans running m = {} times, with k = {} and for a max of {} iterations",
+                    m_subspaces, k_centroids, self.max_iterations);
         let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
         for m in 0..m_subspaces {
             let (partial_from, partial_to) = self.partial_query_begin_end[m];
@@ -213,36 +214,40 @@ impl AlgorithmImpl for FAProductQuantization {
         // Load existing pre-computede data if exists
         if Path::new(file_compute_coarse_quantizers).exists() 
                                 && Path::new(file_residuals_codebook).exists() {
+            println!("\nFit train_residuals_codebook from file");
             let mut t = DebugTimer::start("fit train_residuals_codebook from file");
             let mut read_file = File::open(file_residuals_codebook).unwrap();
             self.residuals_codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
-            t.print_as_secs();
-
+            t.print_as_millis();
+            
+            println!("\nFit compute_coarse_quantizers from file");
             let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
             let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
             self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
         } else {
             let rng = thread_rng();
+            println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
             let kmeans = KMeans::new();
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
             t.stop();
             t.print_as_secs();
 
+            println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
             let mut t = DebugTimer::start("fit compute_residuals");
             let residuals = self.compute_residuals(&centroids, dataset);
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
             // Residuals PQ Training data
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit random_traindata");
             let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
             let mut t = DebugTimer::start("fit train_residuals_codebook");
             self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
@@ -255,7 +260,7 @@ impl AlgorithmImpl for FAProductQuantization {
             let mut new_file = File::create(file_residuals_codebook).unwrap();
             serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
  
             let mut t = DebugTimer::start("fit residual_encoding");
             let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
@@ -272,7 +277,7 @@ impl AlgorithmImpl for FAProductQuantization {
             let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
             serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
         }
     }
     

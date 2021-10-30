@@ -19,7 +19,7 @@ pub struct FAScann {
     name: String,
     metric: String,
     algo_parameters: AlgoParameters,
-    codebook: Vec<Centroid>,
+    centroids: Vec<Centroid>,
     m: usize,
     training_size: usize,
     coarse_quantizer_k: usize,
@@ -65,10 +65,10 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         return Ok(FAScann {
-            name: "fa_scann_c02".to_string(),
+            name: "fa_scann_c03".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
-            codebook: Vec::<Centroid>::new(),
+            centroids: Vec::<Centroid>::new(),
             m: m,         // M
             training_size: training_size,
             coarse_quantizer_k: coarse_quantizer_k,         // K
@@ -149,54 +149,54 @@ impl FAScann {
         residuals_codebook
     }
 
-    fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>) -> Array1<Array1<usize>> {
-        // Residuals Encoding
-        println!("Started residual_encoding");
-        let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
-        let bar_residuals = ProgressBar::new(residuals.nrows() as u64);
-        for n in 0..residuals.nrows() {
-            for m in 0..residuals_codebook.nrows() {
-                let partial_dim = self.partial_query_begin_end[m];
-                let partial_dimension = residuals.slice(s![n, partial_dim.0..partial_dim.1]);
+    // fn residual_encoding(&self, residuals: &Array2<f64>, residuals_codebook: &Array2::<Array1<f64>>) -> Array1<Array1<usize>> {
+    //     // Residuals Encoding
+    //     println!("Started residual_encoding");
+    //     let  mut pqcodes = Array::from_elem(residuals.nrows(), Array::from_elem(residuals_codebook.nrows(), 0));
+    //     let bar_residuals = ProgressBar::new(residuals.nrows() as u64);
+    //     for n in 0..residuals.nrows() {
+    //         for m in 0..residuals_codebook.nrows() {
+    //             let partial_dim = self.partial_query_begin_end[m];
+    //             let partial_dimension = residuals.slice(s![n, partial_dim.0..partial_dim.1]);
 
-                let mut best_distance = OrderedFloat(f64::INFINITY);
-                let mut best_index = 0;
-                for k in 0..residuals_codebook.ncols() {
-                    let centroid = &residuals_codebook[[m,k]].view();
-                    let distance = OrderedFloat(-centroid.dot(&partial_dimension));
-                    // let distance = OrderedFloat(cosine_similarity(centroid,  &partial_dimension));
-                    if distance < best_distance { 
-                        best_distance = distance;
-                        best_index = k; 
-                    };
-                }
-                pqcodes[n][m] = best_index;
-            }
-            bar_residuals.inc(1);
-        }
-        bar_residuals.finish();
-        pqcodes
-    }
+    //             let mut best_distance = OrderedFloat(f64::INFINITY);
+    //             let mut best_index = 0;
+    //             for k in 0..residuals_codebook.ncols() {
+    //                 let centroid = &residuals_codebook[[m,k]].view();
+    //                 let distance = OrderedFloat(-centroid.dot(&partial_dimension));
+    //                 // let distance = OrderedFloat(cosine_similarity(centroid,  &partial_dimension));
+    //                 if distance < best_distance { 
+    //                     best_distance = distance;
+    //                     best_index = k; 
+    //                 };
+    //             }
+    //             pqcodes[n][m] = best_index;
+    //         }
+    //         bar_residuals.inc(1);
+    //     }
+    //     bar_residuals.finish();
+    //     pqcodes
+    // }
 
-    fn compute_coarse_quantizers(&self, centroids: &Vec::<Centroid>, residual_pq_codes: &Array1<Array1<usize>>,
-                                        m_centroids: usize) -> Vec::<PQCentroid> {
-        // Compute coarse quantizer for centroids with pq codes
-        let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
-        println!("Started compute_coarse_quantizers");
-        let bar_centroids = ProgressBar::new(centroids.len() as u64);
-        for centroid in centroids.iter() {
-            let mut pqchilderen =  HashMap::<usize, Vec::<usize>>::new();
-            for index in centroid.indexes.iter() {
-                let codes = &residual_pq_codes[*index];
-                pqchilderen.insert(*index, codes.to_vec());
-            }
-            let pqc = PQCentroid{id: centroid.id, point: centroid.point.to_owned(), children: pqchilderen};
-            coarse_quantizer.push(pqc);
-            bar_centroids.inc(1);
-        }
-        bar_centroids.finish();
-        coarse_quantizer
-    }
+    // fn compute_coarse_quantizers(&self, centroids: &Vec::<Centroid>, residual_pq_codes: &Array1<Array1<usize>>,
+    //                                     m_centroids: usize) -> Vec::<PQCentroid> {
+    //     // Compute coarse quantizer for centroids with pq codes
+    //     let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
+    //     println!("Started compute_coarse_quantizers");
+    //     let bar_centroids = ProgressBar::new(centroids.len() as u64);
+    //     for centroid in centroids.iter() {
+    //         let mut pqchilderen =  HashMap::<usize, Vec::<usize>>::new();
+    //         for index in centroid.indexes.iter() {
+    //             let codes = &residual_pq_codes[*index];
+    //             pqchilderen.insert(*index, codes.to_vec());
+    //         }
+    //         let pqc = PQCentroid{id: centroid.id, point: centroid.point.to_owned(), children: pqchilderen};
+    //         coarse_quantizer.push(pqc);
+    //         bar_centroids.inc(1);
+    //     }
+    //     bar_centroids.finish();
+    //     coarse_quantizer
+    // }
 }
 
 fn compute_dimension_begin_end(m_clusters: usize, dimension_size: usize) -> Vec::<(usize, usize)> {
@@ -263,14 +263,13 @@ impl AlgorithmImpl for FAScann {
 
             println!("\nFit train_residuals_codebook");
             let mut t = DebugTimer::start("fit train_residuals_codebook");
-            // residuals_codebook[m][k] -> pq code
             self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
                                                                     self.residuals_codebook_k, self.sub_dimension);
             t.stop();
             t.print_as_secs();
             
             // Write residuals_codebook to bin
-            println!("\nFit write residuals_codebook to file");
+            println!("\nFit write residuals_codebook to file: {}", file_residuals_codebook);
             let mut t = DebugTimer::start("Fit write residuals_codebook to file");
             let mut new_file = File::create(file_residuals_codebook).unwrap();
             serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
@@ -296,9 +295,9 @@ impl AlgorithmImpl for FAScann {
             // t.print_as_secs();
 
             
-            println!("\nFit move centers to different structure TEMP FIX");
-            println!("self.residuals_codebook[[0,0]].len() {:?}", self.residuals_codebook[[0,0]].len());
-            println!("self.residuals_codebook.len() {:?}", self.residuals_codebook.shape());
+            // println!("\nFit move centers to different structure TEMP FIX");
+            // println!("self.residuals_codebook[[0,0]].len() {:?}", self.residuals_codebook[[0,0]].len());
+            // println!("self.residuals_codebook.len() {:?}", self.residuals_codebook.shape());
             let mut centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.residuals_codebook_k]; self.m];
             
             for m in 0..self.m {
@@ -306,29 +305,42 @@ impl AlgorithmImpl for FAScann {
                     let partial_dims = &self.residuals_codebook[[m,k]].to_vec();
                     // println!("m:{} k:{} x:{:?}", m, k, partial_dims);
                     centers[m][k] = partial_dims.clone();
-                    // for x in 0..self.sub_dimension {
-                    //     centers[[m,k]][x] = self.residuals_codebook[[m,k]][x];
-                    // }
                 }
             }
 
             // Trying a new angle
             println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
-            // let centers: Vec<Array1<f64>> = self.coarse_quantizer.iter().map(|x| x.point.clone()).collect();
             let mut quantized_dataset = vec![vec![0,self.m]; dataset.nrows()];
             for index in 0..dataset.nrows() {
                 let residual = residuals.slice(s![index,..]);
                 let datapoint = dataset.slice(s![index,..]);
                 let mut result = vec![0; self.m];
                 let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold, &mut result);
-                println!("coordinate_descent_ah_quantize pq codes: {:?}", result);
+                // println!("coordinate_descent_ah_quantize pq codes: {:?}", result);
                 quantized_dataset.push(result.clone());
             }
-            println!("quantized_dataset.len() {:?}", quantized_dataset.len());
-            println!("quantized_dataset[0].len() {:?}", quantized_dataset[0].len());
+            // println!("quantized_dataset.len() {:?}", quantized_dataset.len());
+            // println!("quantized_dataset[0].len() {:?}", quantized_dataset[0].len());
+            
+            for centroid in centroids.iter() {
+                let mut hmap = HashMap::<usize, Vec::<usize>>::new();
+                for index in centroid.indexes.iter() {
+                    let pqcodes: Vec<usize> = quantized_dataset[*index].clone();
+                    hmap.insert(*index, pqcodes);
+                }
+                let pqcentroid = PQCentroid{id: centroid.id.clone(), point: centroid.point.clone(), children: hmap};
+                self.coarse_quantizer.push(pqcentroid);
+            }
 
-            panic!("ARHH DONE WITH FITTING");
+            // Write centroids to file
+            println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
+            let mut t = DebugTimer::start("Fit write centroids to file");
+            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            t.stop();
+            t.print_as_millis();
+            
         }
     }
     
@@ -345,11 +357,13 @@ impl AlgorithmImpl for FAScann {
                             self.coarse_quantizer.iter().map(|centroid| 
                             (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
                             .collect();
-
+        // println!("\nQuery best_coarse_quantizers done");
+        
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
                                                                 .pop().unwrap().1).collect();
-
+        // println!("\nQuery best_pq_indexes done");
+        
         let m_dim = *&self.residuals_codebook.nrows();
         let k_dim = *&self.residuals_codebook.ncols();
         
@@ -369,6 +383,7 @@ impl AlgorithmImpl for FAScann {
                 distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_query);
             }
         }
+        // println!("\nQuery distance_table done");
 
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
@@ -395,6 +410,7 @@ impl AlgorithmImpl for FAScann {
                 }
             }
         }
+        // println!("\nQuery quantizer_candidates done");
         
         // Rescore with true distance value of query and candidates
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
@@ -408,11 +424,13 @@ impl AlgorithmImpl for FAScann {
                 candidates.push((distance, index));
             }
         }
+        // println!("\nQuery candidates done");
 
         // Pop all candidate indexes from heap and reverse list.
         let mut best_n_candidates: Vec<usize> =  (0..candidates.len())
                                                         .map(|_| candidates
                                                         .pop().unwrap().1).collect();
+        // println!("\nQuery best_n_candidates done");
         best_n_candidates.reverse();
         best_n_candidates
     }

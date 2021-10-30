@@ -64,7 +64,7 @@ impl AlgorithmImpl for FAKMeans {
             let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
             self.codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
         } else {
             // Write compute_coarse_quantizers to bin
             let rng = thread_rng();
@@ -72,13 +72,13 @@ impl AlgorithmImpl for FAKMeans {
             let kmeans = KMeans::new();
             self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false);
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
             let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
             let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
             serialize_into(&mut new_file, &self.codebook).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
         }
     }
 

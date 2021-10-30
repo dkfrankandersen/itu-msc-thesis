@@ -1,15 +1,15 @@
+use crate::util::{sampling::sampling_without_replacement};
+use crate::util::debug_timer::DebugTimer;
+use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
+extern crate sys_info;
 use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
-pub use ordered_float::*;
-use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
+use ordered_float::*;
 use indicatif::ProgressBar;
-use crate::util::debug_timer::DebugTimer;
 use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
-extern crate sys_info;
 
 pub struct KMeans {}
 
