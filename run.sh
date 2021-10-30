@@ -49,13 +49,13 @@ then
     cargo run --release angular $DATASET bruteforce [10]
 elif [ $run_type = 'k' ]
 then
-    cargo run --release angular $DATASET kmeans [10] [2000 100] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
+    cargo run --release angular $DATASET kmeans [10] [2000 10] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
 elif [ $run_type = 'p' ]
 then
-    cargo run --release angular $DATASET pq [10] [10 2000 250000 256 10] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [128 12288] [192 16384] [256 32768] [384 73728]]
+    cargo run --release angular $DATASET pq [10] [10 2000 250000 16 10] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [128 12288] [192 16384] [256 32768] [384 73728]]
 elif [ $run_type = 's' ]
 then
-    cargo run --release angular $DATASET scann [10] [10 2000 250000 16 10 0.2] [[1 32]]
+    cargo run --release angular $DATASET scann [10] [50 2000 250000 16 10 0.2] [[1 32]]
 
 else
     exit 0

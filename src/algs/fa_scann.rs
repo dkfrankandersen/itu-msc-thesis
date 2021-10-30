@@ -35,7 +35,8 @@ pub struct FAScann {
 
 impl FAScann {
 
-    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
+    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, 
+                            m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
         if m <= 0 {
@@ -59,6 +60,9 @@ impl FAScann {
         else if max_iterations <= 0 {
             return Err("max_iterations must be greater than 0".to_string());
         }
+
+        println!("\nRunning FAScann with\nm: {}\ncoarse_quantizer_k: {}\ntraining_size: {}\nresiduals_codebook_k: {} \nmax_iterations: {}\nanisotropic_quantization_threshold: {}\n\n", 
+                                            m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         return Ok(FAScann {
             name: "fa_scann_c02".to_string(),
@@ -123,22 +127,25 @@ impl FAScann {
                                 k_centroids: usize, sub_dimension: usize) -> Array2::<Array1<f64>> {
         // Train residuals codebook
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
-        println!("Started Train residuals codebook");
-        let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
+        println!("Started Train residuals codebook with kmeans running m = {} times, with k = {} and for a max of {} iterations",
+                    m_subspaces, k_centroids, self.max_iterations);
+        // let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
+        let bar_max_iterations = ProgressBar::new((m_subspaces*self.max_iterations) as u64);
         for m in 0..m_subspaces {
             let (partial_from, partial_to) = self.partial_query_begin_end[m];
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
             let kmeans = SCANNKMeans::new();
-            let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
+            let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
                 residuals_codebook[[m,k]] = centroid.point.clone();
             }
-            bar_m_subspaces.inc(1);
+            // bar_m_subspaces.inc(1);
         }
-        bar_m_subspaces.finish();
+        bar_max_iterations.finish();
+        // bar_m_subspaces.finish();
         residuals_codebook
     }
 
@@ -216,37 +223,45 @@ impl AlgorithmImpl for FAScann {
         // Load existing pre-computede data if exists
         if Path::new(file_compute_coarse_quantizers).exists() 
                                 && Path::new(file_residuals_codebook).exists() {
+            println!("\nFit train_residuals_codebook from file");
             let mut t = DebugTimer::start("fit train_residuals_codebook from file");
             let mut read_file = File::open(file_residuals_codebook).unwrap();
             self.residuals_codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
+            println!("\nFit compute_coarse_quantizers from file");
             let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
             let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
             self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
         } else {
             let rng = thread_rng();
+            println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
             let kmeans = SCANNKMeans::new();
-            let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+            let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
+            let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
+            bar_max_iterations.finish();
             t.stop();
             t.print_as_secs();
 
+            println!("\nFit compute_residuals");
             let mut t = DebugTimer::start("fit compute_residuals");
             let residuals = self.compute_residuals(&centroids, dataset);
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
             // Residuals PQ Training data
-            let rng = thread_rng();
+            println!("\nFit random_traindata");
             let mut t = DebugTimer::start("fit random_traindata");
+            let rng = thread_rng();
             let residuals_training_data = self.random_traindata(rng, &residuals.view(), self.training_size);
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
 
+            println!("\nFit train_residuals_codebook");
             let mut t = DebugTimer::start("fit train_residuals_codebook");
             // residuals_codebook[m][k] -> pq code
             self.residuals_codebook = self.train_residuals_codebook(&residuals_training_data.view(), self.m, 
@@ -255,42 +270,65 @@ impl AlgorithmImpl for FAScann {
             t.print_as_secs();
             
             // Write residuals_codebook to bin
+            println!("\nFit write residuals_codebook to file");
             let mut t = DebugTimer::start("Fit write residuals_codebook to file");
             let mut new_file = File::create(file_residuals_codebook).unwrap();
             serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
             t.stop();
-            t.print_as_secs();
+            t.print_as_millis();
  
-            let mut t = DebugTimer::start("fit residual_encoding");
-            // residual_pq_codes[n][m] -> pq code
-            let residual_pq_codes: Array1<Array1<usize>> = self.residual_encoding(&residuals, &self.residuals_codebook);
-            t.stop();
-            t.print_as_secs();
+            // let mut t = DebugTimer::start("fit residual_encoding");
+            // // residual_pq_codes[n][m] -> pq code
+            // let residual_pq_codes: Array1<Array1<usize>> = self.residual_encoding(&residuals, &self.residuals_codebook);
+            // t.stop();
+            // t.print_as_secs();
             
-            let mut t = DebugTimer::start("fit compute_coarse_quantizers");
-            self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
-            t.stop();
-            t.print_as_secs();
+            // let mut t = DebugTimer::start("fit compute_coarse_quantizers");
+            // self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
+            // t.stop();
+            // t.print_as_secs();
 
-            // Write compute_coarse_quantizers to bin
-            let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
-            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            t.stop();
-            t.print_as_secs();
+            // // Write compute_coarse_quantizers to bin
+            // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
+            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            // t.stop();
+            // t.print_as_secs();
 
+            
+            println!("\nFit move centers to different structure TEMP FIX");
+            println!("self.residuals_codebook[[0,0]].len() {:?}", self.residuals_codebook[[0,0]].len());
+            println!("self.residuals_codebook.len() {:?}", self.residuals_codebook.shape());
+            let mut centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.residuals_codebook_k]; self.m];
+            
+            for m in 0..self.m {
+                for k in 0..self.residuals_codebook_k {
+                    let partial_dims = &self.residuals_codebook[[m,k]].to_vec();
+                    // println!("m:{} k:{} x:{:?}", m, k, partial_dims);
+                    centers[m][k] = partial_dims.clone();
+                    // for x in 0..self.sub_dimension {
+                    //     centers[[m,k]][x] = self.residuals_codebook[[m,k]][x];
+                    // }
+                }
+            }
 
             // Trying a new angle
+            println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
             // let centers: Vec<Array1<f64>> = self.coarse_quantizer.iter().map(|x| x.point.clone()).collect();
-            let centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.coarse_quantizer_k]; self.m];
+            let mut quantized_dataset = vec![vec![0,self.m]; dataset.nrows()];
             for index in 0..dataset.nrows() {
                 let residual = residuals.slice(s![index,..]);
                 let datapoint = dataset.slice(s![index,..]);
-                let mut result = vec![0, self.m];
+                let mut result = vec![0; self.m];
                 let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold, &mut result);
+                println!("coordinate_descent_ah_quantize pq codes: {:?}", result);
+                quantized_dataset.push(result.clone());
             }
+            println!("quantized_dataset.len() {:?}", quantized_dataset.len());
+            println!("quantized_dataset[0].len() {:?}", quantized_dataset[0].len());
 
+            panic!("ARHH DONE WITH FITTING");
         }
     }
     

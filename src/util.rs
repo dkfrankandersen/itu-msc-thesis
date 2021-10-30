@@ -75,8 +75,8 @@ impl AlgoParameters {
         let s = format!("fit_file_output/{}/{}", self.algorithm, self.dataset);
         let res = create_dir_all(&s);
         match res {
-            Ok(_) => println!("fit_create_path \n {}", s),
-            Err(e) => panic!("fit_create_path \n{}", e)
+            Ok(_) => println!("Using path for storing output: {}", s),
+            Err(e) => panic!("Error: unable to create path/file \n{}", e)
         };
         s
     }   

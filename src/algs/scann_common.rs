@@ -54,7 +54,7 @@ pub fn check_dimension_eq(a: usize, b: usize, msg: &str) {
 }
 
 pub fn check_dimension_ge(a: usize, b: usize, msg: &str) {
-    if a != b {
+    if a < b {
         panic!("Dimension check {}>={} failed in {}", a, b, msg);
     }
 }
@@ -78,16 +78,22 @@ pub struct SubspaceResidualStats {
 pub fn compute_residual_stats_for_cluster(
     maybe_residual_dptr: &Vec<f64>, original_dptr: &Vec<f64>,
     inv_norm: f64, quantized: &Vec<f64>) -> SubspaceResidualStats {
+    // println!("maybe_residual_dptr {:?}", maybe_residual_dptr);
+    // println!("original_dptr {:?}", original_dptr);
+    // println!("inv_norm {:?}", inv_norm);
+    // println!("quantized {:?}", quantized);
+
 
     check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "compute_residual_stats_for_cluster");
     let mut result = SubspaceResidualStats{residual_norm: 0.0, parallel_residual_component: 0.0};
     
     for i in 0..maybe_residual_dptr.len() {
         let residual_coordinate: f64 = maybe_residual_dptr[i] - quantized[i];
-        result.residual_norm += residual_coordinate.sqrt();
+        result.residual_norm += square(residual_coordinate);
         result.parallel_residual_component +=
             residual_coordinate * original_dptr[i] * inv_norm;
-  }
+    }
+    // println!("result.residual_norm {:?}", result.residual_norm);
   result
 }
 
@@ -233,6 +239,7 @@ pub fn optimize_single_subspace(
 pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, result_sorted: &mut Vec<usize>, subspace_idxs: &mut Vec<usize>) {
     let mut sorted_tuple: Vec<(f64, usize, usize)> = Vec::new();
     for i in 0..result_sorted.len() {
+        // println!("subspace_residual_norms[{}] = {:?}",i, subspace_residual_norms[i]);
         sorted_tuple.push((subspace_residual_norms[i], result_sorted[i], i));
     }
     sorted_tuple.sort_by(|a, b| b.partial_cmp(a).unwrap());
@@ -249,14 +256,14 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  ori
     check_dimension_eq(result.len(), centers.len(), "coordinate_descent_ah_quantize");
     check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "coordinate_descent_ah_quantize");
     
-    println!("Dimension maybe_residual_dptr.len() = {} expect D=100", maybe_residual_dptr.len());
-    println!("Dimension original_dptr.len() = {} expect D=100", original_dptr.len());
-    println!("Dimension centers.len() = {} expect M=50", centers.len());
-    println!("Dimension centers[0].len() = {} expect K=16", centers[0].len());
+    // println!("Dimension maybe_residual_dptr.len() = {} expect D=100", maybe_residual_dptr.len());
+    // println!("Dimension original_dptr.len() = {} expect D=100", original_dptr.len());
+    // println!("Dimension centers.len() = {} expect M=50", centers.len());
+    // println!("Dimension centers[0].len() = {} expect K=16", centers[0].len());
 
     let residual_stats: Vec<Vec<SubspaceResidualStats>> = compute_residual_stats(maybe_residual_dptr, original_dptr, centers);
-    println!("Dimension residual_stats.len() = {} expect K=16", residual_stats.len());
-    println!("Dimension residual_stats[0].len() = {} expect K=16", residual_stats[0].len());
+    // println!("Dimension residual_stats.len() = {} expect K=50", residual_stats.len());
+    // println!("Dimension residual_stats[0].len() = {} expect K=16", residual_stats[0].len());
     
     let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(original_dptr), original_dptr.len());
     initialize_to_min_residual_norm(&residual_stats, result); // update result with pq codes
