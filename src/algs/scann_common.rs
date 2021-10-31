@@ -232,7 +232,7 @@ pub fn optimize_single_subspace(
             result.new_parallel_residual_component = new_parallel_residual_component;
         }
     }
-    return result;
+    result
 }
 
 // Sorting in the same way as scann do, might be a faster solution
@@ -251,11 +251,11 @@ pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, resu
 }
 
 pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
-                                                 centers: &Vec<Vec<Vec<f64>>>, threshold: &f64, result: &mut Vec<usize>) {
+                                                 centers: &Vec<Vec<Vec<f64>>>, threshold: &f64) -> Vec<usize> {
     
+    let mut result = vec![0; centers.len()];
     check_dimension_eq(result.len(), centers.len(), "coordinate_descent_ah_quantize");
     check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "coordinate_descent_ah_quantize");
-    
     // println!("Dimension maybe_residual_dptr.len() = {} expect D=100", maybe_residual_dptr.len());
     // println!("Dimension original_dptr.len() = {} expect D=100", original_dptr.len());
     // println!("Dimension centers.len() = {} expect M=50", centers.len());
@@ -266,12 +266,10 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  ori
     // println!("Dimension residual_stats[0].len() = {} expect K=16", residual_stats[0].len());
     
     let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(&threshold, squared_l2_norm(original_dptr), original_dptr.len());
-    initialize_to_min_residual_norm(&residual_stats, result); // update result with pq codes
+    initialize_to_min_residual_norm(&residual_stats, &mut result); // update result with pq codes
     
     let mut parallel_residual_component: f64 =  compute_parallel_residual_component(&result,& residual_stats);
-    // panic!("ARHHHHH");
     
-    // let subspace_idxs = 0..result.len();
     let mut subspace_residual_norms = vec![0.0 as f64; result.len()];
     let mut result_sorted = result.clone();
     let mut subspace_idxs: Vec<usize> = (0..result.len()).collect();
@@ -314,4 +312,5 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  ori
         let center_idx: usize = result_sorted[i];
         result[subspace_idx] = center_idx;
     }
+    result
 }

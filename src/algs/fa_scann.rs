@@ -215,12 +215,12 @@ impl AlgorithmImpl for FAScann {
             t.print_as_secs();
             
             // Write residuals_codebook to bin
-            println!("\nFit write residuals_codebook to file: {}", file_residuals_codebook);
-            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            let mut new_file = File::create(file_residuals_codebook).unwrap();
-            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
-            t.stop();
-            t.print_as_millis();
+            // println!("\nFit write residuals_codebook to file: {}", file_residuals_codebook);
+            // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            // let mut new_file = File::create(file_residuals_codebook).unwrap();
+            // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            // t.stop();
+            // t.print_as_millis();
  
             let mut centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.residuals_codebook_k]; self.m];
             
@@ -233,19 +233,20 @@ impl AlgorithmImpl for FAScann {
 
             println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
-            let mut quantized_dataset = vec![vec![0,self.m]; dataset.nrows()];
+            let mut quantized_dataset = vec![vec![0, self.m]; dataset.nrows()];
             for index in 0..dataset.nrows() {
                 let residual = residuals.slice(s![index,..]);
                 let datapoint = dataset.slice(s![index,..]);
-                let mut result = vec![0; self.m];
-                let new_pq_codes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold, &mut result);
-                quantized_dataset.push(result.clone());
+                let result = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
+                // println!("coordinate_descent_ah_quantize pqcodes: {:?}", &result);
+                
+                quantized_dataset[index] = result;
             }
             
             for centroid in centroids.iter() {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                 for index in centroid.indexes.iter() {
-                    let pqcodes: Vec<usize> = quantized_dataset[*index].clone();
+                    let pqcodes = quantized_dataset[*index].clone();
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id.clone(), point: centroid.point.clone(), children: hmap};
@@ -253,12 +254,12 @@ impl AlgorithmImpl for FAScann {
             }
 
             // Write centroids to file
-            println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
-            let mut t = DebugTimer::start("Fit write centroids to file");
-            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
-            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            t.stop();
-            t.print_as_millis();
+            // println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
+            // let mut t = DebugTimer::start("Fit write centroids to file");
+            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            // t.stop();
+            // t.print_as_millis();
             
         }
     }
@@ -302,17 +303,21 @@ impl AlgorithmImpl for FAScann {
                 distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_query);
             }
         }
-        // println!("\nQuery distance_table done");
+        // println!("\nQuery distance_table done, distance_table.shape() {:?}", distance_table.shape());
 
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
+            // println!("coarse_quantizer childeren \n{:?} \n\n", coarse_quantizer.children);
+            // println!("coarse_quantizer_index:{:?}", coarse_quantizer_index);
 
             for (child_key, child_values) in  coarse_quantizer.children.iter() {
+                // println!("child_key:{} child_values:{:?}", child_key, child_values);
 
                 // Compute distance from indexes
                 let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
+                    // println!("m:{} k:{}", m, k);
                     distance += &distance_table[[m, *k]];
                 }
 
@@ -349,7 +354,7 @@ impl AlgorithmImpl for FAScann {
         let mut best_n_candidates: Vec<usize> =  (0..candidates.len())
                                                         .map(|_| candidates
                                                         .pop().unwrap().1).collect();
-        // println!("\nQuery best_n_candidates done");
+        // println!("\nQuery best_n_candidates done\n\n");
         best_n_candidates.reverse();
         best_n_candidates
     }
