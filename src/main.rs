@@ -46,7 +46,7 @@ fn main() {
     
     let dataset = &ds_test_norm;
     let algo_fit = algs::get_fitted_algorithm(verbose_print, algo_parameters, &ds_train_norm.view());
-
+    println!("");
     match algo_fit {
         Ok(af) => {
             let (build_time, algo, algo_parameters) = af;
