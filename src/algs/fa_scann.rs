@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         return Ok(FAScann {
-            name: "fa_scann_c04".to_string(),
+            name: "fa_scann_c06".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -233,20 +233,22 @@ impl AlgorithmImpl for FAScann {
 
             println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
-            let mut quantized_dataset = vec![vec![0, self.m]; dataset.nrows()];
-            for index in 0..dataset.nrows() {
-                let residual = residuals.slice(s![index,..]);
-                let datapoint = dataset.slice(s![index,..]);
-                let result = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
-                // println!("coordinate_descent_ah_quantize pqcodes: {:?}", &result);
+            // let mut quantized_dataset = vec![vec![0, self.m]; dataset.nrows()];
+            // for index in 0..dataset.nrows() {
+            //     let residual = residuals.slice(s![index,..]);
+            //     let datapoint = dataset.slice(s![index,..]);
+            //     let result = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
+            //     // println!("coordinate_descent_ah_quantize pqcodes: {:?}", &result);
                 
-                quantized_dataset[index] = result;
-            }
+            //     quantized_dataset[index] = result;
+            // }
             
             for centroid in centroids.iter() {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                 for index in centroid.indexes.iter() {
-                    let pqcodes = quantized_dataset[*index].clone();
+                    let residual = residuals.slice(s![*index,..]);
+                    let datapoint = dataset.slice(s![*index,..]);
+                    let pqcodes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id.clone(), point: centroid.point.clone(), children: hmap};
@@ -277,12 +279,10 @@ impl AlgorithmImpl for FAScann {
                             self.coarse_quantizer.iter().map(|centroid| 
                             (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
                             .collect();
-        // println!("\nQuery best_coarse_quantizers done");
         
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
                                                                 .pop().unwrap().1).collect();
-        // println!("\nQuery best_pq_indexes done");
         
         let m_dim = *&self.residuals_codebook.nrows();
         let k_dim = *&self.residuals_codebook.ncols();
@@ -303,21 +303,15 @@ impl AlgorithmImpl for FAScann {
                 distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_query);
             }
         }
-        // println!("\nQuery distance_table done, distance_table.shape() {:?}", distance_table.shape());
 
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
-            // println!("coarse_quantizer childeren \n{:?} \n\n", coarse_quantizer.children);
-            // println!("coarse_quantizer_index:{:?}", coarse_quantizer_index);
 
             for (child_key, child_values) in  coarse_quantizer.children.iter() {
-                // println!("child_key:{} child_values:{:?}", child_key, child_values);
-
                 // Compute distance from indexes
                 let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
-                    // println!("m:{} k:{}", m, k);
                     distance += &distance_table[[m, *k]];
                 }
 
@@ -334,7 +328,6 @@ impl AlgorithmImpl for FAScann {
                 }
             }
         }
-        // println!("\nQuery quantizer_candidates done");
         
         // Rescore with true distance value of query and candidates
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
@@ -348,13 +341,11 @@ impl AlgorithmImpl for FAScann {
                 candidates.push((distance, index));
             }
         }
-        // println!("\nQuery candidates done");
 
         // Pop all candidate indexes from heap and reverse list.
         let mut best_n_candidates: Vec<usize> =  (0..candidates.len())
                                                         .map(|_| candidates
                                                         .pop().unwrap().1).collect();
-        // println!("\nQuery best_n_candidates done\n\n");
         best_n_candidates.reverse();
         best_n_candidates
     }

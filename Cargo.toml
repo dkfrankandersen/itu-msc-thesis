@@ -27,4 +27,4 @@ name = "hdf5_attribute_fix"
 crate-type = ["cdylib"]
 
 [profile.release]
-debug = true
+debug = false

@@ -26,24 +26,14 @@ impl SCANNKMeans {
 
         // Init
         let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
-
-        // println!("Started kmeans Init");
-        // let mut t = DebugTimer::start("kmeans init");
-        // let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
         let mut centroids: Vec::<Centroid> = unique_indexes.into_par_iter()
                     .enumerate()
                     .map(|(k, index)| {
                         let datapoint = dataset.slice(s![index,..]);
                         Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()}
                     }).collect();
-        // bar_unique_indexes.finish();
-        // t.stop();
-        // t.print_as_millis();
 
         // Repeat
-        // println!("Started scann kmeans repeat");
-        // let mut t = DebugTimer::start("scann kmeans Repeat");
-        // let bar_max_iterations = ProgressBar::new(max_iterations as u64);
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
         let metric_arc = Arc::new(metric.clone());
@@ -144,9 +134,6 @@ impl SCANNKMeans {
             }
             bar_max_iterations.inc(1);
         }
-        // bar_max_iterations.finish();
-        // t.stop();
-        // t.print_as_secs();
         centroids
     }
 }
