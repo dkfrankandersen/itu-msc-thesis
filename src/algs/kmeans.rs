@@ -18,30 +18,31 @@ impl KMeans {
         Self{}
     }
 
-    pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize, dataset: &ArrayView2::<f64>, verbose_print: bool) -> Vec::<Centroid> {
+    pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize,
+                    dataset: &ArrayView2::<f64>, verbose_print: bool, bar_max_iterations: &ProgressBar) -> Vec::<Centroid> {
         let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init
         let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), k_centroids);
 
-        println!("Started kmeans Init");
-        let mut t = DebugTimer::start("kmeans init");
-        let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
+        // println!("Started kmeans Init");
+        // let mut t = DebugTimer::start("kmeans init");
+        // let bar_unique_indexes = ProgressBar::new(unique_indexes.len() as u64);
         let mut centroids: Vec::<Centroid> = unique_indexes.into_par_iter()
                     .enumerate()
                     .map(|(k, index)| {
                         let datapoint = dataset.slice(s![index,..]);
                         Centroid{id: k, point: datapoint.to_owned(), indexes: Vec::<usize>::new()}
                     }).collect();
-        bar_unique_indexes.finish();
-        t.stop();
-        t.print_as_millis();
+        // bar_unique_indexes.finish();
+        // t.stop();
+        // t.print_as_millis();
 
         // Repeat
-        println!("Started kmeans Repeat");
-        let mut t = DebugTimer::start("kmeans Repeat");
-        let bar_max_iterations = ProgressBar::new(max_iterations as u64);
+        // println!("Started kmeans Repeat");
+        // let mut t = DebugTimer::start("kmeans Repeat");
+        // let bar_max_iterations = ProgressBar::new(max_iterations as u64);
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
         let metric_arc = Arc::new(metric.clone());
@@ -142,9 +143,9 @@ impl KMeans {
             }
             bar_max_iterations.inc(1);
         }
-        bar_max_iterations.finish();
-        t.stop();
-        t.print_as_secs();
+        // bar_max_iterations.finish();
+        // t.stop();
+        // t.print_as_secs();
         centroids
     }
 }

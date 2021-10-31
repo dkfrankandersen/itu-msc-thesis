@@ -7,6 +7,7 @@ use crate::algs::{kmeans::{KMeans}, common::{Centroid}};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
 use std::path::Path;
+use indicatif::ProgressBar;
 use bincode::serialize_into;
 
 #[derive(Debug, Clone)]
@@ -32,7 +33,7 @@ impl FAKMeans {
 
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_cX".to_string(),
+                        name: "fa_kmeans_c04".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -69,8 +70,10 @@ impl AlgorithmImpl for FAKMeans {
             // Write compute_coarse_quantizers to bin
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
+            let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
             let kmeans = KMeans::new();
-            self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false);
+            self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false, &bar_max_iterations);
+            bar_max_iterations.finish();
             t.stop();
             t.print_as_millis();
 

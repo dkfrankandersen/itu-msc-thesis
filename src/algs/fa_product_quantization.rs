@@ -60,7 +60,7 @@ impl FAProductQuantization {
         }
 
         return Ok(FAProductQuantization {
-            name: "fa_product_quantization_cX2".to_string(),
+            name: "fa_product_quantization_c04".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -122,21 +122,21 @@ impl FAProductQuantization {
         let mut residuals_codebook = Array::from_elem((m_subspaces, k_centroids), Array::zeros(sub_dimension));
         println!("Started Train residuals codebook with kmeans running m = {} times, with k = {} and for a max of {} iterations",
                     m_subspaces, k_centroids, self.max_iterations);
-        let bar_m_subspaces = ProgressBar::new(m_subspaces as u64);
+        let bar_max_iterations = ProgressBar::new((m_subspaces*self.max_iterations) as u64);
+
         for m in 0..m_subspaces {
             let (partial_from, partial_to) = self.partial_query_begin_end[m];
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
             let kmeans = KMeans::new();
-            let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false);
+            let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
                 residuals_codebook[[m,k]] = centroid.point.clone();
             }
-            bar_m_subspaces.inc(1);
         }
-        bar_m_subspaces.finish();
+        bar_max_iterations.finish();
         residuals_codebook
     }
 
@@ -231,8 +231,10 @@ impl AlgorithmImpl for FAProductQuantization {
             let rng = thread_rng();
             println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
+            let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
             let kmeans = KMeans::new();
-            let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print);
+            let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
+            bar_max_iterations.finish();
             t.stop();
             t.print_as_secs();
 
@@ -256,11 +258,11 @@ impl AlgorithmImpl for FAProductQuantization {
             t.print_as_secs();
             
             // Write residuals_codebook to bin
-            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            let mut new_file = File::create(file_residuals_codebook).unwrap();
-            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
-            t.stop();
-            t.print_as_millis();
+            // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            // let mut new_file = File::create(file_residuals_codebook).unwrap();
+            // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            // t.stop();
+            // t.print_as_millis();
  
             let mut t = DebugTimer::start("fit residual_encoding");
             let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
@@ -273,11 +275,11 @@ impl AlgorithmImpl for FAProductQuantization {
             t.print_as_secs();
 
             // Write compute_coarse_quantizers to bin
-            let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
-            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            t.stop();
-            t.print_as_millis();
+            // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
+            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            // t.stop();
+            // t.print_as_millis();
         }
     }
     
