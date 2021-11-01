@@ -1,7 +1,7 @@
 use crate::util::{sampling::sampling_without_replacement};
 use crate::algs::{AlgorithmImpl, distance::{DistanceMetric}, AlgoParameters};
-use crate::algs::distance::cosine_similarity;
-use crate::algs::scann_kmeans::*;
+use crate::algs::distance::{cosine_similarity, euclidian};
+use crate::algs::kmeans::*;
 use crate::algs::scann_common::*;
 use crate::algs::common::{PQCentroid, Centroid};
 use crate::util::{debug_timer::DebugTimer};
@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         return Ok(FAScann {
-            name: "fa_scann_c06".to_string(),
+            name: "fa_scann_c11".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m: m,         // M
@@ -83,6 +83,7 @@ impl FAScann {
 
     pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
         cosine_similarity(&p, &q)
+        // -euclidian(&p, &q)
     }
 
     pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
@@ -133,7 +134,7 @@ impl FAScann {
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
-            let kmeans = SCANNKMeans::new();
+            let kmeans = KMeans::new();
             let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
@@ -186,7 +187,7 @@ impl AlgorithmImpl for FAScann {
             let rng = thread_rng();
             println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
-            let kmeans = SCANNKMeans::new();
+            let kmeans = KMeans::new();
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
             bar_max_iterations.finish();
@@ -233,15 +234,6 @@ impl AlgorithmImpl for FAScann {
 
             println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
-            // let mut quantized_dataset = vec![vec![0, self.m]; dataset.nrows()];
-            // for index in 0..dataset.nrows() {
-            //     let residual = residuals.slice(s![index,..]);
-            //     let datapoint = dataset.slice(s![index,..]);
-            //     let result = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
-            //     // println!("coordinate_descent_ah_quantize pqcodes: {:?}", &result);
-                
-            //     quantized_dataset[index] = result;
-            // }
             
             for centroid in centroids.iter() {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
