@@ -81,20 +81,20 @@ impl FAScann {
         });
     }
 
-    pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        cosine_similarity(&p, &q)
-        // -euclidian(&p, &q)
-    }
+    // pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
+    //     cosine_similarity(&p, &q)
+    //     // -euclidian(&p, &q)
+    // }
 
-    pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
-                                                                -> OrderedFloat::<f64> {
-        OrderedFloat(-self.distance(p, q))
-    }
+    // pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
+    //                                                             -> OrderedFloat::<f64> {
+    //     OrderedFloat(-self.distance(p, q))
+    // }
 
-    pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
-                                                                -> OrderedFloat::<f64> {
-        OrderedFloat(self.distance(p, q))
-    }
+    // pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
+    //                                                             -> OrderedFloat::<f64> {
+    //     OrderedFloat(self.distance(p, q))
+    // }
 
     pub fn random_traindata<T: RngCore>(&self, rng: T, dataset: &ArrayView2::<f64>,
                                         train_dataset_size: usize) -> Array2::<f64> {
@@ -269,7 +269,8 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
+                            // (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
+                            (OrderedFloat(-euclidian(query, &centroid.point.view())), *&centroid.id))
                             .collect();
         
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
@@ -325,7 +326,9 @@ impl AlgorithmImpl for FAScann {
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let distance = self.min_distance_ordered(query,  &datapoint);
+            // let distance = self.min_distance_ordered(query,  &datapoint);
+            let distance = OrderedFloat(euclidian(query, &datapoint));
+
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));
             } else if distance < candidates.peek().unwrap().0 {

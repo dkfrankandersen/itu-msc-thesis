@@ -81,7 +81,7 @@ impl KMeans {
                             // let q_dot_sqrt = metric_arc.query_dot_sqrt(q);
                             // let distance = metric_arc.fast_min_distance_ordered(index, q, datapoint, q_dot_sqrt);
                             // let distance =  OrderedFloat(cosine_similarity(&centroid.point.view(), datapoint));
-                            let distance =  OrderedFloat(euclidian(&centroid.point.view(), datapoint));
+                            let distance = OrderedFloat(euclidian(&centroid.point.view(), datapoint));
                             if distance < best_distance { 
                                 best_distance = distance;
                                 best_index = centroid_index; 
