@@ -14,7 +14,7 @@ pub fn euclidian(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     for i in 0..p.len() {
         sum_val += (p[i]-q[i]).powi(2);
     }
-    return sum_val.sqrt();
+    sum_val.sqrt()
 }
 
 #[allow(dead_code)]
@@ -23,15 +23,14 @@ pub fn angular_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
     let cos_sim = dot_prod / (magnitude_p*magnitude_q);
-    return cos_sim.acos() / std::f64::consts::PI;
+    cos_sim.acos() / std::f64::consts::PI
 }
 
 pub fn cosine_similarity(p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
     let dot_prod = p.dot(q);
     let magnitude_p = p.dot(p).sqrt();
     let magnitude_q = q.dot(q).sqrt();
-    let cos_sim = dot_prod / (magnitude_p*magnitude_q);
-    return cos_sim;
+    dot_prod / (magnitude_p*magnitude_q)
 }
 
 #[derive(Debug, Clone)]
@@ -60,7 +59,7 @@ impl CosineSimilarity {
     }
 
     pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        self.cosine_similarity(&p, &q)
+        self.cosine_similarity(p, &q)
     }
 
     pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {

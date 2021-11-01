@@ -128,7 +128,7 @@ impl KMeans {
                     // Divide by indexes to get mean
                     let centroid_indexes_count = centroid.indexes.len() as f64;
                     for i in 0..datapoint_dimension {  
-                        centroid.point[i] = centroid.point[i]/centroid_indexes_count;
+                        centroid.point[i] /= centroid_indexes_count;
                     }
                 }
             }

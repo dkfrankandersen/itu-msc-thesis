@@ -27,7 +27,7 @@ pub enum Algorithm {
 
 trait AlgorithmImpl {
     fn fit(&mut self, dataset: &ArrayView2::<f64>);
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize>;
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &[usize]) -> Vec<usize>;
     fn name(&self) -> String;
 }
 
@@ -42,7 +42,7 @@ impl AlgorithmImpl for Algorithm {
         }
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, p: &ArrayView1::<f64>, results_per_query: usize, arguments: &[usize]) -> Vec<usize> {
         match *self {
             Algorithm::FABruteforce(ref x) => x.query(dataset, p, results_per_query, arguments),
             Algorithm::FAKMeans(ref x) => x.query(dataset, p, results_per_query, arguments),
@@ -116,22 +116,21 @@ pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParame
                     
                     println!("Starting dataset fitting for algorithm");
                     let time_start = Instant::now();
-                    a.fit(&dataset);
+                    a.fit(dataset);
                     let time_finish = Instant::now();
                     let total_time = time_finish.duration_since(time_start);
                     println!("Timespend in algorithm fitting: {}s", total_time.as_secs());
-                    return Ok((total_time.as_secs_f64(), a, algo_parameters))
+                    Ok((total_time.as_secs_f64(), a, algo_parameters))
                 }
         Err(e) => Err(e)
     }
 }
 
-pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &Vec<usize>) -> (f64, Vec<(usize, f64)>) {
+pub fn run_individual_query(algo: &Algorithm, query: &ArrayView1<f64>, dataset: &ArrayView2<f64>, results_per_query: usize, arguments: &[usize]) -> (f64, Vec<(usize, f64)>) {
     let time_start = Instant::now();
-    let candidates = algo.query(dataset, &query, results_per_query, arguments);
+    let candidates = algo.query(dataset, query, results_per_query, arguments);
     let time_finish = Instant::now();
     let total_time = time_finish.duration_since(time_start);
-    // let dist = distance::Distance::;
     let mut candidates_dist: Vec<(usize, f64)> = Vec::new();
     for i in candidates.into_iter() {
         let datapoint = &dataset.slice(s![i,..]);

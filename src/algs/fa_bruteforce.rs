@@ -17,13 +17,13 @@ pub struct FABruteforce {
 
 impl FABruteforce {
     pub fn new(verbose_print: bool, dist_metric: DistanceMetric) -> Result<Self, String> {
-        return Ok(FABruteforce {
+        Ok(FABruteforce {
             name: "fa_bruteforce_c05".to_string(),
             metric: "angular".to_string(),
             verbose_print: verbose_print,
             dist: dist_metric,
             cosine_metric: None
-        });
+        })
     }
 }
 
@@ -38,13 +38,13 @@ impl AlgorithmImpl for FABruteforce {
         self.cosine_metric = Some(CosineSimilarity::new(dataset));
     }
     
-    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, _arguments: &Vec::<usize>) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, _arguments: &[usize]) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         let cosine_metric = self.cosine_metric.as_ref().unwrap();
         let q_dot_sqrt = cosine_metric.query_dot_sqrt(query);
         for (index, datapoint) in dataset.outer_iter().enumerate() {
             // let distance = OrderedFloat(cosine_similarity(&query, &datapoint));
-            let distance = cosine_metric.fast_min_distance_ordered(index, &datapoint, &query, q_dot_sqrt);
+            let distance = cosine_metric.fast_min_distance_ordered(index, &datapoint, query, q_dot_sqrt);
             if best_candidates.len() < results_per_query {
                 best_candidates.push((distance, index));
                 

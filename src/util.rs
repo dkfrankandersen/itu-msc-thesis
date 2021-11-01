@@ -55,9 +55,9 @@ pub struct RunParameters {
 
 impl RunParameters {
     pub fn algo_definition(&self) -> String {
-        let algo_arg = format!("{:?}", self.algo_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
-        let query_arg = format!("{:?}", self.query_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
-        return format!("{}[{}_{}_{}]", self.algorithm, self.metric, algo_arg, query_arg);
+        let algo_arg = format!("{:?}", self.algo_arguments).replace(",","").replace('"',"").replace(" ","_");
+        let query_arg = format!("{:?}", self.query_arguments).replace(",","").replace('"',"").replace(" ","_");
+        format!("{}[{}_{}_{}]", self.algorithm, self.metric, algo_arg, query_arg)
     }
 }
 
@@ -117,7 +117,7 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
 
     let mut run_parameters = Vec::<RunParameters>::new();
     for results_per_query in results_per_query.iter() {
-        if query_arguments.len() > 0 {
+        if !query_arguments.is_empty() {
             for cluster_to_search in query_arguments.iter() {
                 let run_parameter = RunParameters{ 
                     metric: metric.to_string(), 
@@ -142,6 +142,6 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
         }   
         
     }
-    return AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), 
-                                algo_arguments: algo_arguments.clone(), run_parameters: run_parameters};
+    AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), 
+                                algo_arguments, run_parameters}
 }

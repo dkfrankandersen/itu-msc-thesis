@@ -63,22 +63,22 @@ impl FAScann {
         println!("\nRunning FAScann with\nm: {}\ncoarse_quantizer_k: {}\ntraining_size: {}\nresiduals_codebook_k: {} \nmax_iterations: {}\nanisotropic_quantization_threshold: {}\n\n", 
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
-        return Ok(FAScann {
+        Ok(FAScann {
             name: "fa_scann_c13_euclidian".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
-            m: m,         // M
-            training_size: training_size,
-            coarse_quantizer_k: coarse_quantizer_k,         // K
-            max_iterations: max_iterations,
-            verbose_print: verbose_print,
+            m,         // M
+            training_size,
+            coarse_quantizer_k,         // K
+            max_iterations,
+            verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
-            residuals_codebook_k: residuals_codebook_k,
+            residuals_codebook_k,
             sub_dimension: dataset.ncols()/m,
             partial_query_begin_end: compute_dimension_begin_end(m, dataset.ncols()/m),
-            anisotropic_quantization_threshold: anisotropic_quantization_threshold,
-        });
+            anisotropic_quantization_threshold,
+        })
     }
 
     // pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
@@ -108,7 +108,7 @@ impl FAScann {
         train_data
     }
 
-    fn compute_residuals(&self, centroids: &Vec::<Centroid>, dataset: &ArrayView2::<f64>) -> Array2<f64> {
+    fn compute_residuals(&self, centroids: &[Centroid], dataset: &ArrayView2::<f64>) -> Array2<f64> {
         // Compute residuals for each centroid
         let mut residuals = Array::from_elem((dataset.nrows(), dataset.ncols()), 0.);
         for centroid in centroids.iter() {
@@ -243,7 +243,7 @@ impl AlgorithmImpl for FAScann {
                     let pqcodes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
                     hmap.insert(*index, pqcodes);
                 }
-                let pqcentroid = PQCentroid{id: centroid.id.clone(), point: centroid.point.clone(), children: hmap};
+                let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
                 self.coarse_quantizer.push(pqcentroid);
             }
 
@@ -259,7 +259,7 @@ impl AlgorithmImpl for FAScann {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,
-                                                                arguments: &Vec::<usize>) -> Vec::<usize> {
+                                                                arguments: &[usize]) -> Vec::<usize> {
         
         // Query Arguments
         let clusters_to_search = arguments[0];
@@ -270,15 +270,15 @@ impl AlgorithmImpl for FAScann {
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
                             // (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
-                            (OrderedFloat(-euclidian(query, &centroid.point.view())), *&centroid.id))
+                            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id))
                             .collect();
         
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
                                                                 .pop().unwrap().1).collect();
         
-        let m_dim = *&self.residuals_codebook.nrows();
-        let k_dim = *&self.residuals_codebook.ncols();
+        let m_dim = self.residuals_codebook.nrows();
+        let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         

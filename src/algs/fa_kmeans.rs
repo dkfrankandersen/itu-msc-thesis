@@ -31,7 +31,7 @@ impl FAKMeans {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
-        return Ok(
+        Ok(
             FAKMeans {
                         name: "fa_kmeans_c13_euclidian".to_string(),
                         metric: algo_parameters.metric.clone(),
@@ -41,7 +41,7 @@ impl FAKMeans {
                         max_iterations: max_iterations,
                         verbose_print: verbose_print,
                         cosine_metric: None
-                    });
+                    })
     }
 }
 
@@ -85,7 +85,7 @@ impl AlgorithmImpl for FAKMeans {
         }
     }
 
-    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &Vec::<usize>) -> Vec<usize> {
+    fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, arguments: &[usize]) -> Vec<usize> {
         // Query Arguments
         let clusters_to_search = arguments[0];
 
@@ -112,7 +112,7 @@ impl AlgorithmImpl for FAKMeans {
 
                 // let distance = self.min_distance_ordered(query, &candidate.view());
                 // let distance = cosine_metric.fast_min_distance_ordered(candidate_index, &candidate, &query, q_dot_sqrt);
-                let distance = OrderedFloat(euclidian(&candidate, &query));
+                let distance = OrderedFloat(euclidian(&candidate, query));
 
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {

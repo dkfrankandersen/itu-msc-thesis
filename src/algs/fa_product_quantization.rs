@@ -61,21 +61,21 @@ impl FAProductQuantization {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
-        return Ok(FAProductQuantization {
+        Ok(FAProductQuantization {
             name: "fa_product_quantization_c13_euclidian".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
-            m: m,         // M
-            training_size: training_size,
-            coarse_quantizer_k: coarse_quantizer_k,         // K
-            max_iterations: max_iterations,
-            verbose_print: verbose_print,
+            m,         // M
+            training_size,
+            coarse_quantizer_k,         // K
+            max_iterations,
+            verbose_print,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
-            residuals_codebook_k: residuals_codebook_k,
+            residuals_codebook_k,
             sub_dimension: dataset.ncols()/m,
             partial_query_begin_end: compute_dimension_begin_end(m, dataset.ncols()/m)
-        });
+        })
     }
 
     // pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
@@ -104,7 +104,7 @@ impl FAProductQuantization {
         train_data
     }
 
-    fn compute_residuals(&self, centroids: &Vec::<Centroid>, dataset: &ArrayView2::<f64>) -> Array2<f64> {
+    fn compute_residuals(&self, centroids: &[Centroid], dataset: &ArrayView2::<f64>) -> Array2<f64> {
         // Compute residuals for each centroid
         let mut residuals = Array::from_elem((dataset.nrows(), dataset.ncols()), 0.);
         for centroid in centroids.iter() {
@@ -171,7 +171,7 @@ impl FAProductQuantization {
         pqcodes
     }
 
-    fn compute_coarse_quantizers(&self, centroids: &Vec::<Centroid>, residual_pq_codes: &Array1<Array1<usize>>,
+    fn compute_coarse_quantizers(&self, centroids: &[Centroid], residual_pq_codes: &Array1<Array1<usize>>,
                                         m_centroids: usize) -> Vec::<PQCentroid> {
         // Compute coarse quantizer for centroids with pq codes
         let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
@@ -286,7 +286,7 @@ impl AlgorithmImpl for FAProductQuantization {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>,  query: &ArrayView1::<f64>, results_per_query: usize,
-                                                                arguments: &Vec::<usize>) -> Vec<usize> {
+                                                                arguments: &[usize]) -> Vec<usize> {
         
         // Query Arguments
         let clusters_to_search = arguments[0];
@@ -297,15 +297,15 @@ impl AlgorithmImpl for FAProductQuantization {
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
                             // (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
-                            (OrderedFloat(-euclidian(query, &centroid.point.view())), *&centroid.id))
+                            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id))
                             .collect();
 
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
                                                                 .pop().unwrap().1).collect();
 
-        let m_dim = *&self.residuals_codebook.nrows();
-        let k_dim = *&self.residuals_codebook.ncols();
+        let m_dim = self.residuals_codebook.nrows();
+        let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         

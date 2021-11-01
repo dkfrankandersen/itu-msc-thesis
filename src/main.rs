@@ -10,11 +10,11 @@ extern crate sys_info;
 fn print_sys_info() {
     let m = sys_info::mem_info().unwrap();
     println!("+----------------------------------------------+");
-    println!("| hostname {:?}", sys_info::hostname().unwrap_or("hostname unknown".to_string()));
-    println!("| os_release {:?}", sys_info::os_release().unwrap_or("os_release unknown".to_string()));
+    println!("| hostname {:?}", sys_info::hostname().unwrap_or_else(|_| "hostname unknown".to_string()));
+    println!("| os_release {:?}", sys_info::os_release().unwrap_or_else(|_| "os_release unknown".to_string()));
     println!("| cpu_speed {:?}", sys_info::cpu_speed().unwrap_or(0));
     println!("| cpu_num {:?}", sys_info::cpu_num().unwrap_or(0));
-    println!("| os_type {:?}", sys_info::os_type().unwrap_or("os_type unknown".to_string()));
+    println!("| os_type {:?}", sys_info::os_type().unwrap_or_else(|_| "os_type unknown".to_string()));
     println!("| mem_info {:?} GB", m.total/1024/1024);
     println!("+----------------------------------------------+");
 
