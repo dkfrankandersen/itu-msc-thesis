@@ -1,6 +1,6 @@
 use crate::util::{sampling::sampling_without_replacement};
 use crate::util::debug_timer::DebugTimer;
-use crate::algs::{distance::{CosineSimilarity}, common::Centroid};
+use crate::algs::{distance::{euclidian}, common::Centroid};
 extern crate sys_info;
 use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
@@ -20,7 +20,7 @@ impl KMeans {
 
     pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize,
                     dataset: &ArrayView2::<f64>, verbose_print: bool, bar_max_iterations: &ProgressBar) -> Vec::<Centroid> {
-        let metric = CosineSimilarity::new(&dataset);
+        // let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init
@@ -35,7 +35,7 @@ impl KMeans {
         // Repeat
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
-        let metric_arc = Arc::new(metric.clone());
+        // let metric_arc = Arc::new(metric.clone());
                 
         let no_of_threads: usize = sys_info::cpu_num().unwrap_or(1) as usize;
         let max_val = dataset.nrows();
@@ -67,7 +67,7 @@ impl KMeans {
             let mut handles = Vec::new();
             for (f, t) in chunks.clone().into_iter() {
                 let centroids_arc = Arc::clone(&centroids_arc);
-                let metric_arc = Arc::clone(&metric_arc);
+                // let metric_arc = Arc::clone(&metric_arc);
                 let dataset_arc = Arc::clone(&dataset_arc);
 
                 handles.push(thread::spawn(move || {
@@ -77,10 +77,11 @@ impl KMeans {
                         let mut best_index: usize = 0;
                         let datapoint = &dataset_arc.slice(s![index,..]);
                         for (centroid_index, centroid) in centroids_arc.iter().enumerate() {
-                            let q =  &centroid.point.view();
-                            let q_dot_sqrt = metric_arc.query_dot_sqrt(q);
-                            let distance = metric_arc.fast_min_distance_ordered(index, q, datapoint, q_dot_sqrt);
+                            // let q =  &centroid.point.view();
+                            // let q_dot_sqrt = metric_arc.query_dot_sqrt(q);
+                            // let distance = metric_arc.fast_min_distance_ordered(index, q, datapoint, q_dot_sqrt);
                             // let distance =  OrderedFloat(cosine_similarity(&centroid.point.view(), datapoint));
+                            let distance =  OrderedFloat(euclidian(&centroid.point.view(), datapoint));
                             if distance < best_distance { 
                                 best_distance = distance;
                                 best_index = centroid_index; 

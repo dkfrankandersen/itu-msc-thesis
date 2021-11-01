@@ -249,7 +249,7 @@ pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, resu
     }
 }
 
-pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>,  original_dptr: ArrayView1<f64>,
+pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
                                                  centers: &Vec<Vec<Vec<f64>>>, threshold: &f64) -> Vec<usize> {
     
     let mut result = vec![0; centers.len()];

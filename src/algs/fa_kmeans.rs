@@ -33,7 +33,7 @@ impl FAKMeans {
 
         return Ok(
             FAKMeans {
-                        name: "fa_kmeans_c05".to_string(),
+                        name: "fa_kmeans_c13_euclidian".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -77,11 +77,11 @@ impl AlgorithmImpl for FAKMeans {
             t.stop();
             t.print_as_millis();
 
-            let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
-            let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
-            serialize_into(&mut new_file, &self.codebook).unwrap();
-            t.stop();
-            t.print_as_millis();
+            // let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
+            // let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
+            // serialize_into(&mut new_file, &self.codebook).unwrap();
+            // t.stop();
+            // t.print_as_millis();
         }
     }
 
