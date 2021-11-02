@@ -59,7 +59,7 @@ impl CosineSimilarity {
     }
 
     pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-        self.cosine_similarity(p, &q)
+        self.cosine_similarity(p, q)
     }
 
     pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> OrderedFloat::<f64> {

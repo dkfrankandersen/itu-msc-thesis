@@ -24,22 +24,22 @@ pub struct FAKMeans {
 
 impl FAKMeans {
     pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
-        if k_clusters <= 0 {
+        if k_clusters == 0 {
             return Err("Clusters must be greater than 0".to_string());
         }
-        else if max_iterations <= 0 {
+        else if max_iterations == 0 {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_c13_euclidian".to_string(),
+                        name: "fa_kmeans_c14_euclidian".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
-                        k_clusters: k_clusters,
-                        max_iterations: max_iterations,
-                        verbose_print: verbose_print,
+                        k_clusters,
+                        max_iterations,
+                        verbose_print,
                         cosine_metric: None
                     })
     }
@@ -95,7 +95,7 @@ impl AlgorithmImpl for FAKMeans {
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
             // (cosine_metric.max_distance_ordered(query, &centroid.point.view()), *&centroid.id)
-            (OrderedFloat(-euclidian(query, &centroid.point.view())), *&centroid.id)
+            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id)
 
         }).collect();
 

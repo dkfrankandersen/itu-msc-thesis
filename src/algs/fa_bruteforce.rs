@@ -20,7 +20,7 @@ impl FABruteforce {
         Ok(FABruteforce {
             name: "fa_bruteforce_c05".to_string(),
             metric: "angular".to_string(),
-            verbose_print: verbose_print,
+            verbose_print,
             dist: dist_metric,
             cosine_metric: None
         })
@@ -48,11 +48,9 @@ impl AlgorithmImpl for FABruteforce {
             if best_candidates.len() < results_per_query {
                 best_candidates.push((distance, index));
                 
-            } else {
-                if distance < best_candidates.peek().unwrap().0 {
+            } else if distance < best_candidates.peek().unwrap().0 {
                     best_candidates.pop();
                     best_candidates.push((distance, index));
-                }
             }
         }
 

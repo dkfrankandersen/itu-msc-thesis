@@ -5,17 +5,16 @@ pub mod kmeans;
 pub mod common;
 pub mod distance;
 pub mod fa_scann;
-pub mod scann_kmeans;
 pub mod scann_common;
 
-use std::time::{Instant};
+use std::time::Instant;
 use ndarray::{ArrayView1, ArrayView2, s};
-use fa_bruteforce::{FABruteforce};
-use fa_kmeans::{FAKMeans};
-use fa_product_quantization::{FAProductQuantization};
-use fa_scann::{FAScann};
-use crate::util::{AlgoParameters};
-use distance::{DistanceMetric};
+use fa_bruteforce::FABruteforce;
+use fa_kmeans::FAKMeans;
+use fa_product_quantization::FAProductQuantization;
+use fa_scann::FAScann;
+use crate::util::AlgoParameters;
+use distance::DistanceMetric;
 
 #[derive(Debug, Clone)]
 pub enum Algorithm {

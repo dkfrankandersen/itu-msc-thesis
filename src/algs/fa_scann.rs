@@ -38,25 +38,25 @@ impl FAScann {
                             m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
-        if m <= 0 {
+        if m == 0 {
             return Err("m must be greater than 0".to_string());
         }
         else if dataset.ncols() % m != 0 {
             return Err(format!("M={} is not divisable with dataset dimension d={}!", m, dataset.ncols()));
         }
-        else if coarse_quantizer_k <= 0 {
+        else if coarse_quantizer_k == 0 {
             return Err("coarse_quantizer_k must be greater than 0".to_string());
         }
-        else if training_size <= 0 {
+        else if training_size == 0 {
             return Err("training_size must be greater than 0".to_string());
         }
         else if training_size > dataset.nrows() {
             return Err("training_size must be less than or equal to dataset size".to_string());
         }
-        else if residuals_codebook_k <= 0 {
+        else if residuals_codebook_k == 0 {
             return Err("residuals_codebook_k must be greater than 0".to_string());
         }
-        else if max_iterations <= 0 {
+        else if max_iterations == 0 {
             return Err("max_iterations must be greater than 0".to_string());
         }
 
@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_c13_euclidian".to_string(),
+            name: "fa_scann_c14_euclidian".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M

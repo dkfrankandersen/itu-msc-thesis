@@ -41,6 +41,7 @@ cargo build --release
 
 if [ $run_type = 't' ]
 then
+    cargo run --release angular $DATASET bruteforce [10]
     cargo run --release angular $DATASET kmeans [10] [2000 10] [[24] [64] [128] [384]]
     cargo run --release angular $DATASET pq [10] [50 2000 1183514 16 10] [[24 1024] [64 2048] [128 8192] [384 73728]]
     cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[24 1024] [64 2048] [128 8192] [384 73728]]

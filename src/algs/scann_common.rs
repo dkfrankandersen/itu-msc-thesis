@@ -139,7 +139,7 @@ pub fn compute_residual_stats(maybe_residual_dptr: ArrayView1<f64>,  original_dp
     let  mut chunked_norm: f64 = 0.0;
     for m in 0..num_subspaces {
         for x in original_dptr_chunked[m].iter() {
-            chunked_norm += x*x;
+            chunked_norm += square(x);
         }
     }
     let chunked_norm: f64 = chunked_norm.sqrt();

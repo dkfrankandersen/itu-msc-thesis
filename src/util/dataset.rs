@@ -79,6 +79,6 @@ impl Dataset {
             }
             println!("|  idx: {} neighbors {:?}", i, neighbors);
         }
-        println!("");
+        println!();
     }
 }
