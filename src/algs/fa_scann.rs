@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_c14_euclidian".to_string(),
+            name: "fa_scann_c15_euclidian_debug".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -102,6 +102,8 @@ impl FAScann {
 
         let mut train_data = Array2::zeros((unique_indexes.len(), dataset.ncols()));
         for (i, index) in unique_indexes.iter().enumerate() {
+            debug_track_query_top_results(index, "selected in random_traindata".to_string());
+
             let data_row = dataset.slice(s![*index,..]);
             train_data.row_mut(i).assign(&data_row);
         }
@@ -114,6 +116,7 @@ impl FAScann {
         for centroid in centroids.iter() {
             for index in centroid.indexes.iter() {
                 let point = dataset.slice(s![*index,..]);
+                debug_track_query_top_results(index, "compute_residuals".to_string());
                 for i in 0..point.len() {
                     residuals[[*index, i]] = point[i] - centroid.point[i];
                 }
@@ -240,7 +243,8 @@ impl AlgorithmImpl for FAScann {
                 for index in centroid.indexes.iter() {
                     let residual = residuals.slice(s![*index,..]);
                     let datapoint = dataset.slice(s![*index,..]);
-                    let pqcodes = coordinate_descent_ah_quantize(residual, datapoint, &centers, threshold);
+                    let pqcodes = coordinate_descent_ah_quantize(&index, residual, datapoint, &centers, threshold);
+                    debug_track_query_top_results(index, format!("Final pqcodes {:?}\n", &pqcodes));
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
@@ -310,13 +314,18 @@ impl AlgorithmImpl for FAScann {
 
                 let dist = OrderedFloat(distance);
 
+                debug_track_query_top_results(child_key, format!("From centroid {} compute lookup dist {:?}", coarse_quantizer.id, dist));
+
                 // If candidates list is shorter than min results requestes push to heap
                 if quantizer_candidates.len() < results_to_rescore {
                     quantizer_candidates.push((dist, *child_key));
+                    debug_track_query_top_results(child_key, "Add quantizer_candidates because len".to_string());
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
                 else if dist < quantizer_candidates.peek().unwrap().0 {
+                    debug_track_query_top_results(&quantizer_candidates.peek().unwrap().1, "Pop quantizer_candidates because dist".to_string());
                     quantizer_candidates.pop();
+                    debug_track_query_top_results(child_key, format!("Add quantizer_candidates because dist {}", dist));
                     quantizer_candidates.push((dist, *child_key));
                 }
             }
@@ -331,8 +340,11 @@ impl AlgorithmImpl for FAScann {
 
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));
+                debug_track_query_top_results(&index, "Add quantizer_candidates because len".to_string());
             } else if distance < candidates.peek().unwrap().0 {
+                debug_track_query_top_results(&candidates.peek().unwrap().1, "Pop quantizer_candidates because dist".to_string());
                 candidates.pop();
+                debug_track_query_top_results(&index, format!("Add quantizer_candidates because dist {}", distance));
                 candidates.push((distance, index));
             }
         }

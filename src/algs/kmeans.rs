@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
+use crate::algs::scann_common::debug_track_query_top_results;
+
 
 pub struct KMeans {}
 
@@ -92,6 +94,7 @@ impl KMeans {
                         } else {
                             hmap.insert(best_index, vec!(index));
                         }
+                        debug_track_query_top_results(&index, format!("kmeans add to centroid {}", {best_index}));
                     }
                     hmap
                 }));

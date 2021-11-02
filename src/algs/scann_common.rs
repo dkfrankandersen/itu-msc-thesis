@@ -1,51 +1,41 @@
 use ndarray::prelude::*;
-// use crate::algs::common::Centroid;
 
-// #[allow(dead_code)]
-// pub fn recompute_centroids_simple(spherical: bool, dataset: &ArrayView2::<f64>, centroids: &mut Vec::<Centroid>) {
-//     // Update new means
-//     for centroid in centroids.iter_mut() {
-//         // Clear centroid point
-//         centroid.point.fill(0.);
+pub fn debug_track_query_top_results(index: &usize, msg: String) {
+    let neighbors = vec![
+                            // glove-100-angular.hdf5
+                            // 97478,  262700,  846101,  671078,  232287,  727732,  544474,
+                            // 1133489,  723915,  660281,  566421, 1093917,  908319,  656605,
+                            // 93438,  326455,  584887, 1096614,  100206,  547334,  674655,
+                            // 834699,  445577,  979282,  776528,   51821,  994865,  186281,
+                            // 533888,  331310, 1037752,  193057,  859959,  368655,  690267,
+                            // 82685,  484525, 1168162, 1069248, 1126839,  256447,  451625,
+                            // 914908,  873104,  956338,  678395,  939324,  748511,  207076,
+                            // 751282,  817757,  402216,  932395,  290452,  265744,  696453,
+                            // 82910,  436049,  712479,  494528,  989330,  655775,  995275,
+                            // 647843,  375237,  242797, 1116578,  793170,  325682,  265226,
+                            // 888453,  599119,  631740,  212807, 1142011,  530481,  656064,
+                            // 944910,  459704,  490937,  239304,  264602,  495380,  843410,
+                            // 724903,  876802,  636623,  172030,  162588,  761652,   74880,
+                            // 418892,  687317, 1008844, 1011545,  983601,  340497,  598329,
+                            // 944409,  725625
 
-//         if centroid.indexes.len() > 0 {
-//             // Add dimension value of each
-//             for index in centroid.indexes.iter() {
-//                 let point = dataset.slice(s![*index,..]);
-//                 for (i, x) in point.iter().enumerate() {
-//                     centroid.point[i] += x;
-//                 }
-//             }
-
-//             let divisor = if spherical { centroid.point.dot(&centroid.point).sqrt() }
-//                           else { centroid.indexes.len() as f64};
-     
-//             if divisor == 0. {
-//                 println!("recompute_centroids_simple, could not normalize centroid due to zero norm or empty partition.");
-//                 continue;
-//             }
-//             let multiplier = 1.0 / divisor;
-//             // Divide by indexes to get mean
-//             for i in 0..centroid.point.len() {  
-//                 centroid.point[i] *= multiplier;
-//             }
-//         }
-//     }
-// }
-
-
-// perpendicular_norm_delta =
-//         residual_norm_delta - parallel_norm_delta;
-
-// cost_delta = parallel_cost_multiplier * parallel_norm_delta +
-//                         perpendicular_norm_delta;
-
-// pub fn _anisotropic_loss(p: ArrayView1::<f64>, q: ArrayView1::<f64>) {
-//     let w = 1. as f64;
-//     let a = h_parallel(p.dot(&p), w, p.len()) * r_parallel_residual_error(&p, &q);
-//     let b = h_orthogonal(p, w) * 
-//      //*  + h_orthogonal(w: f64, x: f64)
-// }
+                            // random-xs-20-angular.hdf5
+                            3618, 8213, 4462, 6709, 3975, 3129, 5120, 2979, 6319, 3244,
+                            //   381,
+                            // 5332, 5846,  319, 3325, 1882, 4401, 2044, 7224, 1294, 7539, 5321,
+                            // 3247, 5398,   33, 8582, 7254, 1397, 5700, 4536, 2615, 7802, 3220,
+                            // 4717, 5082, 6604, 2583, 8871, 2275, 4235,  655, 8254, 7007,  511,
+                            // 3502, 4826, 5959,  533, 8705, 8201, 8054, 5335, 7155, 3313, 2820,
+                            // 3974,  185, 5523,  839, 6242, 3192, 2180, 2740, 1477,  992, 3602,
+                            // 3113, 2747, 6137, 5837, 1630,  345, 5159, 8732, 6615, 4195,  325,
+                            // 2969, 8426,  197, 1064, 5957,  647, 1281, 7618, 5121, 6835, 7551,
+                            // 7102, 4981, 6960, 1153, 3357, 1479,  564, 6526, 4545, 6335, 1001,
+                            // 1113
+                            ];
+    if neighbors.contains(index) {
+        println!("Found {}:  {}", index, msg);
+    }
+}
 
 pub fn check_dimension_eq(a: usize, b: usize, msg: &str) {
     if a != b {
@@ -139,7 +129,7 @@ pub fn compute_residual_stats(maybe_residual_dptr: ArrayView1<f64>,  original_dp
     let  mut chunked_norm: f64 = 0.0;
     for m in 0..num_subspaces {
         for x in original_dptr_chunked[m].iter() {
-            chunked_norm += square(x);
+            chunked_norm += square(*x);
         }
     }
     let chunked_norm: f64 = chunked_norm.sqrt();
@@ -249,7 +239,7 @@ pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, resu
     }
 }
 
-pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
+pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
                                                  centers: &[Vec<Vec<f64>>], threshold: &f64) -> Vec<usize> {
     
     let mut result = vec![0; centers.len()];
@@ -260,8 +250,11 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, orig
     
     let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(threshold, squared_l2_norm(original_dptr), original_dptr.len());
     initialize_to_min_residual_norm(&residual_stats, &mut result); // update result with pq codes
+   
+    debug_track_query_top_results(index, format!("parallel_cost_multiplier {}", {parallel_cost_multiplier}));
+    debug_track_query_top_results(index, format!("Initin pqcodes {:?}", {&result}));
     
-    let mut parallel_residual_component: f64 =  compute_parallel_residual_component(&result,& residual_stats);
+    let mut parallel_residual_component: f64 =  compute_parallel_residual_component(&result, &residual_stats);
     
     let mut subspace_residual_norms = vec![0.0_f64; result.len()];
     let mut result_sorted = result.clone();
@@ -283,7 +276,12 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, orig
         }
         cur_round_changes = false;
         for i in 0..num_subspaces {
-            let subspace_idx = result_sorted[i];
+            let subspace_idx = subspace_idxs[i];
+            if subspace_idx > residual_stats.len() {
+                println!("residual_stats {}, subspace_idx: {} num_subspaces {} result_sorted.len() {:?}", residual_stats.len(), subspace_idx, num_subspaces, result_sorted.len());
+            }
+                
+
             let cur_subspace_residual_stats = &residual_stats[subspace_idx];
             
             let cur_center_idx: usize = result_sorted[subspace_idx];

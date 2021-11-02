@@ -41,7 +41,7 @@ cargo build --release
 
 if [ $run_type = 't' ]
 then
-    cargo run --release angular $DATASET bruteforce [10]
+    # cargo run --release angular $DATASET bruteforce [10]
     cargo run --release angular $DATASET kmeans [10] [2000 10] [[24] [64] [128] [384]]
     cargo run --release angular $DATASET pq [10] [50 2000 1183514 16 10] [[24 1024] [64 2048] [128 8192] [384 73728]]
     cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[24 1024] [64 2048] [128 8192] [384 73728]]
@@ -54,12 +54,14 @@ then
     cargo run --release angular $DATASET kmeans [10] [2000 10] [[16] [24] [32] [64] [128] [192] [256] [384] [512]]
 elif [ $run_type = 'p' ]
 then
-    cargo run --release angular $DATASET pq [10] [50 2000 250000 16 10] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [192 16384] [256 32768] [384 73728]]
+    cargo run --release angular $DATASET pq [10] [50 2000 1183514 16 10] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [192 16384] [256 32768] [384 73728]]
 elif [ $run_type = 's' ]
 then
+    cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[24 1024]]
+    # cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[24 1024] [64 2048] [128 8192] [384 73728]]
     # cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[16 512] [24 1024] [64 2048]]
     # cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[16 512] [24 1024] [64 2048] [72 3072] [88 4096] [128 8192] [128 12288] [192 16384] [256 32768] [384 73728]]
-    cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
+    # cargo run --release angular $DATASET scann [10] [50 2000 1183514 16 10 0.2] [[1 30] [2 30] [4 30] [8 30] [30 120] [35 100] [40 80] [45 80] [50 80] [55 95] [60 110] [65 110] [75 110] [90 110] [110 120] [130 150] [150 200] [170 200] [200 300] [220 500] [250 500] [310 300] [400 300] [500 500] [800 1000]]
 else
     exit 0
 fi
