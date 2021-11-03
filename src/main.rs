@@ -87,15 +87,15 @@ fn main() {
                 let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
                 for p in dataset.outer_iter() {
                     let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
-                    println!("\n\nresult : {:?}\n", &result);
-                    for x in result.1.iter() {
-                        for (i, y) in neighbors.iter().enumerate() {
-                            if x.0 == *y {
-                                println!("Found {} as number {} closest neighbor", x.0, i);
-                            }
-                        }
-                    }
-                    panic!("Only query 0 in interessting for now...");
+                    // println!("\n\nresult : {:?}\n", &result);
+                    // for x in result.1.iter() {
+                    //     for (i, y) in neighbors.iter().enumerate() {
+                    //         if x.0 == *y {
+                    //             println!("Found {} as number {} closest neighbor", x.0, i);
+                    //         }
+                    //     }
+                    // }
+                    // panic!("Only query 0 in interessting for now...");
                     results.push(result);
                     pb.inc(1);
                 }
