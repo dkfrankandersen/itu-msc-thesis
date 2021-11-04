@@ -247,14 +247,16 @@ pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayV
     check_dimension_eq(result.len(), centers.len(), "coordinate_descent_ah_quantize");
     check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "coordinate_descent_ah_quantize");
 
-    let residual_stats: Vec<Vec<SubspaceResidualStats>> = compute_residual_stats(maybe_residual_dptr, original_dptr, centers);
+    let residual_stats: Vec<Vec<SubspaceResidualStats>> =
+                compute_residual_stats(maybe_residual_dptr, original_dptr, centers);
     
-    let parallel_cost_multiplier: f64 = compute_parallel_cost_multiplier(threshold, squared_l2_norm(original_dptr), original_dptr.len());
+    let parallel_cost_multiplier: f64 =
+                compute_parallel_cost_multiplier(threshold, squared_l2_norm(original_dptr), original_dptr.len());
+                
     initialize_to_min_residual_norm(&residual_stats, &mut result); // update result with pq codes
-   
-    debug_track_query_top_results(index, format!("Init  pqcodes {:?}", {&result}));
-    
-    let mut parallel_residual_component: f64 =  compute_parallel_residual_component(&result, &residual_stats);
+       
+    let mut parallel_residual_component: f64 = 
+                compute_parallel_residual_component(&result, &residual_stats);
     
     let mut subspace_residual_norms = vec![0.0_f64; result.len()];
     let mut result_sorted = result.clone();
@@ -276,12 +278,7 @@ pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayV
         }
         cur_round_changes = false;
         for i in 0..num_subspaces {
-            let subspace_idx = subspace_idxs[i];
-            if subspace_idx > residual_stats.len() {
-                println!("residual_stats {}, subspace_idx: {} num_subspaces {} result_sorted.len() {:?}", residual_stats.len(), subspace_idx, num_subspaces, result_sorted.len());
-            }
-                
-
+            let subspace_idx = subspace_idxs[i];                
             let cur_subspace_residual_stats = &residual_stats[subspace_idx];
             
             let cur_center_idx: usize = result_sorted[subspace_idx];

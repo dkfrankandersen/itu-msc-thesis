@@ -61,7 +61,7 @@ impl FAProductQuantization {
         }
 
         Ok(FAProductQuantization {
-            name: "fa_product_quantization_c15_euclidian".to_string(),
+            name: "fa_pq_TR05".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -295,7 +295,6 @@ impl AlgorithmImpl for FAProductQuantization {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            // (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
                             (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id))
                             .collect();
 
@@ -307,44 +306,53 @@ impl AlgorithmImpl for FAProductQuantization {
         let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
-        
-        // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-        let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
+
         let dim = query.len()/m_dim;
-        for m in 0..m_dim {
-
-            let begin = dim * m;
-            let end = begin + dim;
-            
-            let partial_query = query.slice(s![begin..end]);
-            for k in 0..k_dim {
-                let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_query);
-            }
-        }
-
+        let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
+        
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
 
-            for (child_key, child_values) in  coarse_quantizer.children.iter() {
+            let residual_qc = {
+                let mut residual = Array::from_elem(query.len(), 0.);
+                for i in 0..query.len() {
+                    residual[i] = query[i] - coarse_quantizer.point[i];
+                }
+                residual
+            };
 
+            for m in 0..m_dim {
+                let begin = dim * m;
+                let end = begin + dim;
+                
+                let partial_residual = residual_qc.slice(s![begin..end]);
+                for k in 0..k_dim {
+                    let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
+                    // distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_residual);
+                    distance_table[[m,k]] = euclidian(&partial_residual, partial_residual_codeword);
+
+                }
+            }
+
+            for (child_key, child_values) in  coarse_quantizer.children.iter() {
+                
                 // Compute distance from indexes
                 let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
                     distance += &distance_table[[m, *k]];
                 }
 
-                let dist = OrderedFloat(distance);
+                let distance = OrderedFloat(distance);
 
                 // If candidates list is shorter than min results requestes push to heap
                 if quantizer_candidates.len() < results_to_rescore {
-                    quantizer_candidates.push((dist, *child_key));
+                    quantizer_candidates.push((distance, *child_key));
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
-                else if dist < quantizer_candidates.peek().unwrap().0 {
+                else if distance < quantizer_candidates.peek().unwrap().0 {
                     quantizer_candidates.pop();
-                    quantizer_candidates.push((dist, *child_key));
+                    quantizer_candidates.push((distance, *child_key));
                 }
             }
         }
@@ -353,7 +361,6 @@ impl AlgorithmImpl for FAProductQuantization {
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            // let distance = self.min_distance_ordered(query,  &datapoint);
             let distance = OrderedFloat(euclidian(query, &datapoint));
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));

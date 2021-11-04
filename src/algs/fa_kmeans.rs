@@ -33,7 +33,7 @@ impl FAKMeans {
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_c15_euclidian".to_string(),
+                        name: "fa_kmeans_TR04".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -52,9 +52,6 @@ impl AlgorithmImpl for FAKMeans {
     }
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
-
-        println!("Fitting for faster CosineSimilarity");
-        // self.cosine_metric = Some(CosineSimilarity::new(dataset));
 
         let file_fa_kmeans_codebook = &self.algo_parameters.fit_file_output("codebook");
 
@@ -89,15 +86,9 @@ impl AlgorithmImpl for FAKMeans {
         // Query Arguments
         let clusters_to_search = arguments[0];
 
-        // let cosine_metric = self.cosine_metric.as_ref().unwrap();
-        // let q_dot_sqrt = cosine_metric.query_dot_sqrt(query);
-
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
-            // (cosine_metric.max_distance_ordered(query, &centroid.point.view()), *&centroid.id)
-            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id)
-
-        }).collect();
+            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id)}).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
         let min_val = std::cmp::min(clusters_to_search, query_centroid_distances.len());
@@ -110,8 +101,6 @@ impl AlgorithmImpl for FAKMeans {
                 let candidate_index = *candidate_key;
                 let candidate = dataset.slice(s![*candidate_key,..]);
 
-                // let distance = self.min_distance_ordered(query, &candidate.view());
-                // let distance = cosine_metric.fast_min_distance_ordered(candidate_index, &candidate, &query, q_dot_sqrt);
                 let distance = OrderedFloat(euclidian(&candidate, query));
 
                 // If candidates list is shorter than min results requestes push to heap

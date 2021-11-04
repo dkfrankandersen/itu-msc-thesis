@@ -94,7 +94,7 @@ impl KMeans {
                         } else {
                             hmap.insert(best_index, vec!(index));
                         }
-                        debug_track_query_top_results(&index, format!("kmeans add to centroid {}", {best_index}));
+                        // debug_track_query_top_results(&index, format!("kmeans add to centroid {}", {best_index}));
                     }
                     hmap
                 }));

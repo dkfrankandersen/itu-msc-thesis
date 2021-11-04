@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_c16_euclidian_debug".to_string(),
+            name: "fa_scann_TR05".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -81,29 +81,12 @@ impl FAScann {
         })
     }
 
-    // pub fn distance(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>) -> f64 {
-    //     cosine_similarity(&p, &q)
-    //     // -euclidian(&p, &q)
-    // }
-
-    // pub fn min_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
-    //                                                             -> OrderedFloat::<f64> {
-    //     OrderedFloat(-self.distance(p, q))
-    // }
-
-    // pub fn max_distance_ordered(&self, p: &ArrayView1::<f64>, q: &ArrayView1::<f64>)
-    //                                                             -> OrderedFloat::<f64> {
-    //     OrderedFloat(self.distance(p, q))
-    // }
-
     pub fn random_traindata<T: RngCore>(&self, rng: T, dataset: &ArrayView2::<f64>,
                                         train_dataset_size: usize) -> Array2::<f64> {
         let unique_indexes = sampling_without_replacement(rng, dataset.nrows(), train_dataset_size);
 
         let mut train_data = Array2::zeros((unique_indexes.len(), dataset.ncols()));
         for (i, index) in unique_indexes.iter().enumerate() {
-            debug_track_query_top_results(index, "selected in random_traindata".to_string());
-
             let data_row = dataset.slice(s![*index,..]);
             train_data.row_mut(i).assign(&data_row);
         }
@@ -116,7 +99,6 @@ impl FAScann {
         for centroid in centroids.iter() {
             for index in centroid.indexes.iter() {
                 let point = dataset.slice(s![*index,..]);
-                debug_track_query_top_results(index, "compute_residuals".to_string());
                 for i in 0..point.len() {
                     residuals[[*index, i]] = point[i] - centroid.point[i];
                 }
@@ -244,7 +226,6 @@ impl AlgorithmImpl for FAScann {
                     let residual = residuals.slice(s![*index,..]);
                     let datapoint = dataset.slice(s![*index,..]);
                     let pqcodes = coordinate_descent_ah_quantize(&index, residual, datapoint, &centers, threshold);
-                    debug_track_query_top_results(index, format!("Final pqcodes {:?}\n", &pqcodes));
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
@@ -273,7 +254,6 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            // (self.max_distance_ordered(query, &centroid.point.view()), centroid.id))
                             (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id))
                             .collect();
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
@@ -286,25 +266,33 @@ impl AlgorithmImpl for FAScann {
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         
         // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-        let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
         let dim = query.len()/m_dim;
-        for m in 0..m_dim {
+        let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
 
-            let begin = dim * m;
-            let end = begin + dim;
-            
-            let partial_query = query.slice(s![begin..end]);
-            for k in 0..k_dim {
-                let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                distance_table[[m,k]] = -partial_residual_codeword.dot(&partial_query);
-            }
-        }
-
-        // println!("Find in best pq centroids");
-        // println!("best_pq_indexes: \n {:?}", best_pq_indexes);
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
+
+            let residual_qc = {
+                let mut residual = Array::from_elem(query.len(), 0.);
+                for i in 0..query.len() {
+                    residual[i] = query[i] - coarse_quantizer.point[i];
+                }
+                residual
+            };
+
+            for m in 0..m_dim {
+                let begin = dim * m;
+                let end = begin + dim;
+                
+                let partial_residual = residual_qc.slice(s![begin..end]);
+                for k in 0..k_dim {
+                    let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
+                    // distance_table[[m,k]] = partial_residual_codeword.dot(&partial_residual);
+                    distance_table[[m,k]] = euclidian(&partial_residual, partial_residual_codeword);
+
+                }
+            }
 
             for (child_key, child_values) in  coarse_quantizer.children.iter() {
                 // Compute distance from indexes
@@ -313,44 +301,32 @@ impl AlgorithmImpl for FAScann {
                     distance += &distance_table[[m, *k]];
                 }
 
-                let dist = OrderedFloat(distance);
-
-                debug_track_query_top_results(child_key, format!("From centroid {} compute lookup dist {:?}", coarse_quantizer.id, dist));
+                let distance = OrderedFloat(distance);
 
                 // If candidates list is shorter than min results requestes push to heap
                 if quantizer_candidates.len() < results_to_rescore {
-                    quantizer_candidates.push((dist, *child_key));
-                    debug_track_query_top_results(child_key, "Add quantizer_candidates because len".to_string());
+                    quantizer_candidates.push((distance, *child_key));
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
-                else if dist < quantizer_candidates.peek().unwrap().0 {
-                    debug_track_query_top_results(child_key, format!("Add quantizer_candidates because dist {} < {}", dist, quantizer_candidates.peek().unwrap().0));
-                    debug_track_query_top_results(&quantizer_candidates.peek().unwrap().1, "Pop quantizer_candidates because dist".to_string());
+                else if distance < quantizer_candidates.peek().unwrap().0 {
                     quantizer_candidates.pop();
-                    quantizer_candidates.push((dist, *child_key));
+                    quantizer_candidates.push((distance, *child_key));
                 }
             }
         }
-
-        // println!("Rescore");
         
         // Rescore with true distance value of query and candidates
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            // let distance = self.min_distance_ordered(query,  &datapoint);
             let distance = OrderedFloat(euclidian(query, &datapoint));
 
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));
-                debug_track_query_top_results(&index, "Add in rescore because len".to_string());
             } else {
                 let peak_distance = candidates.peek().unwrap().0;
                 if distance < peak_distance {
-                    debug_track_query_top_results(&candidates.peek().unwrap().1, "Pop in rescore because dist".to_string());
                     candidates.pop();
-                    debug_track_query_top_results(&index, format!("Add in rescore because dist {} < {}", distance, peak_distance));
-                    debug_track_query_top_results(&index, format!("Add in recore because dist {}", distance));
                     candidates.push((distance, index));
                 }
             }
