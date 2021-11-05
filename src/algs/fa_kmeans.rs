@@ -2,7 +2,8 @@ use ndarray::{ArrayView1, ArrayView2, s};
 use std::collections::{BinaryHeap};
 use rand::{prelude::*};
 use ordered_float::*;
-use crate::algs::{AlgorithmImpl, distance::{CosineSimilarity, DistanceMetric, euclidian}, AlgoParameters};
+use crate::algs::{AlgorithmImpl, AlgoParameters};
+use crate::algs::distance::{DistanceMetric, min_distance};
 use crate::algs::{kmeans::{KMeans}, common::{Centroid}};
 use crate::util::{debug_timer::DebugTimer};
 use std::fs::File;
@@ -19,7 +20,6 @@ pub struct FAKMeans {
     k_clusters: usize,
     max_iterations: usize,
     verbose_print: bool,
-    cosine_metric: Option<CosineSimilarity>
 }
 
 impl FAKMeans {
@@ -33,14 +33,13 @@ impl FAKMeans {
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_TR04".to_string(),
+                        name: "fa_kmeans_TR07".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters,
                         max_iterations,
                         verbose_print,
-                        cosine_metric: None
                     })
     }
 }
@@ -68,7 +67,7 @@ impl AlgorithmImpl for FAKMeans {
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
-            let kmeans = KMeans::new();
+            let kmeans = KMeans::new(DistanceMetric::Euclidian);
             self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false, &bar_max_iterations);
             bar_max_iterations.finish();
             t.stop();
@@ -88,7 +87,7 @@ impl AlgorithmImpl for FAKMeans {
 
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
-            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id)}).collect();
+            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::Euclidian)), centroid.id)}).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
         let min_val = std::cmp::min(clusters_to_search, query_centroid_distances.len());
@@ -101,7 +100,7 @@ impl AlgorithmImpl for FAKMeans {
                 let candidate_index = *candidate_key;
                 let candidate = dataset.slice(s![*candidate_key,..]);
 
-                let distance = OrderedFloat(euclidian(&candidate, query));
+                let distance = OrderedFloat(min_distance(&candidate, query, &DistanceMetric::Euclidian));
 
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {

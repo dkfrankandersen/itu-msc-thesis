@@ -1,6 +1,6 @@
 use crate::util::{sampling::sampling_without_replacement};
-use crate::algs::{AlgorithmImpl, distance::{DistanceMetric}, AlgoParameters};
-use crate::algs::distance::{cosine_similarity, euclidian};
+use crate::algs::{AlgorithmImpl, AlgoParameters};
+use crate::algs::distance::{DistanceMetric, min_distance};
 use crate::algs::kmeans::*;
 use crate::algs::scann_common::*;
 use crate::algs::common::{PQCentroid, Centroid};
@@ -64,7 +64,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR05".to_string(),
+            name: "fa_scann_TR07".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -93,15 +93,21 @@ impl FAScann {
         train_data
     }
 
+    fn compute_residual(&self, a: &ArrayView1<f64>, b: &ArrayView1<f64>) -> Array1<f64> {
+        let mut residual = Array1::from_elem(a.len(), 0_f64);
+        for i in 0..a.len() {
+            residual[i] = a[i] - b[i];
+        }
+        residual
+    }
+
     fn compute_residuals(&self, centroids: &[Centroid], dataset: &ArrayView2::<f64>) -> Array2<f64> {
         // Compute residuals for each centroid
         let mut residuals = Array::from_elem((dataset.nrows(), dataset.ncols()), 0.);
         for centroid in centroids.iter() {
             for index in centroid.indexes.iter() {
                 let point = dataset.slice(s![*index,..]);
-                for i in 0..point.len() {
-                    residuals[[*index, i]] = point[i] - centroid.point[i];
-                }
+                residuals.row_mut(*index).assign(&self.compute_residual(&point, &centroid.point.view()));
             }
         }
         residuals
@@ -119,7 +125,7 @@ impl FAScann {
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
-            let kmeans = KMeans::new();
+            let kmeans = KMeans::new(DistanceMetric::Euclidian);
             let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
@@ -172,7 +178,7 @@ impl AlgorithmImpl for FAScann {
             let rng = thread_rng();
             println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
-            let kmeans = KMeans::new();
+            let kmeans = KMeans::new(DistanceMetric::Euclidian);
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
             bar_max_iterations.finish();
@@ -254,7 +260,7 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-euclidian(query, &centroid.point.view())), centroid.id))
+                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::Euclidian)), centroid.id))
                             .collect();
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
@@ -266,30 +272,19 @@ impl AlgorithmImpl for FAScann {
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         
         // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
-        let dim = query.len()/m_dim;
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
-
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
 
-            let residual_qc = {
-                let mut residual = Array::from_elem(query.len(), 0.);
-                for i in 0..query.len() {
-                    residual[i] = query[i] - coarse_quantizer.point[i];
-                }
-                residual
-            };
+            let residual_qc = &self.compute_residual(&query, &coarse_quantizer.point.view());
 
             for m in 0..m_dim {
-                let begin = dim * m;
-                let end = begin + dim;
-                
-                let partial_residual = residual_qc.slice(s![begin..end]);
+                let (partial_from, partial_to) = self.partial_query_begin_end[m];     
+                let partial_residual = residual_qc.slice(s![partial_from..partial_to]);
                 for k in 0..k_dim {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    // distance_table[[m,k]] = partial_residual_codeword.dot(&partial_residual);
-                    distance_table[[m,k]] = euclidian(&partial_residual, partial_residual_codeword);
+                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::Euclidian);
 
                 }
             }
@@ -319,7 +314,7 @@ impl AlgorithmImpl for FAScann {
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let distance = OrderedFloat(euclidian(query, &datapoint));
+            let distance = OrderedFloat(min_distance(query, &datapoint, &DistanceMetric::DotProduct));
 
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));

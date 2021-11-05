@@ -6,7 +6,7 @@ mod running;
 use indicatif::{ProgressBar};
 use rayon::iter::{ParallelIterator, IntoParallelRefIterator};
 extern crate sys_info;
-use ndarray::{s};
+// use ndarray::{s};
 
 fn print_sys_info() {
     let m = sys_info::mem_info().unwrap();

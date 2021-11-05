@@ -1,6 +1,7 @@
 use crate::util::{sampling::sampling_without_replacement};
 use crate::util::debug_timer::DebugTimer;
-use crate::algs::{distance::{euclidian}, common::Centroid};
+use crate::algs::{common::Centroid};
+use crate::algs::distance::{DistanceMetric, min_distance};
 extern crate sys_info;
 use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
@@ -13,16 +14,19 @@ use rayon::prelude::*;
 use crate::algs::scann_common::debug_track_query_top_results;
 
 
-pub struct KMeans {}
+pub struct KMeans {
+    dist_metric: DistanceMetric
+}
 
 impl KMeans {
-    pub fn new() -> Self {
-        Self{}
+    pub fn new(dist_metric: DistanceMetric) -> Self {
+        KMeans {
+            dist_metric
+        }
     }
 
     pub fn run<T: RngCore>(&self, rng: T, k_centroids: usize, max_iterations: usize,
                     dataset: &ArrayView2::<f64>, verbose_print: bool, bar_max_iterations: &ProgressBar) -> Vec::<Centroid> {
-        // let metric = CosineSimilarity::new(&dataset);
         let datapoint_dimension = dataset.ncols();
 
         // Init
@@ -37,7 +41,6 @@ impl KMeans {
         // Repeat
         let mut last_centroids = Vec::<Centroid>::with_capacity(k_centroids);
         let dataset_arc = Arc::new(dataset.to_owned());
-        // let metric_arc = Arc::new(metric.clone());
                 
         let no_of_threads: usize = sys_info::cpu_num().unwrap_or(1) as usize;
         let max_val = dataset.nrows();
@@ -58,20 +61,22 @@ impl KMeans {
                 if verbose_print { println!("Computation has converged, iterations: {}", iterations); }
                 break;
             }
-
+            
             last_centroids = centroids.clone();
-
+            
             // Remove centroid children
             centroids.par_iter_mut().for_each(|c| c.indexes.clear());
-          
+            
             // Assign     
             let centroids_arc = Arc::new(centroids.clone());
+            let dist_metric_arc = Arc::new(self.dist_metric.clone());
+
             let mut handles = Vec::new();
             for (f, t) in chunks.clone().into_iter() {
                 let centroids_arc = Arc::clone(&centroids_arc);
-                // let metric_arc = Arc::clone(&metric_arc);
                 let dataset_arc = Arc::clone(&dataset_arc);
-
+                let dist_metric_arc = Arc::clone(&dist_metric_arc);
+                
                 handles.push(thread::spawn(move || {
                     let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                     for index in f..t {
@@ -79,11 +84,7 @@ impl KMeans {
                         let mut best_index: usize = 0;
                         let datapoint = &dataset_arc.slice(s![index,..]);
                         for (centroid_index, centroid) in centroids_arc.iter().enumerate() {
-                            // let q =  &centroid.point.view();
-                            // let q_dot_sqrt = metric_arc.query_dot_sqrt(q);
-                            // let distance = metric_arc.fast_min_distance_ordered(index, q, datapoint, q_dot_sqrt);
-                            // let distance =  OrderedFloat(cosine_similarity(&centroid.point.view(), datapoint));
-                            let distance = OrderedFloat(euclidian(&centroid.point.view(), datapoint));
+                            let distance = OrderedFloat(min_distance(&centroid.point.view(), datapoint, &dist_metric_arc));
                             if distance < best_distance { 
                                 best_distance = distance;
                                 best_index = centroid_index; 
@@ -94,7 +95,6 @@ impl KMeans {
                         } else {
                             hmap.insert(best_index, vec!(index));
                         }
-                        // debug_track_query_top_results(&index, format!("kmeans add to centroid {}", {best_index}));
                     }
                     hmap
                 }));
