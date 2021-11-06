@@ -60,7 +60,7 @@ impl FAProductQuantization {
         }
 
         Ok(FAProductQuantization {
-            name: "fa_pq_TR11".to_string(),
+            name: "fa_pq_TR13".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M

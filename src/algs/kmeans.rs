@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::thread;
 use std::sync::Arc;
 use rayon::prelude::*;
-use crate::algs::scann_common::debug_track_query_top_results;
+// use crate::algs::scann_common::debug_track_query_top_results;
 
 
 pub struct KMeans {

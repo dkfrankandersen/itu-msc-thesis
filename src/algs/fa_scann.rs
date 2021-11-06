@@ -65,7 +65,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR12".to_string(),
+            name: "fa_scann_TR13".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -234,6 +234,7 @@ impl AlgorithmImpl for FAScann {
                     let residual = residuals.slice(s![*index,..]);
                     let datapoint = dataset.slice(s![*index,..]);
                     let pqcodes = coordinate_descent_ah_quantize(&index, residual, datapoint, &centers, threshold);
+                    // debug_track_query_top_results(index, format!("is at centroid {:?}\n", &centroid.id));
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
@@ -274,9 +275,9 @@ impl AlgorithmImpl for FAScann {
         let m_dim = self.residuals_codebook.nrows();
         let k_dim = self.residuals_codebook.ncols();
         
-        let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
+        let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_to_rescore);
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
-        
+        // println!("\nbest_pq_indexes {:?}\n", best_pq_indexes);
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -292,23 +293,26 @@ impl AlgorithmImpl for FAScann {
                 }
             }
 
-            for (child_key, child_values) in  coarse_quantizer.children.iter() {
+            for (datapoint_index, datapoint_pqcodes) in  coarse_quantizer.children.iter() {
                 // Compute distance from indexes
                 let mut distance: f64 = 0.;
-                for (m, k) in child_values.iter().enumerate() {
+                for (m, k) in datapoint_pqcodes.iter().enumerate() {
                     distance += &distance_table[[m, *k]];
                 }
-
+                // debug_track_query_top_results(datapoint_index, format!("coarse_quantizer_index {:?} distance_table {:?}", &coarse_quantizer_index, &distance));
+                
                 let distance = OrderedFloat(distance);
 
                 // If candidates list is shorter than min results requestes push to heap
                 if quantizer_candidates.len() < results_to_rescore {
-                    quantizer_candidates.push((distance, *child_key));
+                    quantizer_candidates.push((distance, *datapoint_index));
+                    // debug_track_query_top_results(&datapoint_index, format!("in quantizer_candidates (len)"));
                 }
                 // If distance is better, remove top (worst) and push candidate to heap
                 else if distance < quantizer_candidates.peek().unwrap().0 {
                     quantizer_candidates.pop();
-                    quantizer_candidates.push((distance, *child_key));
+                    quantizer_candidates.push((distance, *datapoint_index));
+                    // debug_track_query_top_results(&datapoint_index, format!("in quantizer_candidates (dist)"));
                 }
             }
         }
@@ -318,15 +322,15 @@ impl AlgorithmImpl for FAScann {
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
             let distance = OrderedFloat(min_distance(query, &datapoint, &self.dist_metric));
-
+            // debug_track_query_top_results(&index, format!("rescore distance {:?}", &distance));
+            
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));
-            } else {
-                let peak_distance = candidates.peek().unwrap().0;
-                if distance < peak_distance {
-                    candidates.pop();
-                    candidates.push((distance, index));
-                }
+                // debug_track_query_top_results(&index, format!("in best_n_candidates (len)"));
+            } else if distance < candidates.peek().unwrap().0 {
+                candidates.pop();
+                candidates.push((distance, index));
+                // debug_track_query_top_results(&index, format!("in best_n_candidates (dist)"));
             }
         }
 

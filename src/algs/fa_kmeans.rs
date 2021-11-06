@@ -34,7 +34,7 @@ impl FAKMeans {
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_TR09".to_string(),
+                        name: "fa_kmeans_TR13".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
