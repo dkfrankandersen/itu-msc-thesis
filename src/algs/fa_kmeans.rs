@@ -20,10 +20,11 @@ pub struct FAKMeans {
     k_clusters: usize,
     max_iterations: usize,
     verbose_print: bool,
+    dist_metric: DistanceMetric
 }
 
 impl FAKMeans {
-    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
+    pub fn new(verbose_print: bool, dist_metric: DistanceMetric, algo_parameters: &AlgoParameters, k_clusters: usize, max_iterations: usize) -> Result<Self, String> {
         if k_clusters == 0 {
             return Err("Clusters must be greater than 0".to_string());
         }
@@ -33,13 +34,14 @@ impl FAKMeans {
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_TR07".to_string(),
+                        name: "fa_kmeans_TR09".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
                         k_clusters,
                         max_iterations,
                         verbose_print,
+                        dist_metric
                     })
     }
 }
@@ -67,7 +69,7 @@ impl AlgorithmImpl for FAKMeans {
             let rng = thread_rng();
             let mut t = DebugTimer::start("fit run kmeans");
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
-            let kmeans = KMeans::new(DistanceMetric::Euclidian);
+            let kmeans = KMeans::new(&self.dist_metric);
             self.codebook = kmeans.run(rng, self.k_clusters, self.max_iterations, dataset, false, &bar_max_iterations);
             bar_max_iterations.finish();
             t.stop();
@@ -87,7 +89,7 @@ impl AlgorithmImpl for FAKMeans {
 
         // Calculate distance between query and all centroids, collect result into max heap
         let mut query_centroid_distances: BinaryHeap::<(OrderedFloat::<f64>, usize)> = self.codebook.iter().map(|centroid| {
-            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::Euclidian)), centroid.id)}).collect();
+            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id)}).collect();
 
         // Collect best centroid indexes, limit by clusters_to_search
         let min_val = std::cmp::min(clusters_to_search, query_centroid_distances.len());
@@ -100,7 +102,7 @@ impl AlgorithmImpl for FAKMeans {
                 let candidate_index = *candidate_key;
                 let candidate = dataset.slice(s![*candidate_key,..]);
 
-                let distance = OrderedFloat(min_distance(&candidate, query, &DistanceMetric::Euclidian));
+                let distance = OrderedFloat(min_distance(&candidate, query, &self.dist_metric));
 
                 // If candidates list is shorter than min results requestes push to heap
                 if best_candidates.len() < results_per_query {

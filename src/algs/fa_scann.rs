@@ -29,12 +29,13 @@ pub struct FAScann {
     residuals_codebook_k: usize,
     sub_dimension: usize,
     partial_query_begin_end: Vec::<(usize, usize)>,
-    anisotropic_quantization_threshold: f64
+    anisotropic_quantization_threshold: f64,
+    dist_metric: DistanceMetric,
 }
 
 impl FAScann {
 
-    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, 
+    pub fn new(verbose_print: bool, dist_metric: DistanceMetric, algo_parameters: &AlgoParameters, dataset: &ArrayView2::<f64>, 
                             m: usize, coarse_quantizer_k: usize, training_size: usize, 
                             residuals_codebook_k: usize, max_iterations: usize, anisotropic_quantization_threshold: f64) -> Result<Self, String> {
 
@@ -64,7 +65,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR07".to_string(),
+            name: "fa_scann_TR11".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -72,6 +73,7 @@ impl FAScann {
             coarse_quantizer_k,         // K
             max_iterations,
             verbose_print,
+            dist_metric,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
             residuals_codebook_k,
@@ -125,7 +127,7 @@ impl FAScann {
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
-            let kmeans = KMeans::new(DistanceMetric::Euclidian);
+            let kmeans = KMeans::new(&self.dist_metric);
             let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
@@ -178,7 +180,7 @@ impl AlgorithmImpl for FAScann {
             let rng = thread_rng();
             println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
-            let kmeans = KMeans::new(DistanceMetric::Euclidian);
+            let kmeans = KMeans::new(&self.dist_metric);
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
             bar_max_iterations.finish();
@@ -214,8 +216,8 @@ impl AlgorithmImpl for FAScann {
             // t.stop();
             // t.print_as_millis();
  
+            println!("\nFit copy centers");
             let mut centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.residuals_codebook_k]; self.m];
-            
             for m in 0..self.m {
                 for k in 0..self.residuals_codebook_k {
                     let partial_dims = &self.residuals_codebook[[m,k]].to_vec();
@@ -225,7 +227,7 @@ impl AlgorithmImpl for FAScann {
 
             println!("\nFit run coordinate_descent_ah_quantize");
             let threshold = &self.anisotropic_quantization_threshold;
-            
+            let bar_max_iterations = ProgressBar::new(centroids.len() as u64);
             for centroid in centroids.iter() {
                 let mut hmap = HashMap::<usize, Vec::<usize>>::new();
                 for index in centroid.indexes.iter() {
@@ -236,7 +238,10 @@ impl AlgorithmImpl for FAScann {
                 }
                 let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
                 self.coarse_quantizer.push(pqcentroid);
+                bar_max_iterations.inc(1);
             }
+            bar_max_iterations.finish();
+
 
             // Write centroids to file
             // println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
@@ -260,7 +265,7 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::Euclidian)), centroid.id))
+                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
                             .collect();
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
@@ -270,9 +275,8 @@ impl AlgorithmImpl for FAScann {
         let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
-        
-        // Create a distance table, for each of the M blocks to all of the K codewords -> table of size M times K.
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
+        
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -284,8 +288,7 @@ impl AlgorithmImpl for FAScann {
                 let partial_residual = residual_qc.slice(s![partial_from..partial_to]);
                 for k in 0..k_dim {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::Euclidian);
-
+                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::DotProduct);
                 }
             }
 
@@ -314,7 +317,7 @@ impl AlgorithmImpl for FAScann {
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let distance = OrderedFloat(min_distance(query, &datapoint, &DistanceMetric::DotProduct));
+            let distance = OrderedFloat(min_distance(query, &datapoint, &self.dist_metric));
 
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));

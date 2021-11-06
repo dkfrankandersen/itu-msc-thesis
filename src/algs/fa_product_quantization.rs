@@ -27,14 +27,13 @@ pub struct FAProductQuantization {
     residuals_codebook: Array2::<Array1::<f64>>,
     residuals_codebook_k: usize,
     sub_dimension: usize,
-    partial_query_begin_end: Vec::<(usize, usize)>
-
-
+    partial_query_begin_end: Vec::<(usize, usize)>,
+    dist_metric: DistanceMetric,
 }
 
 impl FAProductQuantization {
 
-    pub fn new(verbose_print: bool, _dist: DistanceMetric, algo_parameters: &AlgoParameters,
+    pub fn new(verbose_print: bool, dist_metric: DistanceMetric, algo_parameters: &AlgoParameters,
                 dataset: &ArrayView2::<f64>, m: usize, coarse_quantizer_k: usize, training_size: usize, 
                 residuals_codebook_k: usize, max_iterations: usize) -> Result<Self, String> {
 
@@ -61,7 +60,7 @@ impl FAProductQuantization {
         }
 
         Ok(FAProductQuantization {
-            name: "fa_pq_TR07".to_string(),
+            name: "fa_pq_TR11".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -69,6 +68,7 @@ impl FAProductQuantization {
             coarse_quantizer_k,         // K
             max_iterations,
             verbose_print,
+            dist_metric,
             coarse_quantizer: Vec::<PQCentroid>::with_capacity(m),
             residuals_codebook: Array::from_elem((m, coarse_quantizer_k), Array::zeros(dataset.ncols()/m)),
             residuals_codebook_k,
@@ -122,7 +122,7 @@ impl FAProductQuantization {
             let partial_data = residuals_training_data.slice(s![.., partial_from..partial_to]);
 
             let rng = thread_rng();
-            let kmeans = KMeans::new(DistanceMetric::Euclidian);
+            let kmeans = KMeans::new(&self.dist_metric);
             let centroids = kmeans.run(rng, k_centroids, self.max_iterations, &partial_data.view(), false, &bar_max_iterations);
 
             for (k, centroid) in centroids.iter().enumerate() {
@@ -147,7 +147,7 @@ impl FAProductQuantization {
                 let mut best_index = 0;
                 for k in 0..residuals_codebook.ncols() {
                     let centroid = &residuals_codebook[[m,k]].view();
-                    let distance = OrderedFloat(min_distance(centroid, &partial_dimension, &DistanceMetric::DotProduct));
+                    let distance = OrderedFloat(min_distance(centroid, &partial_dimension, &self.dist_metric));
                     if distance < best_distance { 
                         best_distance = distance;
                         best_index = k; 
@@ -224,7 +224,7 @@ impl AlgorithmImpl for FAProductQuantization {
             println!("\nFit run kmeans with k = {} for a max of {} iterations", self.coarse_quantizer_k, self.max_iterations);
             let mut t = DebugTimer::start("fit run kmeans");
             let bar_max_iterations = ProgressBar::new((self.max_iterations) as u64);
-            let kmeans = KMeans::new(DistanceMetric::Euclidian);
+            let kmeans = KMeans::new(&self.dist_metric);
             let centroids = kmeans.run(rng, self.coarse_quantizer_k, self.max_iterations, dataset, verbose_print, &bar_max_iterations);
             bar_max_iterations.finish();
             t.stop();
@@ -286,7 +286,7 @@ impl AlgorithmImpl for FAProductQuantization {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::Euclidian)), centroid.id))
+                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
                             .collect();
 
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
@@ -297,8 +297,6 @@ impl AlgorithmImpl for FAProductQuantization {
         let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
-
-        let dim = query.len()/m_dim;
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
         
         for coarse_quantizer_index in best_pq_indexes.iter() {
@@ -312,13 +310,12 @@ impl AlgorithmImpl for FAProductQuantization {
                 let partial_residual = residual_qc.slice(s![partial_from..partial_to]);
                 for k in 0..k_dim {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::Euclidian);
+                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::DotProduct);
 
                 }
             }
 
             for (child_key, child_values) in  coarse_quantizer.children.iter() {
-                
                 // Compute distance from indexes
                 let mut distance: f64 = 0.;
                 for (m, k) in child_values.iter().enumerate() {
@@ -343,7 +340,7 @@ impl AlgorithmImpl for FAProductQuantization {
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
         for (_, index) in quantizer_candidates.into_iter() {
             let datapoint = dataset.slice(s![index,..]);
-            let distance = OrderedFloat(min_distance(query, &datapoint, &DistanceMetric::Euclidian));
+            let distance = OrderedFloat(min_distance(query, &datapoint, &self.dist_metric));
             if candidates.len() < results_per_query {
                 candidates.push((distance, index));
             } else if distance < candidates.peek().unwrap().0 {

@@ -15,7 +15,7 @@ pub struct FABruteforce {
 impl FABruteforce {
     pub fn new(verbose_print: bool, dist_metric: DistanceMetric) -> Result<Self, String> {
         Ok(FABruteforce {
-            name: "fa_bruteforce_TR07".to_string(),
+            name: "fa_bruteforce_TR11".to_string(),
             metric: "angular".to_string(),
             verbose_print,
             dist_metric,
@@ -35,7 +35,7 @@ impl AlgorithmImpl for FABruteforce {
     fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, _arguments: &[usize]) -> Vec<usize> {
         let mut best_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::new();
         for (index, datapoint) in dataset.outer_iter().enumerate() {
-            let distance = OrderedFloat(min_distance(&query, &datapoint, &DistanceMetric::Euclidian));
+            let distance = OrderedFloat(min_distance(&query, &datapoint, &self.dist_metric));
             if best_candidates.len() < results_per_query {
                 best_candidates.push((distance, index));
                 

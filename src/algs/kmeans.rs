@@ -19,9 +19,9 @@ pub struct KMeans {
 }
 
 impl KMeans {
-    pub fn new(dist_metric: DistanceMetric) -> Self {
+    pub fn new(dist_metric: &DistanceMetric) -> Self {
         KMeans {
-            dist_metric
+            dist_metric: dist_metric.clone()
         }
     }
 

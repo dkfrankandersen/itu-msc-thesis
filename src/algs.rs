@@ -64,24 +64,23 @@ pub struct AlgorithmFactory {}
 
 impl AlgorithmFactory {
     pub fn get(verbose_print: bool, dataset: &ArrayView2::<f64>, algo_parameters: &AlgoParameters) -> Result<Algorithm, String> {
-        let dist = DistanceMetric::CosineSimilarity;
         match algo_parameters.algorithm.as_ref() {
-            "bruteforce" => {   
-                            let alg = FABruteforce::new(verbose_print, dist);
+            "bruteforce" => {
+                            let alg = FABruteforce::new(verbose_print, DistanceMetric::Euclidian);
                             match alg {
                                 Ok(a) => Ok(Algorithm::FABruteforce(a)),
                                 Err(e) => Err(e)
                             }
                             },
             "kmeans" => {
-                            let alg = FAKMeans::new(verbose_print, dist, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
+                            let alg = FAKMeans::new(verbose_print, DistanceMetric::Euclidian, algo_parameters, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), algo_parameters.algo_arguments[1].parse::<usize>().unwrap());
                             match alg {
                                 Ok(a) => Ok(Algorithm::FAKMeans(a)),
                                 Err(e) => Err(e)
                             }
                         },
             "pq" => {
-                            let alg = FAProductQuantization::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                            let alg = FAProductQuantization::new(verbose_print, DistanceMetric::Euclidian, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                             algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
                             algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap());
                             match alg {
@@ -90,7 +89,7 @@ impl AlgorithmFactory {
                             }
                         },
             "scann" => {
-                        let alg = FAScann::new(verbose_print, dist, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
+                        let alg = FAScann::new(verbose_print, DistanceMetric::Euclidian, algo_parameters, dataset, algo_parameters.algo_arguments[0].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[1].parse::<usize>().unwrap(), algo_parameters.algo_arguments[2].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[3].parse::<usize>().unwrap(), algo_parameters.algo_arguments[4].parse::<usize>().unwrap(), 
                         algo_parameters.algo_arguments[5].parse::<f64>().unwrap());
