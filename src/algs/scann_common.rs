@@ -1,24 +1,24 @@
 use ndarray::prelude::*;
 
 pub fn debug_track_query_top_results(index: &usize, msg: String) {
-    // let neighbors = vec![
-    //                         // glove-100-angular.hdf5
-    //                         // 97478,  262700,  846101,  671078,  232287,  727732,  544474,
-    //                         // 1133489,  723915,  660281
-    //                         // ,  566421, 1093917,  908319,  656605,
-    //                         // 93438,  326455,  584887, 1096614,  100206,  547334,  674655,
-    //                         // 834699,  445577,  979282,  776528,   51821,  994865,  186281,
-    //                         // 533888,  331310, 1037752,  193057,  859959,  368655,  690267,
-    //                         // 82685,  484525, 1168162, 1069248, 1126839,  256447,  451625,
-    //                         // 914908,  873104,  956338,  678395,  939324,  748511,  207076,
-    //                         // 751282,  817757,  402216,  932395,  290452,  265744,  696453,
-    //                         // 82910,  436049,  712479,  494528,  989330,  655775,  995275,
-    //                         // 647843,  375237,  242797, 1116578,  793170,  325682,  265226,
-    //                         // 888453,  599119,  631740,  212807, 1142011,  530481,  656064,
-    //                         // 944910,  459704,  490937,  239304,  264602,  495380,  843410,
-    //                         // 724903,  876802,  636623,  172030,  162588,  761652,   74880,
-    //                         // 418892,  687317, 1008844, 1011545,  983601,  340497,  598329,
-    //                         // 944409,  725625
+    let neighbors = vec![
+                            // glove-100-angular.hdf5
+                            97478,  262700,  846101,  671078,  232287,  727732,  544474,
+                            1133489,  723915,  660281
+                            // ,  566421, 1093917,  908319,  656605,
+                            // 93438,  326455,  584887, 1096614,  100206,  547334,  674655,
+                            // 834699,  445577,  979282,  776528,   51821,  994865,  186281,
+                            // 533888,  331310, 1037752,  193057,  859959,  368655,  690267,
+                            // 82685,  484525, 1168162, 1069248, 1126839,  256447,  451625,
+                            // 914908,  873104,  956338,  678395,  939324,  748511,  207076,
+                            // 751282,  817757,  402216,  932395,  290452,  265744,  696453,
+                            // 82910,  436049,  712479,  494528,  989330,  655775,  995275,
+                            // 647843,  375237,  242797, 1116578,  793170,  325682,  265226,
+                            // 888453,  599119,  631740,  212807, 1142011,  530481,  656064,
+                            // 944910,  459704,  490937,  239304,  264602,  495380,  843410,
+                            // 724903,  876802,  636623,  172030,  162588,  761652,   74880,
+                            // 418892,  687317, 1008844, 1011545,  983601,  340497,  598329,
+                            // 944409,  725625
 
     //                         // random-xs-20-angular.hdf5
     //                         3618, 8213, 4462, 6709, 3975, 3129, 5120, 2979, 6319, 3244,
@@ -32,10 +32,10 @@ pub fn debug_track_query_top_results(index: &usize, msg: String) {
     //                         // 2969, 8426,  197, 1064, 5957,  647, 1281, 7618, 5121, 6835, 7551,
     //                         // 7102, 4981, 6960, 1153, 3357, 1479,  564, 6526, 4545, 6335, 1001,
     //                         // 1113
-    //                         ];
-    // if neighbors.contains(index) {
-    //     println!("Found {}:  {}", index, msg);
-    // }
+                            ];
+    if neighbors.contains(index) {
+        println!("Found {}:  {}", index, msg);
+    }
 }
 
 pub fn check_dimension_eq(a: usize, b: usize, msg: &str) {
@@ -69,11 +69,6 @@ pub struct SubspaceResidualStats {
 pub fn compute_residual_stats_for_cluster(
     maybe_residual_dptr: &[f64], original_dptr: &[f64],
     inv_norm: f64, quantized: &[f64]) -> SubspaceResidualStats {
-    // println!("maybe_residual_dptr {:?}", maybe_residual_dptr);
-    // println!("original_dptr {:?}", original_dptr);
-    // println!("inv_norm {:?}", inv_norm);
-    // println!("quantized {:?}", quantized);
-
 
     check_dimension_eq(maybe_residual_dptr.len(), original_dptr.len(), "compute_residual_stats_for_cluster");
     let mut result = SubspaceResidualStats{residual_norm: 0.0, parallel_residual_component: 0.0};
@@ -84,7 +79,6 @@ pub fn compute_residual_stats_for_cluster(
         result.parallel_residual_component +=
             residual_coordinate * original_dptr[i] * inv_norm;
     }
-    // println!("result.residual_norm {:?}", result.residual_norm);
   result
 }
 
@@ -267,7 +261,7 @@ pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayV
         subspace_residual_norms[subspace_idx] = residual_stats[subspace_idx][cluster_idx].residual_norm;
     }
     
-    sorted_by_max_residual_norms(&mut subspace_residual_norms, &mut result_sorted, &mut subspace_idxs);
+    // sorted_by_max_residual_norms(&mut subspace_residual_norms, &mut result_sorted, &mut subspace_idxs);
 
     let num_subspaces = result.len();
     let k_max_rounds = 10;
