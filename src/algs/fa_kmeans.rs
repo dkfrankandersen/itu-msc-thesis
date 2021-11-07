@@ -10,6 +10,7 @@ use std::fs::File;
 use std::path::Path;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
+use std::io::{BufWriter, BufReader};
 
 #[derive(Debug, Clone)]
 pub struct FAKMeans {
@@ -75,11 +76,12 @@ impl AlgorithmImpl for FAKMeans {
             t.stop();
             t.print_as_millis();
 
-            // let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
-            // let mut new_file = File::create(file_fa_kmeans_codebook).unwrap();
-            // serialize_into(&mut new_file, &self.codebook).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            println!("\nFit write centroids to file: {}", file_fa_kmeans_codebook);
+            let mut t = DebugTimer::start("Fit write fa_kmeans_codebook to file");
+            let mut new_file = BufWriter::new(File::create(file_fa_kmeans_codebook).unwrap());
+            serialize_into(&mut new_file, &self.codebook).unwrap();
+            t.stop();
+            t.print_as_secs();
         }
     }
 

@@ -234,7 +234,7 @@ pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, resu
     }
 }
 
-pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
+pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
                                                  centers: &[Vec<Vec<f64>>], threshold: &f64) -> Vec<usize> {
     
     let mut result = vec![0; centers.len()];
@@ -260,9 +260,8 @@ pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayV
         let cluster_idx = result[subspace_idx];
         subspace_residual_norms[subspace_idx] = residual_stats[subspace_idx][cluster_idx].residual_norm;
     }
-    
     // sorted_by_max_residual_norms(&mut subspace_residual_norms, &mut result_sorted, &mut subspace_idxs);
-
+    
     let num_subspaces = result.len();
     let k_max_rounds = 10;
     let mut cur_round_changes = true;
@@ -294,10 +293,5 @@ pub fn coordinate_descent_ah_quantize(index: &usize, maybe_residual_dptr: ArrayV
         let center_idx: usize = result_sorted[i];
         result[subspace_idx] = center_idx;
     }
-    // debug_track_query_top_results(index, format!("residual_stats {:?}", &residual_stats));
-    // debug_track_query_top_results(index, format!("parallel_cost_multiplier {:?}", &parallel_cost_multiplier));
-    // debug_track_query_top_results(index, format!("parallel_residual_component {:?}", &parallel_residual_component));
-    // debug_track_query_top_results(index, format!("result {:?}", &result));
-
     result
 }

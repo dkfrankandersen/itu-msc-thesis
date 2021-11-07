@@ -12,6 +12,7 @@ use rand::{prelude::*};
 use ordered_float::*;
 use indicatif::ProgressBar;
 use bincode::serialize_into;
+use std::io::{BufWriter, BufReader};
 
 #[derive(Debug, Clone)]
 pub struct FAProductQuantization {
@@ -208,14 +209,14 @@ impl AlgorithmImpl for FAProductQuantization {
                                 && Path::new(file_residuals_codebook).exists() {
             println!("\nFit train_residuals_codebook from file");
             let mut t = DebugTimer::start("fit train_residuals_codebook from file");
-            let mut read_file = File::open(file_residuals_codebook).unwrap();
+            let mut read_file = BufReader::new(File::open(file_residuals_codebook).unwrap());
             self.residuals_codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
             t.print_as_millis();
             
             println!("\nFit compute_coarse_quantizers from file");
             let mut t = DebugTimer::start("fit compute_coarse_quantizers from file");
-            let mut read_file = File::open(file_compute_coarse_quantizers).unwrap();
+            let mut read_file = BufReader::new(File::open(file_compute_coarse_quantizers).unwrap());
             self.coarse_quantizer = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
             t.print_as_millis();
@@ -251,7 +252,7 @@ impl AlgorithmImpl for FAProductQuantization {
             
             // Write residuals_codebook to bin
             // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            // let mut new_file = File::create(file_residuals_codebook).unwrap();
+            // let mut new_file = BufWriter::new(File::create(file_residuals_codebook).unwrap());
             // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
             // t.stop();
             // t.print_as_millis();
@@ -268,7 +269,7 @@ impl AlgorithmImpl for FAProductQuantization {
 
             // Write compute_coarse_quantizers to bin
             // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            // let mut new_file = BufWriter::new(File::create(file_compute_coarse_quantizers).unwrap());
             // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
             // t.stop();
             // t.print_as_millis();

@@ -29,7 +29,7 @@ impl AlgorithmImpl for FABruteforce {
         self.name.to_string()
     }
     
-    fn fit(&mut self, dataset: &ArrayView2::<f64>) {
+    fn fit(&mut self, _dataset: &ArrayView2::<f64>) {
     }
     
     fn query(&self, dataset: &ArrayView2::<f64>, query: &ArrayView1::<f64>, results_per_query: usize, _arguments: &[usize]) -> Vec<usize> {
