@@ -65,7 +65,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR19".to_string(),
+            name: "fa_scann_TR25".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -209,12 +209,12 @@ impl AlgorithmImpl for FAScann {
             t.print_as_secs();
             
             // Write residuals_codebook to bin
-            // println!("\nFit write residuals_codebook to file: {}", file_residuals_codebook);
-            // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            // let mut new_file = File::create(file_residuals_codebook).unwrap();
-            // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            println!("\nFit write residuals_codebook to file: {}", file_residuals_codebook);
+            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            let mut new_file = File::create(file_residuals_codebook).unwrap();
+            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            t.stop();
+            t.print_as_millis();
  
             println!("\nFit copy centers");
             let mut centers: Vec<Vec<Vec<f64>>> = vec![vec![vec![0.0; self.sub_dimension]; self.residuals_codebook_k]; self.m];
@@ -234,7 +234,6 @@ impl AlgorithmImpl for FAScann {
                     let residual = residuals.slice(s![*index,..]);
                     let datapoint = dataset.slice(s![*index,..]);
                     let pqcodes = coordinate_descent_ah_quantize(&index, residual, datapoint, &centers, threshold);
-                    // debug_track_query_top_results(index, format!("is at centroid {:?}\n", &centroid.id));
                     hmap.insert(*index, pqcodes);
                 }
                 let pqcentroid = PQCentroid{id: centroid.id, point: centroid.point.clone(), children: hmap};
@@ -245,12 +244,12 @@ impl AlgorithmImpl for FAScann {
 
 
             // Write centroids to file
-            // println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
-            // let mut t = DebugTimer::start("Fit write centroids to file");
-            // let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
-            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            println!("\nFit write centroids to file: {}", file_compute_coarse_quantizers);
+            let mut t = DebugTimer::start("Fit write centroids to file");
+            let mut new_file = File::create(file_compute_coarse_quantizers).unwrap();
+            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            t.stop();
+            t.print_as_millis();
             
         }
     }
@@ -266,7 +265,7 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
+                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::DotProduct)), centroid.id))
                             .collect();
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
@@ -277,12 +276,12 @@ impl AlgorithmImpl for FAScann {
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_to_rescore);
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
+
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
 
             let residual_qc = &self.compute_residual(&query, &coarse_quantizer.point.view());
-
             for m in 0..m_dim {
                 let (partial_from, partial_to) = self.partial_query_begin_end[m];     
                 let partial_residual = residual_qc.slice(s![partial_from..partial_to]);

@@ -60,7 +60,7 @@ impl FAProductQuantization {
         }
 
         Ok(FAProductQuantization {
-            name: "fa_pq_TR18".to_string(),
+            name: "fa_pq_TR25".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -310,7 +310,7 @@ impl AlgorithmImpl for FAProductQuantization {
                 let partial_residual = residual_qc.slice(s![partial_from..partial_to]);
                 for k in 0..k_dim {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &DistanceMetric::DotProduct);
+                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &self.dist_metric);
 
                 }
             }

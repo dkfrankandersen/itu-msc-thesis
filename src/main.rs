@@ -75,8 +75,6 @@ fn main() {
                 let mut results = Vec::<(f64, Vec<(usize, f64)>)>::new();
                 for p in test_queries.outer_iter() {
                     let result = algs::run_individual_query(&algo, &p, &ds_train_norm.view(), parameters.results_per_query, &parameters.query_arguments);
-                    // print!("{:?}", result);
-                    // panic!("ARGG");
                     results.push(result);
                     pb.inc(1);
                 }

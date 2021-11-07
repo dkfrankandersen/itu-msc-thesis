@@ -8,6 +8,7 @@ pub enum DistanceMetric {
     Angular,
     CosineSimilarity,
     Euclidian,
+    SquareEuclidian,
     DotProduct
 }
 
@@ -15,17 +16,22 @@ pub fn min_distance(a: &ArrayView1::<f64>, b: &ArrayView1::<f64>, metric: &Dista
     match metric {
         DistanceMetric::DotProduct => -(a.dot(b)),
         DistanceMetric::Euclidian => euclidian(a, b),
+        DistanceMetric::SquareEuclidian => square_euclidian(a, b),
         DistanceMetric::Angular => angular_similarity(a, b),
         DistanceMetric::CosineSimilarity => cosine_similarity(a, b),
         _ => panic!("DistanceMetric unknown")
     }
-    
 }
 
 #[allow(dead_code)]
 pub fn euclidian(a: &ArrayView1::<f64>, b: &ArrayView1::<f64>) -> f64 {
     let sum_val: f64 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum();
     sum_val.sqrt()
+}
+
+pub fn square_euclidian(a: &ArrayView1::<f64>, b: &ArrayView1::<f64>) -> f64 {
+    let sum_val: f64 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum();
+    sum_val
 }
 
 #[allow(dead_code)]
