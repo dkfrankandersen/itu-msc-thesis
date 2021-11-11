@@ -146,7 +146,7 @@ impl FAProductQuantization {
     fn compute_coarse_quantizers(&self, centroids: &[Centroid], pq_codes: &Array1<Array1<usize>>,
                                         m_centroids: usize) -> Vec::<PQCentroid> {
         // Compute coarse quantizer for centroids with pq codes
-        let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(m_centroids);
+        let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(centroids.len());
         println!("Started compute_coarse_quantizers");
         let bar_centroids = ProgressBar::new(centroids.len() as u64);
         for centroid in centroids.iter() {

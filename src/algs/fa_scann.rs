@@ -66,7 +66,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR25_sqr_euc".to_string(),
+            name: "fa_scann_TR28_sqr_euc".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M

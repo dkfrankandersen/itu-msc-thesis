@@ -43,8 +43,8 @@ if [ $run_type = 't' ]
 then
     # cargo run --release angular $DATASET bruteforce [10]
     # cargo run --release angular $DATASET kmeans [10] [2000 10] [[24] [64] [128]]
-    # cargo run --release angular $DATASET pq [10] [10 2000 1183514 16 10] [[24 1024] [64 2048] [128 4096] [24 2048] [64 4096] [128 8192]]
-    cargo run --release angular $DATASET scann [10] [10 2000 1183514 16 10 0.2] [[24 1024] [64 2048] [128 4096] [24 2048] [64 4096] [128 8192]]
+    cargo run --release angular $DATASET pq [50] [50 2000 1183514 16 10] [[24 1024] [64 2048] [128 4096] [24 2048] [64 4096] [128 8192] [192 16384]]
+    cargo run --release angular $DATASET scann [50] [50 2000 1183514 16 10 0.2] [[24 1024] [64 2048] [128 4096] [24 2048] [64 4096] [128 8192] [192 16384]]
 
 elif [ $run_type = 'b' ]
 then
