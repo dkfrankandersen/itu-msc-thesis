@@ -1,6 +1,4 @@
-use ndarray::{ArrayView1, ArrayView2};
-use ordered_float::OrderedFloat;
-use rayon::prelude::*;
+use ndarray::{ArrayView1};
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -19,7 +17,6 @@ pub fn min_distance(a: &ArrayView1::<f64>, b: &ArrayView1::<f64>, metric: &Dista
         DistanceMetric::SquareEuclidian => square_euclidian(a, b),
         DistanceMetric::Angular => angular_similarity(a, b),
         DistanceMetric::CosineSimilarity => cosine_similarity(a, b),
-        _ => panic!("DistanceMetric unknown")
     }
 }
 

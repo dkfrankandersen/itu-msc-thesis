@@ -7,13 +7,13 @@ pub mod distance;
 pub mod fa_scann;
 pub mod scann_common;
 
+use crate::util::AlgoParameters;
 use std::time::Instant;
 use ndarray::{ArrayView1, ArrayView2, s};
 use fa_bruteforce::FABruteforce;
 use fa_kmeans::FAKMeans;
 use fa_product_quantization::FAProductQuantization;
 use fa_scann::FAScann;
-use crate::util::AlgoParameters;
 use distance::DistanceMetric;
 
 #[derive(Debug, Clone)]
@@ -109,7 +109,7 @@ pub fn get_fitted_algorithm(verbose_print: bool, mut algo_parameters: AlgoParame
     match algo {
         Ok(mut a) => {
                     for elem in algo_parameters.run_parameters.iter_mut() {
-                        elem.algorithm = a.name();
+                        elem.algorithm = format!("{}{}", a.name(), algo_parameters.description);
                     }
                     
                     println!("Starting dataset fitting for algorithm");

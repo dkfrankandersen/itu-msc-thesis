@@ -61,7 +61,7 @@ impl FAProductQuantization {
         }
 
         Ok(FAProductQuantization {
-            name: "fa_pq_TR28".to_string(),
+            name: "fa_pq".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -162,8 +162,8 @@ impl FAProductQuantization {
         pqcodes
     }
 
-    fn compute_coarse_quantizers(&self, centroids: &[Centroid], residual_pq_codes: &Array1<Array1<usize>>,
-                                        m_centroids: usize) -> Vec::<PQCentroid> {
+    fn compute_coarse_quantizers(&self, centroids: &[Centroid], 
+                residual_pq_codes: &Array1<Array1<usize>>) -> Vec::<PQCentroid> {
         // Compute coarse quantizer for centroids with pq codes
         let mut coarse_quantizer = Vec::<PQCentroid>::with_capacity(centroids.len());
         println!("Started compute_coarse_quantizers");
@@ -251,11 +251,11 @@ impl AlgorithmImpl for FAProductQuantization {
             t.print_as_secs();
             
             // Write residuals_codebook to bin
-            // let mut t = DebugTimer::start("Fit write residuals_codebook to file");
-            // let mut new_file = BufWriter::new(File::create(file_residuals_codebook).unwrap());
-            // serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            let mut t = DebugTimer::start("Fit write residuals_codebook to file");
+            let mut new_file = BufWriter::new(File::create(file_residuals_codebook).unwrap());
+            serialize_into(&mut new_file, &self.residuals_codebook).unwrap();
+            t.stop();
+            t.print_as_millis();
  
             let mut t = DebugTimer::start("fit residual_encoding");
             let residual_pq_codes = self.residual_encoding(&residuals, &self.residuals_codebook);
@@ -263,16 +263,16 @@ impl AlgorithmImpl for FAProductQuantization {
             t.print_as_secs();
             
             let mut t = DebugTimer::start("fit compute_coarse_quantizers");
-            self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes, self.m);
+            self.coarse_quantizer = self.compute_coarse_quantizers(&centroids, &residual_pq_codes);
             t.stop();
             t.print_as_secs();
 
             // Write compute_coarse_quantizers to bin
-            // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            // let mut new_file = BufWriter::new(File::create(file_compute_coarse_quantizers).unwrap());
-            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
+            let mut new_file = BufWriter::new(File::create(file_compute_coarse_quantizers).unwrap());
+            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            t.stop();
+            t.print_as_millis();
         }
     }
     
@@ -281,25 +281,35 @@ impl AlgorithmImpl for FAProductQuantization {
         
         // Query Arguments
         let clusters_to_search = arguments[0];
-        let results_to_rescore = arguments[1];
+        let mut results_to_rescore = arguments[1];
 
-        // Lets find matches in best coarse_quantizers
-        // For each coarse_quantizer compute distance between query and centroid, push to heap.
-        let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
-                            self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
-                            .collect();
+        let bruteforce = if clusters_to_search == 0 {true} else {false};
+        let rescore = if results_to_rescore == 0 {false} else {true};
+        if !rescore {
+            results_to_rescore = results_per_query
+        }
+        let best_pq_indexes: Vec::<usize>;
 
-        let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
-        let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
-                                                                .pop().unwrap().1).collect();
+        if bruteforce {
+            best_pq_indexes = (0..self.coarse_quantizer.len()).collect();
+        } else {
+            // Lets find matches in best coarse_quantizers
+            // For each coarse_quantizer compute distance between query and centroid, push to heap.
+            let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
+                                self.coarse_quantizer.iter().map(|centroid| 
+                                (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
+                                .collect();
 
+            let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
+            best_pq_indexes = (0..min_val).map(|_| best_coarse_quantizers
+                                                                    .pop().unwrap().1).collect();
+        }
+                                                                
         let m_dim = self.residuals_codebook.nrows();
         let k_dim = self.residuals_codebook.ncols();
         
         let mut quantizer_candidates = BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(self.coarse_quantizer_k);
         let mut distance_table = Array::from_elem((m_dim, k_dim), 0.);
-        
         for coarse_quantizer_index in best_pq_indexes.iter() {
             // Get coarse_quantizer from index
             let coarse_quantizer = &self.coarse_quantizer[*coarse_quantizer_index];
@@ -339,15 +349,20 @@ impl AlgorithmImpl for FAProductQuantization {
         
         // Rescore with true distance value of query and candidates
         let candidates = &mut BinaryHeap::<(OrderedFloat::<f64>, usize)>::with_capacity(results_per_query);
-        for (_, index) in quantizer_candidates.into_iter() {
-            let datapoint = dataset.slice(s![index,..]);
-            let distance = OrderedFloat(min_distance(query, &datapoint, &self.dist_metric));
-            if candidates.len() < results_per_query {
-                candidates.push((distance, index));
-            } else if distance < candidates.peek().unwrap().0 {
-                candidates.pop();
-                candidates.push((distance, index));
+        if rescore {
+            for (_, index) in quantizer_candidates.into_iter() {
+                let datapoint = dataset.slice(s![index,..]);
+                let distance = OrderedFloat(min_distance(query, &datapoint, &self.dist_metric));
+                if candidates.len() < results_per_query {
+                    candidates.push((distance, index));
+                } else if distance < candidates.peek().unwrap().0 {
+                    candidates.pop();
+                    candidates.push((distance, index));
+                }
             }
+        } else {
+            *candidates = quantizer_candidates;
+            
         }
 
         // Pop all candidate indexes from heap and reverse list.

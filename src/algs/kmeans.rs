@@ -1,5 +1,4 @@
 use crate::util::{sampling::sampling_without_replacement};
-use crate::util::debug_timer::DebugTimer;
 use crate::algs::{common::Centroid};
 use crate::algs::distance::{DistanceMetric, min_distance};
 extern crate sys_info;
@@ -7,11 +6,7 @@ use ndarray::{Array, ArrayView2, s};
 use rand::{prelude::*};
 use ordered_float::*;
 use indicatif::ProgressBar;
-use std::collections::HashMap;
-use std::thread;
-use std::sync::Arc;
 use rayon::prelude::*;
-// use crate::algs::scann_common::debug_track_query_top_results;
 
 
 pub struct KMeans {
@@ -53,7 +48,6 @@ impl KMeans {
             centroids.par_iter_mut().for_each(|c| c.indexes.clear());
 
             // Assign
-            // let mut point_allocations = vec![0_usize; dataset.len()];
             let mut point_allocations = vec![0_usize; dataset.nrows()];
             point_allocations.par_iter_mut().enumerate().for_each(|(index, assigned_centroid_idx)| {
                 let mut best_distance: OrderedFloat::<f64> = OrderedFloat(f64::INFINITY);

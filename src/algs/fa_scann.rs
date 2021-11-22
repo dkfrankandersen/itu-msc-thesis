@@ -66,7 +66,7 @@ impl FAScann {
                                             m, coarse_quantizer_k, training_size, residuals_codebook_k, max_iterations, anisotropic_quantization_threshold);
 
         Ok(FAScann {
-            name: "fa_scann_TR28_sqr_euc".to_string(),
+            name: "fa_scann".to_string(),
             metric: algo_parameters.metric.clone(),
             algo_parameters: algo_parameters.clone(),
             m,         // M
@@ -158,8 +158,8 @@ impl AlgorithmImpl for FAScann {
 
     fn fit(&mut self, dataset: &ArrayView2::<f64>) {
         let verbose_print = false;
-        let file_residuals_codebook = &self.algo_parameters.fit_file_output("residuals_codebook");
-        let file_compute_coarse_quantizers = &self.algo_parameters.fit_file_output("coarse_quantizers");
+        let file_residuals_codebook = &self.algo_parameters.fit_file_output("residuals_codebook_dp");
+        let file_compute_coarse_quantizers = &self.algo_parameters.fit_file_output("coarse_quantizers_dp");
 
         // Load existing pre-computede data if exists
         if Path::new(file_compute_coarse_quantizers).exists() 
@@ -266,7 +266,7 @@ impl AlgorithmImpl for FAScann {
         // For each coarse_quantizer compute distance between query and centroid, push to heap.
         let mut best_coarse_quantizers: BinaryHeap::<(OrderedFloat::<f64>, usize)> =
                             self.coarse_quantizer.iter().map(|centroid| 
-                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &DistanceMetric::DotProduct)), centroid.id))
+                            (OrderedFloat(-min_distance(query, &centroid.point.view(), &self.dist_metric)), centroid.id))
                             .collect();
         let min_val = std::cmp::min(clusters_to_search, best_coarse_quantizers.len());
         let best_pq_indexes: Vec::<usize> = (0..min_val).map(|_| best_coarse_quantizers
@@ -288,7 +288,7 @@ impl AlgorithmImpl for FAScann {
                 let partial_residual = residual_qc.slice(s![partial_from..partial_to]);
                 for k in 0..k_dim {
                     let partial_residual_codeword = &self.residuals_codebook[[m, k]].view();
-                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, &self.dist_metric);
+                    distance_table[[m,k]] = min_distance(&partial_residual, partial_residual_codeword, DistanceMetric::DotProduct);
                 }
             }
 

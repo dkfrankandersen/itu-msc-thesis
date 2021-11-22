@@ -225,12 +225,12 @@ impl AlgorithmImpl for FAProductQuantization {
             t.stop();
             t.print_as_secs();
             
-            // Write codebook to bin
-            // let mut t = DebugTimer::start("Fit write codebook to file");
-            // let mut new_file = BufWriter::new(File::create(file_codebook).unwrap());
-            // serialize_into(&mut new_file, &self.codebook).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            Write codebook to bin
+            let mut t = DebugTimer::start("Fit write codebook to file");
+            let mut new_file = BufWriter::new(File::create(file_codebook).unwrap());
+            serialize_into(&mut new_file, &self.codebook).unwrap();
+            t.stop();
+            t.print_as_millis();
  
             let mut t = DebugTimer::start("fit encoding");
             let pq_codes = self.encoding(dataset, &self.codebook);
@@ -242,12 +242,12 @@ impl AlgorithmImpl for FAProductQuantization {
             t.stop();
             t.print_as_secs();
 
-            // Write compute_coarse_quantizers to bin
-            // let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
-            // let mut new_file = BufWriter::new(File::create(file_compute_coarse_quantizers).unwrap());
-            // serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
-            // t.stop();
-            // t.print_as_millis();
+            Write compute_coarse_quantizers to bin
+            let mut t = DebugTimer::start("Fit write coarse_quantizer to file");
+            let mut new_file = BufWriter::new(File::create(file_compute_coarse_quantizers).unwrap());
+            serialize_into(&mut new_file, &self.coarse_quantizer).unwrap();
+            t.stop();
+            t.print_as_millis();
         }
     }
     
@@ -277,10 +277,10 @@ impl AlgorithmImpl for FAProductQuantization {
         
         for m in 0..m_dim {
             let (partial_from, partial_to) = self.partial_query_begin_end[m];
-            let partial_residual = query.slice(s![partial_from..partial_to]);
+            let partial_query = query.slice(s![partial_from..partial_to]);
             for k in 0..k_dim {
                 let partial_codeword = &self.codebook[[m, k]].view();
-                distance_table[[m,k]] = min_distance(&partial_residual, partial_codeword, &self.dist_metric);
+                distance_table[[m,k]] = min_distance(&partial_query, partial_codeword, &self.dist_metric);
             }
         }
 

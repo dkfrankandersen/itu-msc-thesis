@@ -221,18 +221,18 @@ pub fn optimize_single_subspace(
 }
 
 // Sorting in the same way as scann do, might be a faster solution
-pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, result_sorted: &mut Vec<usize>, subspace_idxs: &mut Vec<usize>) {
-    let mut sorted_tuple: Vec<(f64, usize, usize)> = Vec::new();
-    for i in 0..result_sorted.len() {
-        sorted_tuple.push((subspace_residual_norms[i], result_sorted[i], i));
-    }
-    sorted_tuple.sort_by(|a, b| b.partial_cmp(a).unwrap());
-    for i in 0..result_sorted.len() {
-        subspace_residual_norms[i] = sorted_tuple[i].0;
-        result_sorted[i] = sorted_tuple[i].1;
-        subspace_idxs[i] = sorted_tuple[i].2;
-    }
-}
+// pub fn sorted_by_max_residual_norms(subspace_residual_norms: &mut Vec<f64>, result_sorted: &mut Vec<usize>, subspace_idxs: &mut Vec<usize>) {
+//     let mut sorted_tuple: Vec<(f64, usize, usize)> = Vec::new();
+//     for i in 0..result_sorted.len() {
+//         sorted_tuple.push((subspace_residual_norms[i], result_sorted[i], i));
+//     }
+//     sorted_tuple.sort_by(|a, b| b.partial_cmp(a).unwrap());
+//     for i in 0..result_sorted.len() {
+//         subspace_residual_norms[i] = sorted_tuple[i].0;
+//         result_sorted[i] = sorted_tuple[i].1;
+//         subspace_idxs[i] = sorted_tuple[i].2;
+//     }
+// }
 
 pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, original_dptr: ArrayView1<f64>,
                                                  centers: &[Vec<Vec<f64>>], threshold: &f64) -> Vec<usize> {
@@ -254,7 +254,7 @@ pub fn coordinate_descent_ah_quantize(maybe_residual_dptr: ArrayView1<f64>, orig
 
     let mut subspace_residual_norms = vec![0.0_f64; result.len()];
     let mut result_sorted = result.clone();
-    let mut subspace_idxs: Vec<usize> = (0..result.len()).collect();
+    let subspace_idxs: Vec<usize> = (0..result.len()).collect();
     
     for subspace_idx in 0..result.len() {
         let cluster_idx = result[subspace_idx];

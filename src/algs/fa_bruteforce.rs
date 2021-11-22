@@ -15,7 +15,7 @@ pub struct FABruteforce {
 impl FABruteforce {
     pub fn new(verbose_print: bool, dist_metric: DistanceMetric) -> Result<Self, String> {
         Ok(FABruteforce {
-            name: "fa_bruteforce_TR11".to_string(),
+            name: "fa_bruteforce".to_string(),
             metric: "angular".to_string(),
             verbose_print,
             dist_metric,

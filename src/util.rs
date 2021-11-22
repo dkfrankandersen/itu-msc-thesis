@@ -66,6 +66,7 @@ pub struct AlgoParameters {
     pub metric: String,
     pub dataset: String,
     pub algorithm: String,
+    pub description: String,
     pub algo_arguments: Vec::<String>,
     pub run_parameters: Vec<RunParameters>
 } 
@@ -94,8 +95,8 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
     let mut algo_arguments = Vec::<String>::new();
     let mut query_arguments = Vec::<String>::new();
 
-    if args.len() >= 4 {
-        let args_additionals = args[4..].join(" ");
+    if args.len() >= 5 {
+        let args_additionals = args[5..].join(" ");
         let parts = unzip_enclosed_text(args_additionals, '[', ']');
         if parts.len() >= 1 { 
             results_per_query = parts[0].split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect();
@@ -114,6 +115,7 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
     let metric = &args[1].to_string();
     let dataset = &args[2].to_string();
     let algorithm = &args[3].to_string();
+    let description = &args[4].to_string();
 
     let mut run_parameters = Vec::<RunParameters>::new();
     for results_per_query in results_per_query.iter() {
@@ -142,6 +144,5 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
         }   
         
     }
-    AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), 
-                                algo_arguments, run_parameters}
+    AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), description: description.to_string(), algo_arguments, run_parameters}
 }

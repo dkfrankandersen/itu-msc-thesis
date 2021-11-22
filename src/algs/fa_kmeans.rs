@@ -35,7 +35,7 @@ impl FAKMeans {
 
         Ok(
             FAKMeans {
-                        name: "fa_kmeans_TR25".to_string(),
+                        name: "fa_kmeans".to_string(),
                         metric: algo_parameters.metric.clone(),
                         algo_parameters: algo_parameters.clone(),
                         codebook: Vec::<Centroid>::new(),
@@ -61,7 +61,7 @@ impl AlgorithmImpl for FAKMeans {
         if Path::new(file_fa_kmeans_codebook).exists()
                 && Path::new(file_fa_kmeans_codebook).exists() {
             let mut t = DebugTimer::start("fit fa_kmeans_codebook from file");
-            let mut read_file = File::open(file_fa_kmeans_codebook).unwrap();
+            let mut read_file = BufReader::new(File::open(file_fa_kmeans_codebook).unwrap());
             self.codebook = bincode::deserialize_from(&mut read_file).unwrap();
             t.stop();
             t.print_as_millis();
