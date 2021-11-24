@@ -14,13 +14,13 @@ pub fn compute_timing_and_store(best_search_time: f64, build_time: f64, results:
     let best_search_time = { if best_search_time < search_time { best_search_time } else { search_time }};
 
     let attrs = hdf5_store_file::Attributes {
-        build_time: build_time,
+        build_time,
         index_size: 0.,
         algo: parameters.algorithm.clone(),
         dataset: parameters.dataset.clone(),
 
         batch_mode: false,
-        best_search_time: best_search_time,
+        best_search_time,
         candidates: avg_candidates,
         count: results_per_query as u32,
         distance: parameters.metric.clone(),

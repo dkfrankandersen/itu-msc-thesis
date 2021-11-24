@@ -12,6 +12,6 @@ pub fn run(file: String) -> Result<(), ()> {
 fn eval_python(py: Python, file: String) -> PyResult<()> {
     let locals = [("os", py.import("os")?)].into_py_dict(py);
     let code = format!("os.system('python3 src/util/hdf5_attributes_fix.py {}')", file);
-    py.eval(&code, None, Some(&locals))?;
+    py.eval(&code, None, Some(locals))?;
     Ok(())
 }

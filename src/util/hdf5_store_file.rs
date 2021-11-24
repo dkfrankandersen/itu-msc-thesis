@@ -80,7 +80,7 @@ impl ResultFilename {
 
 fn get_result_filename(path: &str, attrs: &Attributes) -> ResultFilename {
     let path = format!("{}/{}/{}/{}/", path, attrs.dataset, attrs.count, attrs.algo);
-    ResultFilename {path: path, name: attrs.name.to_string(), filetype: ".hdf5".to_string()}
+    ResultFilename {path, name: attrs.name.to_string(), filetype: ".hdf5".to_string()}
 }
 
 pub fn store_results(results: Vec<(f64, Vec<(usize, f64)>)>, attrs: Attributes) -> hdf5::Result<String> {
@@ -112,11 +112,11 @@ pub fn store_results(results: Vec<(f64, Vec<(usize, f64)>)>, attrs: Attributes) 
                     }
                     times.write(&res_times).ok();
                     f.close();
-                    return Ok(file.path_and_filename());
+                    Ok(file.path_and_filename())
         },
         Err(e) =>   { 
                         println!("Error {}", e);
-                        return Err(e);
+                        Err(e)
                     }
     }
     

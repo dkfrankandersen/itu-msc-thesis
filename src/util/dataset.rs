@@ -18,27 +18,27 @@ impl Dataset {
     }
 
     pub fn get_f64(&self, dataset: &str) -> Array2::<f64> {
-        return (self.hdf5_file).dataset(dataset).unwrap().read_2d::<f64>().unwrap();
+        (self.hdf5_file).dataset(dataset).unwrap().read_2d::<f64>().unwrap()
     }
 
     pub fn get_usize(&self, dataset: &str) -> Array2::<usize> {
-        return (self.hdf5_file).dataset(dataset).unwrap().read_2d::<usize>().unwrap();
+        (self.hdf5_file).dataset(dataset).unwrap().read_2d::<usize>().unwrap()
     }
 
     pub fn neighbors(&self) -> Array2::<usize> {
-        return self.get_usize("neighbors");
+        self.get_usize("neighbors")
     }
 
     pub fn train_normalize(&self) -> Array2::<f64> {
-        return self.get_as_normalize("train");
+        self.get_as_normalize("train")
     }
 
     pub fn test_normalize(&self) -> Array2::<f64> {
-        return self.get_as_normalize("test");
+        self.get_as_normalize("test")
     }
 
     pub fn distances_normalize(&self) -> Array2::<f64> {
-        return self.get_as_normalize("distances");
+        self.get_as_normalize("distances")
     }
 
     pub fn get_as_normalize(&self, dataset: &str) -> Array2::<f64> {
@@ -50,7 +50,7 @@ impl Dataset {
                 ds_new[[idx_row, idx_col]] = val/magnitude;
             }       
         }
-        return ds_new;
+        ds_new
     }
 
     pub fn normalize_all(&self, dataset: Array2<f64>) -> Array2::<f64> {
@@ -61,12 +61,12 @@ impl Dataset {
                 ds_new[[idx_row, idx_col]] = val/magnitude;
             }            
         }
-        return ds_new;
+        ds_new
     }
     
     pub fn normalize_vector(p: &ArrayView1::<f64>)-> Array1::<f64>  {
         let magnitude = p.dot(p).sqrt();
-        return p.map(|e| e/magnitude);
+        p.map(|e| e/magnitude)
     }
 
     pub fn print_true_neighbors(&self, from : usize, to: usize, m: usize) {
@@ -79,6 +79,6 @@ impl Dataset {
             }
             println!("|  idx: {} neighbors {:?}", i, neighbors);
         }
-        println!("");
+        println!();
     }
 }

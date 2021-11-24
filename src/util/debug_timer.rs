@@ -25,8 +25,7 @@ impl DebugTimer {
     }
 
     pub fn total_duration(&self) -> Duration {
-        let duration =  self.stop.unwrap().duration_since(self.start.unwrap());
-        duration
+        return self.stop.unwrap().duration_since(self.start.unwrap());
     }
 
     pub fn print_as_secs(&self) {
@@ -52,7 +51,7 @@ impl DebugTimer {
     pub fn stopwatch_total_duration(&self) -> Duration {
         let mut sum = Duration::new(0, 0);
         for x in self.stopwatch_durations.iter() {
-            sum = sum + *x;
+            sum += *x;
         }
         sum
     }

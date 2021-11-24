@@ -55,9 +55,9 @@ pub struct RunParameters {
 
 impl RunParameters {
     pub fn algo_definition(&self) -> String {
-        let algo_arg = format!("{:?}", self.algo_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
-        let query_arg = format!("{:?}", self.query_arguments).to_string().replace(",","").replace('"',"").replace(" ","_");
-        return format!("{}[{}_{}_{}]", self.algorithm, self.metric, algo_arg, query_arg);
+        let algo_arg = format!("{:?}", self.algo_arguments).replace(",","").replace('"',"").replace(" ","_");
+        let query_arg = format!("{:?}", self.query_arguments).replace(",","").replace('"',"").replace(" ","_");
+        format!("{}[{}_{}_{}]", self.algorithm, self.metric, algo_arg, query_arg)
     }
 }
 
@@ -66,6 +66,7 @@ pub struct AlgoParameters {
     pub metric: String,
     pub dataset: String,
     pub algorithm: String,
+    pub description: String,
     pub algo_arguments: Vec::<String>,
     pub run_parameters: Vec<RunParameters>
 } 
@@ -75,8 +76,8 @@ impl AlgoParameters {
         let s = format!("fit_file_output/{}/{}", self.algorithm, self.dataset);
         let res = create_dir_all(&s);
         match res {
-            Ok(_) => println!("fit_create_path \n {}", s),
-            Err(e) => panic!("fit_create_path \n{}", e)
+            Ok(_) => println!("Using path for storing output: {}", s),
+            Err(e) => panic!("Error: unable to create path/file \n{}", e)
         };
         s
     }   
@@ -94,8 +95,8 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
     let mut algo_arguments = Vec::<String>::new();
     let mut query_arguments = Vec::<String>::new();
 
-    if args.len() >= 4 {
-        let args_additionals = args[4..].join(" ");
+    if args.len() >= 5 {
+        let args_additionals = args[5..].join(" ");
         let parts = unzip_enclosed_text(args_additionals, '[', ']');
         if parts.len() >= 1 { 
             results_per_query = parts[0].split_whitespace().map(|x| (x.to_string()).parse::<usize>().unwrap()).collect();
@@ -114,10 +115,11 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
     let metric = &args[1].to_string();
     let dataset = &args[2].to_string();
     let algorithm = &args[3].to_string();
+    let description = &args[4].to_string();
 
     let mut run_parameters = Vec::<RunParameters>::new();
     for results_per_query in results_per_query.iter() {
-        if query_arguments.len() > 0 {
+        if !query_arguments.is_empty() {
             for cluster_to_search in query_arguments.iter() {
                 let run_parameter = RunParameters{ 
                     metric: metric.to_string(), 
@@ -142,6 +144,5 @@ pub fn create_run_parameters(args: Vec::<String>) -> AlgoParameters {
         }   
         
     }
-    return AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), 
-                                algo_arguments: algo_arguments.clone(), run_parameters: run_parameters};
+    AlgoParameters{metric: metric.to_string(), dataset: dataset.to_string(), algorithm: algorithm.to_string(), description: description.to_string(), algo_arguments, run_parameters}
 }
