@@ -19,3 +19,4 @@ Cargo.lock
 /results
 /fit_file_output
 /flamegraph
+/ann-benchmarks
